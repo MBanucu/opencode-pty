@@ -20,6 +20,7 @@ This plugin gives the agent full control over multiple terminal sessions, like t
 - **Interactive Input**: Send keystrokes, Ctrl+C, arrow keys, etc.
 - **Output Buffer**: Read output anytime with pagination (offset/limit)
 - **Pattern Filtering**: Search output using regex (like `grep`)
+- **Exit Notifications**: Get notified when processes finish (eliminates polling)
 - **Permission Support**: Respects OpenCode's bash permission settings
 - **Session Lifecycle**: Sessions persist until explicitly killed
 - **Auto-cleanup**: PTYs are cleaned up when OpenCode sessions end
@@ -53,7 +54,7 @@ opencode
 
 | Tool | Description |
 |------|-------------|
-| `pty_spawn` | Create a new PTY session (command, args, workdir, env, title) |
+| `pty_spawn` | Create a new PTY session (command, args, workdir, env, title, notifyOnExit) |
 | `pty_write` | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C) |
 | `pty_read` | Read output buffer with pagination and optional regex filtering |
 | `pty_list` | List all PTY sessions with status, PID, line count |
@@ -95,6 +96,29 @@ pty_write: id="pty_a1b2c3d4", data="\x03"
 pty_kill: id="pty_a1b2c3d4", cleanup=true
 → Terminates process and frees buffer
 ```
+
+### Run with exit notification
+
+```
+pty_spawn: command="npm", args=["run", "build"], title="Build", notifyOnExit=true
+→ Returns: pty_a1b2c3d4
+```
+
+The AI agent will receive a notification when the build completes:
+
+```xml
+<pty_exited>
+ID: pty_a1b2c3d4
+Title: Build
+Exit Code: 0
+Output Lines: 42
+Last Line: Build completed successfully.
+</pty_exited>
+
+Use pty_read to check the full output.
+```
+
+This eliminates the need for polling—perfect for long-running processes like builds, tests, or deployment scripts. If the process fails (non-zero exit code), the notification will suggest using `pty_read` with the `pattern` parameter to search for errors.
 
 ## Configuration
 
@@ -153,6 +177,7 @@ This plugin respects OpenCode's [permission settings](https://opencode.ai/docs/p
 4. **Filter**: Optional regex pattern filters lines before pagination
 5. **Write**: Agent can send any input including escape sequences
 6. **Lifecycle**: Sessions track status (running/exited/killed), persist until cleanup
+7. **Notify**: When `notifyOnExit` is true, sends a message to the session when the process exits
 
 ## Session Lifecycle
 

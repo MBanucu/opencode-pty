@@ -1,9 +1,16 @@
 import { spawn, type IPty } from "bun-pty";
+import type { OpencodeClient } from "@opencode-ai/sdk";
 import { RingBuffer } from "./buffer.ts";
 import type { PTYSession, PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from "./types.ts";
 import { createLogger } from "../logger.ts";
 
 const log = createLogger("manager");
+
+let client: OpencodeClient | null = null;
+
+export function initManager(opcClient: OpencodeClient): void {
+  client = opcClient;
+}
 
 function generateId(): string {
   const hex = Array.from(crypto.getRandomValues(new Uint8Array(4)))
@@ -44,6 +51,7 @@ class PTYManager {
       pid: ptyProcess.pid,
       createdAt: new Date(),
       parentSessionId: opts.parentSessionId,
+      notifyOnExit: opts.notifyOnExit ?? false,
       buffer,
       process: ptyProcess,
     };
@@ -54,11 +62,26 @@ class PTYManager {
       buffer.append(data);
     });
 
-    ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
+    ptyProcess.onExit(async ({ exitCode }: { exitCode: number }) => {
       log.info("pty exited", { id, exitCode });
       if (session.status === "running") {
         session.status = "exited";
         session.exitCode = exitCode;
+      }
+
+      if (session.notifyOnExit && client) {
+        try {
+          const message = this.buildExitNotification(session, exitCode);
+          await client.session.promptAsync({
+            path: { id: session.parentSessionId },
+            body: {
+              parts: [{ type: "text", text: message }],
+            },
+          });
+          log.info("sent exit notification", { id, exitCode, parentSessionId: session.parentSessionId });
+        } catch (err) {
+          log.error("failed to send exit notification", { id, error: String(err) });
+        }
       }
     });
 
@@ -164,6 +187,37 @@ class PTYManager {
       createdAt: session.createdAt,
       lineCount: session.buffer.length,
     };
+  }
+
+  private buildExitNotification(session: PTYSession, exitCode: number): string {
+    const lineCount = session.buffer.length;
+    let lastLine = "";
+    if (lineCount > 0) {
+      const bufferLines = session.buffer.read(lineCount - 1, 1);
+      const line = bufferLines[0];
+      if (line !== undefined) {
+        lastLine = line.length > 250 ? line.slice(0, 250) + "..." : line;
+      }
+    }
+
+    const lines = [
+      "<pty_exited>",
+      `ID: ${session.id}`,
+      `Title: ${session.title}`,
+      `Exit Code: ${exitCode}`,
+      `Output Lines: ${lineCount}`,
+      `Last Line: ${lastLine}`,
+      "</pty_exited>",
+      "",
+    ];
+
+    if (exitCode === 0) {
+      lines.push("Use pty_read to check the full output.");
+    } else {
+      lines.push("Process failed. Use pty_read with the pattern parameter to search for errors in the output.");
+    }
+
+    return lines.join("\n");
   }
 }
 

@@ -1,6 +1,6 @@
 import { createLogger, initLogger } from "./plugin/logger.ts";
 import type { PluginContext, PluginResult } from "./plugin/types.ts";
-import { manager } from "./plugin/pty/manager.ts";
+import { initManager, manager } from "./plugin/pty/manager.ts";
 import { initPermissions } from "./plugin/pty/permissions.ts";
 import { ptySpawn } from "./plugin/pty/tools/spawn.ts";
 import { ptyWrite } from "./plugin/pty/tools/write.ts";
@@ -15,6 +15,7 @@ export const PTYPlugin = async (
 ): Promise<PluginResult> => {
   initLogger(client);
   initPermissions(client, directory);
+  initManager(client);
   log.info("PTY plugin initialized");
 
   return {

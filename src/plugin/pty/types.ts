@@ -15,6 +15,7 @@ export interface PTYSession {
   pid: number;
   createdAt: Date;
   parentSessionId: string;
+  notifyOnExit: boolean;
   buffer: RingBuffer;
   process: IPty;
 }
@@ -39,6 +40,7 @@ export interface SpawnOptions {
   env?: Record<string, string>;
   title?: string;
   parentSessionId: string;
+  notifyOnExit?: boolean;
 }
 
 export interface ReadResult {

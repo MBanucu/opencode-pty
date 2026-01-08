@@ -12,6 +12,7 @@ export const ptySpawn = tool({
     env: tool.schema.record(tool.schema.string(), tool.schema.string()).optional().describe("Additional environment variables"),
     title: tool.schema.string().optional().describe("Human-readable title for the session"),
     description: tool.schema.string().describe("Clear, concise description of what this PTY session is for in 5-10 words"),
+    notifyOnExit: tool.schema.boolean().optional().describe("If true, sends a notification to the session when the process exits (default: false)"),
   },
   async execute(args, ctx) {
     await checkCommandPermission(args.command, args.args ?? []);
@@ -28,6 +29,7 @@ export const ptySpawn = tool({
       env: args.env,
       title: args.title,
       parentSessionId: sessionId,
+      notifyOnExit: args.notifyOnExit,
     });
 
     const output = [

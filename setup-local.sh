@@ -46,21 +46,25 @@ bun install
 # Check if opencode.json exists, create example if not
 if [ ! -f "$PROJECT_DIR/opencode.json" ]; then
     echo "Creating example opencode.json..."
-    cat > "$PROJECT_DIR/opencode.json" << EOF
+    cat > "$PROJECT_DIR/opencode.json" << 'EOF'
 {
-  "\$schema": "https://opencode.ai/config.json",
-  "model": {
-    "provider": "anthropic",
-    "model": "claude-3-5-sonnet-20241022"
-  },
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-3-5-sonnet-20241022",
   "plugin": [
     "opencode-pty"
   ],
-  "permissions": {
+  "permission": {
     "bash": {
-      "allow": ["*"],
-      "deny": []
-    }
+      "*": "allow",
+      "rm *": "ask",
+      "rm -rf *": "deny"
+    },
+    "read": {
+      "*": "allow",
+      ".env*": "deny"
+    },
+    "edit": "allow",
+    "glob": "allow"
   }
 }
 EOF

@@ -93,19 +93,21 @@ src/
 ├── plugin.ts           # Main plugin entry point
 ├── types.ts            # Plugin-level types
 ├── logger.ts           # Logging utilities
-└── pty/                # PTY-specific code
-    ├── types.ts        # PTY types and interfaces
-    ├── manager.ts      # PTY session management
-    ├── buffer.ts       # Output buffering (RingBuffer)
-    ├── permissions.ts  # Permission checking
-    ├── wildcard.ts     # Wildcard matching utilities
-    └── tools/          # Tool implementations
-        ├── spawn.ts    # pty_spawn tool
-        ├── write.ts    # pty_write tool
-        ├── read.ts     # pty_read tool
-        ├── list.ts     # pty_list tool
-        ├── kill.ts     # pty_kill tool
-        └── *.txt       # Tool descriptions
+└── plugin/             # Plugin-specific code
+    ├── pty/            # PTY-specific code
+    │   ├── types.ts    # PTY types and interfaces
+    │   ├── manager.ts  # PTY session management
+    │   ├── buffer.ts   # Output buffering (RingBuffer)
+    │   ├── permissions.ts # Permission checking
+    │   ├── wildcard.ts # Wildcard matching utilities
+    │   └── tools/      # Tool implementations
+    │       ├── spawn.ts # pty_spawn tool
+    │       ├── write.ts # pty_write tool
+    │       ├── read.ts  # pty_read tool
+    │       ├── list.ts  # pty_list tool
+    │       ├── kill.ts  # pty_kill tool
+    │       └── *.txt    # Tool descriptions
+    └── types.ts         # Plugin types
 ```
 
 ### Constants and Magic Numbers
@@ -114,7 +116,7 @@ src/
 - Group related constants together
 
 ### Buffer Management
-- Use RingBuffer for output storage (max 50,000 lines by default)
+- Use RingBuffer for output storage (max 50,000 lines by default via `PTY_MAX_BUFFER_LINES`)
 - Handle line truncation at 2000 characters
 - Implement pagination with offset/limit for large outputs
 
@@ -163,19 +165,26 @@ Follow conventional commit format:
 ### Git Workflow
 - Use feature branches for development
 - Run typecheck and tests before committing
-- Use GitHub Actions for automated releases
-- Follow semantic versioning for releases
+- Use GitHub Actions for automated releases on main branch
+- Follow semantic versioning with `v` prefixed tags
 
 ### Dependencies
-- **@opencode-ai/plugin**: Core plugin framework
-- **@opencode-ai/sdk**: SDK for client interactions
-- **bun-pty**: PTY implementation
-- **@types/bun**: TypeScript definitions for Bun
+- **@opencode-ai/plugin**: ^1.1.3 (Core plugin framework)
+- **@opencode-ai/sdk**: ^1.1.3 (SDK for client interactions)
+- **bun-pty**: ^0.4.2 (PTY implementation)
+- **@types/bun**: 1.3.1 (TypeScript definitions for Bun)
+- **typescript**: ^5 (peer dependency)
 
 ### Development Setup
 - Install Bun: `curl -fsSL https://bun.sh/install | bash`
 - Install dependencies: `bun install`
 - Run development commands: `bun run <script>`
+
+### Nix Development (Alternative)
+- Install Nix: `curl -L https://nixos.org/nix/install | sh`
+- Enter dev shell: `nix develop`
+- Build with bun2nix: `nix run github:nix-community/bun2nix -- -o nix/bun.nix`
+- Update flake: `nix flake update`
 
 ### Common Patterns
 - Use `manager` singleton for PTY operations

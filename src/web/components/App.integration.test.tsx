@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { App } from '../components/App'
 
@@ -19,7 +19,7 @@ global.fetch = (() => Promise.resolve({
 })) as any
 
 // Integration test to ensure the full component renders without crashing
-test.skip('renders complete UI without errors', () => {
+it.skip('renders complete UI without errors', () => {
   expect(() => {
     render(<App />)
   }).not.toThrow()
@@ -31,7 +31,7 @@ test.skip('renders complete UI without errors', () => {
   expect(screen.getByText('Select a session from the sidebar to view its output')).toBeTruthy()
 })
 
-test.skip('has proper accessibility attributes', () => {
+it.skip('has proper accessibility attributes', () => {
   render(<App />)
 
   // Check that heading has proper role
@@ -47,7 +47,7 @@ test.skip('has proper accessibility attributes', () => {
   expect(screen.getByText('No active sessions')).toBeTruthy()
 })
 
-test.skip('maintains component structure integrity', () => {
+it.skip('maintains component structure integrity', () => {
   render(<App />)
 
   // Verify the main layout structure

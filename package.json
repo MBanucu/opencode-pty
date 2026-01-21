@@ -33,11 +33,10 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun run test:unit && bun run test:e2e",
-    "test:run": "bun run test:unit",
+    "test": "bun run test:unit && bun run test:ui && bun run test:e2e",
     "test:unit": "bun test test/ src/plugin/",
+    "test:ui": "NODE_ENV=test LOG_LEVEL=error bun run test-web-server.ts & sleep 2 && vitest run src/web/ && kill %1",
     "test:e2e": "playwright test",
-    "test:all": "bun run test:unit && bun run test:e2e",
     "dev": "vite --host",
     "dev:backend": "bun run test-web-server.ts",
     "build": "tsc && vite build",

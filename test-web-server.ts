@@ -16,11 +16,11 @@ initManager(fakeClient);
 
 // Clear any existing sessions from previous runs
 manager.clearAllSessions();
-console.log("Cleared any existing sessions");
+if (process.env.NODE_ENV !== 'test') console.log("Cleared any existing sessions");
 
 const url = startWebServer({ port: 8867 });
-console.log(`Web server started at ${url}`);
-console.log(`Server PID: ${process.pid}`);
+if (process.env.NODE_ENV !== 'test') console.log(`Web server started at ${url}`);
+if (process.env.NODE_ENV !== 'test') console.log(`Server PID: ${process.pid}`);
 
 // Create test sessions for manual testing and e2e tests
 if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {
@@ -38,7 +38,7 @@ if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {
   console.log(`Visit ${url} to see the session`);
   console.log("Server is running in background...");
   console.log("💡 Click on the session to see live output streaming!");
-} else {
+} else if (process.env.NODE_ENV !== 'test') {
   console.log(`Server running in test mode at ${url} (no sessions created)`);
 }
 

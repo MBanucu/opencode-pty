@@ -9,8 +9,6 @@ const log = createLogger("manager");
 let client: OpencodeClient | null = null;
 type OutputCallback = (sessionId: string, data: string[]) => void;
 const outputCallbacks: OutputCallback[] = [];
-type SessionUpdateCallback = (sessionId: string) => void;
-const sessionUpdateCallbacks: SessionUpdateCallback[] = [];
 
 export function initManager(opcClient: OpencodeClient): void {
   client = opcClient;
@@ -20,14 +18,6 @@ export function onOutput(callback: OutputCallback): void {
   outputCallbacks.push(callback);
 }
 
-export function onSessionUpdate(callback: SessionUpdateCallback): void {
-  sessionUpdateCallbacks.push(callback);
-}
-
-export function clearAllSessions(): void {
-  manager.clearAllSessions();
-}
-
 function notifyOutput(sessionId: string, data: string): void {
   const lines = data.split('\n');
   for (const callback of outputCallbacks) {
@@ -35,16 +25,6 @@ function notifyOutput(sessionId: string, data: string): void {
       callback(sessionId, lines);
     } catch (err) {
       log.error("error in output callback", { error: String(err) });
-    }
-  }
-}
-
-function notifySessionUpdate(sessionId: string): void {
-  for (const callback of sessionUpdateCallbacks) {
-    try {
-      callback(sessionId);
-    } catch (err) {
-      log.error("error in session update callback", { error: String(err) });
     }
   }
 }
@@ -123,7 +103,6 @@ class PTYManager {
       if (session.status === "running") {
         session.status = "exited";
         session.exitCode = exitCode;
-        notifySessionUpdate(id);
       }
 
       if (session.notifyOnExit && client) {

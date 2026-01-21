@@ -1,4 +1,4 @@
-import { initManager, manager, clearAllSessions } from "./src/plugin/pty/manager.ts";
+import { initManager, manager } from "./src/plugin/pty/manager.ts";
 import { initLogger } from "./src/plugin/logger.ts";
 import { startWebServer } from "./src/web/server.ts";
 
@@ -15,7 +15,7 @@ initLogger(fakeClient);
 initManager(fakeClient);
 
 // Clear any existing sessions from previous runs
-clearAllSessions();
+manager.clearAllSessions();
 console.log("Cleared any existing sessions");
 
 const url = startWebServer({ port: 8867 });

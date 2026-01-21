@@ -69,7 +69,8 @@ if [ ! -f "$PROJECT_DIR/opencode.json" ]; then
 }
 EOF
     echo "Created $PROJECT_DIR/opencode.json"
-    echo "Note: Update the model configuration with your actual API keys"
+    echo "Note: This uses Grok Code Fast 1 from OpenCode Zen as an example."
+    echo "      You'll need to connect to OpenCode Zen and get your API key."
 else
     echo "opencode.json already exists. You may need to add the plugin manually:"
     echo "  \"plugin\": [\"opencode-pty\"]"

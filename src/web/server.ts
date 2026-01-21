@@ -116,7 +116,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
   if (server) {
     log.warn("web server already running");
-    return `http://${finalConfig.hostname}:${finalConfig.port}`;
+    return `http://${server.hostname}:${server.port}`;
   }
 
   onOutput((sessionId, data) => {
@@ -131,6 +131,13 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
     async fetch(req, server) {
       const url = new URL(req.url);
+
+      // Handle WebSocket upgrade
+      if (req.headers.get("upgrade") === "websocket") {
+        const success = server.upgrade(req, { data: { socket: null as any, subscribedSessions: new Set() } });
+        if (success) return; // Upgrade succeeded, no response needed
+        return new Response("WebSocket upgrade failed", { status: 400 });
+      }
 
       if (url.pathname === "/") {
         return new Response(await Bun.file("./src/web/index.html").bytes(), {

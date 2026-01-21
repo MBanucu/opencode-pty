@@ -7,6 +7,7 @@ import { ptyWrite } from "./plugin/pty/tools/write.ts";
 import { ptyRead } from "./plugin/pty/tools/read.ts";
 import { ptyList } from "./plugin/pty/tools/list.ts";
 import { ptyKill } from "./plugin/pty/tools/kill.ts";
+import { startWebServer } from "./web/server.ts";
 
 const log = createLogger("plugin");
 
@@ -16,7 +17,9 @@ export const PTYPlugin = async (
   initLogger(client);
   initPermissions(client, directory);
   initManager(client);
-  log.info("PTY plugin initialized");
+
+  const webServerUrl = startWebServer();
+  log.info("PTY plugin initialized", { webServerUrl });
 
   return {
     tool: {

@@ -7,9 +7,25 @@ import { createLogger } from "../logger.ts";
 const log = createLogger("manager");
 
 let client: OpencodeClient | null = null;
+type OutputCallback = (sessionId: string, data: string) => void;
+const outputCallbacks: OutputCallback[] = [];
 
 export function initManager(opcClient: OpencodeClient): void {
   client = opcClient;
+}
+
+export function onOutput(callback: OutputCallback): void {
+  outputCallbacks.push(callback);
+}
+
+function notifyOutput(sessionId: string, data: string): void {
+  for (const callback of outputCallbacks) {
+    try {
+      callback(sessionId, data);
+    } catch (err) {
+      log.error("error in output callback", { error: String(err) });
+    }
+  }
 }
 
 function generateId(): string {
@@ -61,6 +77,7 @@ class PTYManager {
 
     ptyProcess.onData((data: string) => {
       buffer.append(data);
+      notifyOutput(id, data);
     });
 
     ptyProcess.onExit(async ({ exitCode }: { exitCode: number }) => {

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PTY Sessions Monitor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #root {
+      height: 100%;
+    }
+    .container {
+      display: flex;
+      height: 100%;
+      overflow: hidden;
+    }
+    .sidebar {
+      width: 300px;
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #30363d;
+      background: #161b22;
+    }
+    .sidebar-header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #58a6ff;
+    }
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .session-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .session-item:hover {
+      background: #30363d;
+    }
+    .session-item.active {
+      border-color: #58a6ff;
+      background: #1f6feb1a;
+    }
+    .session-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #c9d1d9;
+    }
+    .session-info {
+      font-size: 12px;
+      color: #8b949e;
+      display: flex;
+      justify-content: space-between;
+    }
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-running {
+      background: #238636;
+      color: #fff;
+    }
+    .status-exited {
+      background: #da3633;
+      color: #fff;
+    }
+    .status-killed {
+      background: #8957e5;
+      color: #fff;
+    }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .output-header {
+      padding: 16px;
+      border-bottom: 1px solid #30363d;
+      background: #161b22;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .kill-btn {
+      padding: 8px 16px;
+      background: #da3633;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .kill-btn:hover {
+      background: #f85149;
+    }
+    .output-container {
+      flex: 1;
+      overflow: auto;
+      background: #0d1117;
+      padding: 16px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .output-line {
+      margin-bottom: 2px;
+    }
+    .input-container {
+      padding: 16px;
+      border-top: 1px solid #30363d;
+      background: #161b22;
+      display: flex;
+      gap: 8px;
+    }
+    .input-field {
+      flex: 1;
+      padding: 10px 14px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #c9d1d9;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #58a6ff;
+    }
+    .send-btn {
+      padding: 10px 20px;
+      background: #238636;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .send-btn:hover {
+      background: #2ea043;
+    }
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #8b949e;
+      font-size: 16px;
+    }
+    .connection-status {
+      padding: 8px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      font-size: 12px;
+      color: #8b949e;
+    }
+    .connection-status.connected {
+      color: #238636;
+    }
+    .connection-status.disconnected {
+      color: #da3633;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    function App() {
+      const [sessions, setSessions] = useState([]);
+      const [activeSession, setActiveSession] = useState(null);
+      const [output, setOutput] = useState([]);
+      const [connected, setConnected] = useState(false);
+      const [inputValue, setInputValue] = useState('');
+      const wsRef = useRef(null);
+      const outputRef = useRef(null);
+
+      useEffect(() => {
+        wsRef.current = new WebSocket(`ws://${location.host}`);
+
+        wsRef.current.onopen = () => {
+          setConnected(true);
+        };
+
+        wsRef.current.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+
+          if (message.type === 'session_list') {
+            setSessions(message.sessions || []);
+          } else if (message.type === 'data' && message.sessionId === activeSession?.id) {
+            setOutput(prev => [...prev, message.data]);
+          } else if (message.type === 'error') {
+            console.error('WebSocket error:', message.error);
+          }
+        };
+
+        wsRef.current.onclose = () => {
+          setConnected(false);
+        };
+
+        wsRef.current.onerror = () => {
+          setConnected(false);
+        };
+
+        return () => {
+          if (wsRef.current) {
+            wsRef.current.close();
+          }
+        };
+      }, [activeSession?.id]);
+
+      useEffect(() => {
+        if (activeSession && wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'subscribe', sessionId: activeSession.id }));
+          setOutput([]);
+        }
+        return () => {
+          if (activeSession && wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ type: 'unsubscribe', sessionId: activeSession.id }));
+          }
+        };
+      }, [activeSession?.id]);
+
+      useEffect(() => {
+        if (outputRef.current) {
+          outputRef.current.scrollTop = outputRef.current.scrollHeight;
+        }
+      }, [output]);
+
+      const handleSessionClick = useCallback((session) => {
+        setActiveSession(session);
+        setInputValue('');
+      }, []);
+
+      const handleSendInput = useCallback(async () => {
+        if (!inputValue.trim() || !activeSession) return;
+
+        try {
+          const response = await fetch(`/api/sessions/${activeSession.id}/input`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: inputValue + '\n' }),
+          });
+
+          if (response.ok) {
+            setInputValue('');
+          }
+        } catch (error) {
+          console.error('Failed to send input:', error);
+        }
+      }, [inputValue, activeSession]);
+
+      const handleKillSession = useCallback(async () => {
+        if (!activeSession) return;
+
+        if (!confirm(`Are you sure you want to kill session "${activeSession.title}"?`)) return;
+
+        try {
+          const response = await fetch(`/api/sessions/${activeSession.id}/kill`, {
+            method: 'POST',
+          });
+
+          if (response.ok) {
+            setActiveSession(null);
+            setOutput([]);
+          }
+        } catch (error) {
+          console.error('Failed to kill session:', error);
+        }
+      }, [activeSession]);
+
+      const handleKeyDown = useCallback((e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSendInput();
+        }
+      }, [handleSendInput]);
+
+      return (
+        <div className="container">
+          <div className="sidebar">
+            <div className="sidebar-header">
+              <h1>PTY Sessions</h1>
+            </div>
+            <div className={`connection-status ${connected ? 'connected' : 'disconnected'}`}>
+              {connected ? '● Connected' : '○ Disconnected'}
+            </div>
+            <div className="session-list">
+              {sessions.length === 0 ? (
+                <div style={{ padding: '16px', color: '#8b949e', textAlign: 'center' }}>
+                  No active sessions
+                </div>
+              ) : (
+                sessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
+                    onClick={() => handleSessionClick(session)}
+                  >
+                    <div className="session-title">{session.title}</div>
+                    <div className="session-info">
+                      <span>{session.command}</span>
+                      <span
+                        className={`status-badge status-${session.status}`}
+                      >
+                        {session.status}
+                      </span>
+                    </div>
+                    <div className="session-info" style={{ marginTop: '4px' }}>
+                      <span>PID: {session.pid}</span>
+                      <span>{session.lineCount} lines</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="main">
+            {activeSession ? (
+              <>
+                <div className="output-header">
+                  <div className="output-title">{activeSession.title}</div>
+                  <button className="kill-btn" onClick={handleKillSession}>
+                    Kill Session
+                  </button>
+                </div>
+                <div className="output-container" ref={outputRef}>
+                  {output.length === 0 ? (
+                    <div className="empty-state">Waiting for output...</div>
+                  ) : (
+                    output.map((line, index) => (
+                      <div key={index} className="output-line">
+                        {line}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="input-container">
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder={activeSession.status === 'running' ? 'Type input...' : 'Session not running'}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={activeSession.status !== 'running'}
+                  />
+                  <button
+                    className="send-btn"
+                    onClick={handleSendInput}
+                    disabled={activeSession.status !== 'running' || !inputValue.trim()}
+                  >
+                    Send
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="empty-state">
+                Select a session from the sidebar to view its output
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

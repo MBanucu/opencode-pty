@@ -2,25 +2,81 @@ import { initManager, manager } from "./src/plugin/pty/manager.ts";
 import { initLogger } from "./src/plugin/logger.ts";
 import { startWebServer } from "./src/web/server.ts";
 
+const logLevels = { debug: 0, info: 1, warn: 2, error: 3 };
+const currentLevel = logLevels[process.env.LOG_LEVEL as keyof typeof logLevels] ?? logLevels.info;
+
 const fakeClient = {
   app: {
     log: async (opts: any) => {
       const { level = 'info', message, extra } = opts.body || opts;
-      const extraStr = extra ? ` ${JSON.stringify(extra)}` : '';
-      console.log(`[${level}] ${message}${extraStr}`);
+      const levelNum = logLevels[process.env.LOG_LEVEL as keyof typeof logLevels] ?? logLevels.info;
+      if (levelNum >= currentLevel) {
+        const extraStr = extra ? ` ${JSON.stringify(extra)}` : '';
+        console.log(`[${level}] ${message}${extraStr}`);
+      }
     },
   },
 } as any;
 initLogger(fakeClient);
 initManager(fakeClient);
 
+// Find an available port
+function findAvailablePort(startPort: number = 8867): number {
+  for (let port = startPort; port < startPort + 100; port++) {
+    try {
+      // Try to kill any process on this port
+      Bun.spawnSync(["sh", "-c", `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`]);
+      // Try to create a server to check if port is free
+      const testServer = Bun.serve({
+        port,
+        fetch() { return new Response('test'); }
+      });
+      testServer.stop();
+      return port;
+    } catch (error) {
+      // Port in use, try next
+      continue;
+    }
+  }
+  throw new Error('No available port found');
+}
+
+const port = findAvailablePort();
+console.log(`Using port ${port} for tests`);
+
 // Clear any existing sessions from previous runs
 manager.clearAllSessions();
 if (process.env.NODE_ENV !== 'test') console.log("Cleared any existing sessions");
 
-const url = startWebServer({ port: 8867 });
+const url = startWebServer({ port });
 if (process.env.NODE_ENV !== 'test') console.log(`Web server started at ${url}`);
 if (process.env.NODE_ENV !== 'test') console.log(`Server PID: ${process.pid}`);
+
+// Write port to file for tests to read
+if (process.env.NODE_ENV === 'test') {
+  await Bun.write('/tmp/test-server-port.txt', port.toString());
+}
+
+// Health check for test mode
+if (process.env.NODE_ENV === 'test') {
+  let retries = 20; // 10 seconds
+  while (retries > 0) {
+    try {
+      const response = await fetch(`http://localhost:${port}/api/sessions`);
+      if (response.ok) {
+        break;
+      }
+    } catch (error) {
+      // Server not ready yet
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+    retries--;
+  }
+  if (retries === 0) {
+    console.error('Server failed to start properly after 10 seconds');
+    process.exit(1);
+  }
+}
 
 // Create test sessions for manual testing and e2e tests
 if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {

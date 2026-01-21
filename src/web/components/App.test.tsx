@@ -6,17 +6,6 @@ import { App } from '../components/App'
 describe('App Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // Mock location to point to test server
-    Object.defineProperty(window, 'location', {
-      value: {
-        host: 'localhost:8867',
-        hostname: 'localhost',
-        protocol: 'http:',
-        port: '8867',
-      },
-      writable: true,
-    })
   })
 
   it('renders the PTY Sessions title', () => {

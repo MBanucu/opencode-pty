@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { createLogger } from '../../src/plugin/logger.ts';
+
+const log = createLogger('e2e-live-streaming');
 
 test.use({
   browserName: 'chromium',
@@ -17,7 +20,7 @@ test.describe('PTY Live Streaming', () => {
     const initialResponse = await page.request.get('/api/sessions');
     const initialSessions = await initialResponse.json();
     if (initialSessions.length === 0) {
-      console.log('No sessions found, creating a test session for streaming...');
+      log.info('No sessions found, creating a test session for streaming...');
       await page.request.post('/api/sessions', {
         data: {
           command: 'bash',
@@ -35,7 +38,7 @@ test.describe('PTY Live Streaming', () => {
 
     // Find the running session (there should be at least one)
     const sessionCount = await page.locator('.session-item').count();
-    console.log(`📊 Found ${sessionCount} sessions`);
+    log.info(`📊 Found ${sessionCount} sessions`);
 
     // Find a running session
     const allSessions = page.locator('.session-item');
@@ -53,7 +56,7 @@ test.describe('PTY Live Streaming', () => {
       throw new Error('No running session found');
     }
 
-    console.log('✅ Found running session');
+    log.info('✅ Found running session');
 
     // Click on the running session
     await runningSession.click();
@@ -71,11 +74,11 @@ test.describe('PTY Live Streaming', () => {
     // Get initial output count
     const initialOutputLines = page.locator('.output-line');
     const initialCount = await initialOutputLines.count();
-    console.log(`Initial output lines: ${initialCount}`);
+    log.info(`Initial output lines: ${initialCount}`);
 
     // Check debug info
     const debugText = await page.locator('text=/Debug:/').textContent();
-    console.log(`Debug info: ${debugText}`);
+    log.info(`Debug info: ${debugText}`);
 
     // Verify we have some initial output
     expect(initialCount).toBeGreaterThan(0);
@@ -84,12 +87,12 @@ test.describe('PTY Live Streaming', () => {
     const firstLine = await initialOutputLines.first().textContent();
     expect(firstLine).toContain('Welcome to live streaming test');
 
-    console.log('✅ Buffered output test passed - running session shows output immediately');
+    log.info('✅ Buffered output test passed - running session shows output immediately');
   });
 
   test('should receive live WebSocket updates from running PTY session', async ({ page }) => {
     // Listen to page console for debugging
-    page.on('console', msg => console.log('PAGE CONSOLE:', msg.text()));
+    page.on('console', msg => log.info('PAGE CONSOLE: ' + msg.text()));
 
     // Navigate to the web UI
     await page.goto('http://localhost:8867');
@@ -98,7 +101,7 @@ test.describe('PTY Live Streaming', () => {
     const initialResponse = await page.request.get('/api/sessions');
     const initialSessions = await initialResponse.json();
     if (initialSessions.length === 0) {
-      console.log('No sessions found, creating a test session for streaming...');
+      log.info('No sessions found, creating a test session for streaming...');
       await page.request.post('/api/sessions', {
         data: {
           command: 'bash',
@@ -142,17 +145,17 @@ test.describe('PTY Live Streaming', () => {
     const initialCount = await outputLines.count();
     expect(initialCount).toBeGreaterThan(0);
 
-    console.log(`Initial output lines: ${initialCount}`);
+    log.info(`Initial output lines: ${initialCount}`);
 
     // Check the debug info
     const debugInfo = await page.locator('.output-container').textContent();
     const debugText = (debugInfo || '') as string;
-    console.log(`Debug info: ${debugText}`);
+    log.info(`Debug info: ${debugText}`);
 
     // Extract WS message count
     const wsMatch = debugText.match(/WS messages: (\d+)/);
     const initialWsMessages = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0;
-    console.log(`Initial WS messages: ${initialWsMessages}`);
+    log.info(`Initial WS messages: ${initialWsMessages}`);
 
     // Wait a few seconds for potential WebSocket updates
     await page.waitForTimeout(5000);
@@ -163,19 +166,19 @@ test.describe('PTY Live Streaming', () => {
     const finalWsMatch = finalDebugText.match(/WS messages: (\d+)/);
     const finalWsMessages = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0;
 
-    console.log(`Final WS messages: ${finalWsMessages}`);
+    log.info(`Final WS messages: ${finalWsMessages}`);
 
     // Check final output count
     const finalCount = await outputLines.count();
-    console.log(`Final output lines: ${finalCount}`);
+    log.info(`Final output lines: ${finalCount}`);
 
     // The test requires actual WebSocket messages to validate streaming is working
     if (finalWsMessages > initialWsMessages) {
-      console.log(`✅ Received ${finalWsMessages - initialWsMessages} WebSocket messages - streaming works!`);
+      log.info(`✅ Received ${finalWsMessages - initialWsMessages} WebSocket messages - streaming works!`);
     } else {
-      console.log(`❌ No WebSocket messages received - streaming is not working`);
-      console.log(`WS messages: ${initialWsMessages} -> ${finalWsMessages}`);
-      console.log(`Output lines: ${initialCount} -> ${finalCount}`);
+      log.info(`❌ No WebSocket messages received - streaming is not working`);
+      log.info(`WS messages: ${initialWsMessages} -> ${finalWsMessages}`);
+      log.info(`Output lines: ${initialCount} -> ${finalCount}`);
       throw new Error('Live streaming test failed: No WebSocket messages received');
     }
 
@@ -185,6 +188,6 @@ test.describe('PTY Live Streaming', () => {
       expect(lastTimestampLine).toMatch(/Mi \d+\. Jan \d+:\d+:\d+ CET \d+: Live update\.\.\./);
     }
 
-    console.log(`✅ Live streaming test passed - received ${finalCount - initialCount} live updates`);
+    log.info(`✅ Live streaming test passed - received ${finalCount - initialCount} live updates`);
   });
 });

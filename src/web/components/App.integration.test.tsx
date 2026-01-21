@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { App } from '../components/App'
 
 // Mock WebSocket to prevent real connections
@@ -19,16 +19,16 @@ global.fetch = (() => Promise.resolve({
 })) as any
 
 // Integration test to ensure the full component renders without crashing
-it.skip('renders complete UI without errors', () => {
-  expect(() => {
+it('renders complete UI without errors', async () => {
+  await act(async () => {
     render(<App />)
-  }).not.toThrow()
+  })
 
   // Verify key UI elements are present
-  expect(screen.getByText('PTY Sessions')).toBeTruthy()
-  expect(screen.getByText('○ Disconnected')).toBeTruthy()
-  expect(screen.getByText('No active sessions')).toBeTruthy()
-  expect(screen.getByText('Select a session from the sidebar to view its output')).toBeTruthy()
+  expect(screen.getByText('PTY Sessions')).toBeInTheDocument()
+  expect(screen.getByText('○ Disconnected')).toBeInTheDocument()
+  expect(screen.getByText('No active sessions')).toBeInTheDocument()
+  expect(screen.getByText('Select a session from the sidebar to view its output')).toBeInTheDocument()
 })
 
 it.skip('has proper accessibility attributes', () => {

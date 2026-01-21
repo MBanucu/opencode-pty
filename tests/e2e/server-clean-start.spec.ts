@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { createLogger } from '../../src/plugin/logger.ts';
+
+const log = createLogger('e2e-clean-start');
 
 test.describe('Server Clean Start', () => {
   test('should start with empty session list via API', async ({ request }) => {
@@ -15,7 +18,7 @@ test.describe('Server Clean Start', () => {
     expect(Array.isArray(sessions)).toBe(true);
     expect(sessions.length).toBe(0);
 
-    console.log('✅ Server started cleanly with no sessions via API');
+    log.info('Server started cleanly with no sessions via API');
   });
 
   test('should start with empty session list via browser', async ({ page }) => {
@@ -36,6 +39,6 @@ test.describe('Server Clean Start', () => {
     const emptyState = page.locator('.empty-state').first();
     await expect(emptyState).toBeVisible();
 
-    console.log('✅ Server started cleanly with no sessions in browser');
+    log.info('Server started cleanly with no sessions in browser');
   });
 });

@@ -2,10 +2,23 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../components/App'
+import { createLogger } from '../../plugin/logger.ts'
+
+const log = createLogger('ui-test')
+
+// Get test server port
+const getTestPort = async () => {
+  try {
+    return await Bun.file('/tmp/test-server-port.txt').text();
+  } catch {
+    return '8867'; // fallback
+  }
+}
 
 // Helper function to create a real session via API
 const createRealSession = async (command: string, title?: string) => {
-  const baseUrl = 'http://localhost:8867'
+  const port = await getTestPort();
+  const baseUrl = `http://localhost:${port}`
   const response = await fetch(`${baseUrl}/api/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -28,17 +41,6 @@ describe('App Component - UI Rendering Verification', () => {
     } catch (error) {
       // Ignore errors if server not running
     }
-
-    // Mock location for the test environment
-    Object.defineProperty(window, 'location', {
-      value: {
-        host: 'localhost:8867',
-        hostname: 'localhost',
-        protocol: 'http:',
-        port: '8867',
-      },
-      writable: true,
-    })
   })
 
   it('renders PTY output correctly when received via WebSocket', async () => {
@@ -57,7 +59,7 @@ describe('App Component - UI Rendering Verification', () => {
       expect(screen.getByText('Welcome to the terminal')).toBeInTheDocument()
     }, { timeout: 10000 })
 
-    console.log('✅ PTY output successfully rendered in UI')
+    log.info('PTY output successfully rendered in UI')
   })
 
   it('displays multiple lines of PTY output correctly', async () => {
@@ -74,7 +76,7 @@ describe('App Component - UI Rendering Verification', () => {
       expect(screen.getAllByText('echo "Line 1: Command executed"; echo "Line 2: Processing data"; echo "Line 3: Complete"')).toHaveLength(3) // Sidebar title + info + header
     })
 
-    console.log('✅ Multi-line PTY session created and displayed correctly')
+    log.info('Multi-line PTY session created and displayed correctly')
   })
 
   it('maintains output when switching between sessions', async () => {
@@ -106,7 +108,7 @@ describe('App Component - UI Rendering Verification', () => {
       expect(screen.getByText('Session B: Initial output')).toBeInTheDocument()
     })
 
-    console.log('✅ Session switching maintains correct output display')
+    log.info('Session switching maintains correct output display')
   })
 
   it('shows empty state when no output and no session selected', () => {
@@ -116,7 +118,7 @@ describe('App Component - UI Rendering Verification', () => {
     expect(screen.getByText('Select a session from the sidebar to view its output')).toBeInTheDocument()
     expect(screen.getByText('No active sessions')).toBeInTheDocument()
 
-    console.log('✅ Empty state displays correctly')
+    log.info('Empty state displays correctly')
   })
 
   it('displays connection status correctly', async () => {
@@ -130,6 +132,6 @@ describe('App Component - UI Rendering Verification', () => {
       expect(screen.getByText('● Connected')).toBeInTheDocument()
     }, { timeout: 5000 })
 
-    console.log('✅ Connection status updates correctly')
+    log.info('Connection status updates correctly')
   })
 })

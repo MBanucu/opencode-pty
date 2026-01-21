@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/grok-code",
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "rm *": "ask",
+      "rm -rf *": "deny"
+    },
+    "read": {
+      "*": "allow",
+      ".env*": "deny"
+    },
+    "edit": "allow",
+    "glob": "allow"
+  }
+}

@@ -26,19 +26,25 @@ function unsubscribeFromSession(wsClient: WSClient, sessionId: string): void {
   wsClient.subscribedSessions.delete(sessionId);
 }
 
-function broadcastSessionData(sessionId: string, data: string): void {
+function broadcastSessionData(sessionId: string, data: string[]): void {
+  log.info("broadcastSessionData called", { sessionId, dataLength: data.length });
   const message: WSMessage = { type: "data", sessionId, data };
   const messageStr = JSON.stringify(message);
+  log.info("Broadcasting session data", { clientCount: wsClients.size });
 
+  let sentCount = 0;
   for (const [ws, client] of wsClients) {
     if (client.subscribedSessions.has(sessionId)) {
+      log.debug("Sending to subscribed client");
       try {
         ws.send(messageStr);
+        sentCount++;
       } catch (err) {
-        log.error("failed to send to ws client", { error: String(err) });
+        log.error("Failed to send to client", { error: String(err) });
       }
     }
   }
+  log.info("Broadcast complete", { sentCount });
 }
 
 function sendSessionList(ws: ServerWebSocket<WSClient>): void {
@@ -120,6 +126,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
   }
 
   onOutput((sessionId, data) => {
+    log.info("PTY output received", { sessionId, dataLength: data.length });
     broadcastSessionData(sessionId, data);
   });
 

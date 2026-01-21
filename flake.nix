@@ -26,9 +26,17 @@
             pkgs.bun
             bunDeps
             pkgs.bashInteractive
+            pkgs.playwright
+            pkgs.playwright-test
+            pkgs.playwright-driver.browsers
           ];
           shellHook = ''
             echo "Bun devShell loaded with bun2nix deps. Re-run bun2nix after dependency changes!"
+
+            export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+            export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS="true"
+
+            echo "Using Nix-provided Playwright browsers at $PLAYWRIGHT_BROWSERS_PATH"
           '';
         };
       }

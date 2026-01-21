@@ -1,38 +1,48 @@
-import { initManager, manager } from "./src/plugin/pty/manager.ts";
+import { initManager, manager, clearAllSessions } from "./src/plugin/pty/manager.ts";
 import { initLogger } from "./src/plugin/logger.ts";
 import { startWebServer } from "./src/web/server.ts";
 
 const fakeClient = {
   app: {
     log: async (opts: any) => {
-      console.log(`[${opts.level}] ${opts.message}`, opts.context || '');
+      const { level = 'info', message, extra } = opts.body || opts;
+      const extraStr = extra ? ` ${JSON.stringify(extra)}` : '';
+      console.log(`[${level}] ${message}${extraStr}`);
     },
   },
 } as any;
 initLogger(fakeClient);
 initManager(fakeClient);
 
-const url = startWebServer();
+// Clear any existing sessions from previous runs
+clearAllSessions();
+console.log("Cleared any existing sessions");
+
+const url = startWebServer({ port: 8867 });
 console.log(`Web server started at ${url}`);
+console.log(`Server PID: ${process.pid}`);
 
-console.log("\nStarting a test session...");
-const session = manager.spawn({
-  command: "echo",
-  args: ["Hello, World!", "This is a test session.", "Check the web UI at http://localhost:8765"],
-  description: "Test session for web UI",
-  parentSessionId: "test-session",
-});
+// Create test sessions for manual testing and e2e tests
+if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {
+  console.log("\nStarting a running test session for live streaming...");
+  const session = manager.spawn({
+    command: "bash",
+    args: ["-c", "echo 'Welcome to live streaming test'; echo 'Type commands and see real-time output'; for i in {1..100}; do echo \"$(date): Live update $i...\"; sleep 1; done"],
+    description: "Live streaming test session",
+    parentSessionId: "live-test",
+  });
 
-console.log(`Session ID: ${session.id}`);
-console.log(`Session title: ${session.title}`);
-console.log(`Visit ${url} to see the session`);
+  console.log(`Session ID: ${session.id}`);
+  console.log(`Session title: ${session.title}`);
 
-await Bun.sleep(1000);
-
-console.log("\nReading output...");
-const output = manager.read(session.id);
-if (output) {
-  console.log("Output lines:", output.lines);
+  console.log(`Visit ${url} to see the session`);
+  console.log("Server is running in background...");
+  console.log("💡 Click on the session to see live output streaming!");
+} else {
+  console.log(`Server running in test mode at ${url} (no sessions created)`);
 }
 
-console.log("\nPress Ctrl+C to stop the server and exit");
+// Keep the server running indefinitely
+setInterval(() => {
+  // Keep-alive check - server will continue running
+}, 1000);

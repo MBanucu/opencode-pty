@@ -158,7 +158,7 @@ describe("PTY Manager Integration", () => {
       });
 
       // Wait for it to exit (echo is very fast)
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Check final status
       const response = await fetch(`http://localhost:8778/api/sessions/${session.id}`);

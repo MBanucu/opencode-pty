@@ -17,12 +17,12 @@ describe("Web Types", () => {
       const message: WSMessage = {
         type: "data",
         sessionId: "pty_12345",
-        data: "test output\n",
+        data: ["test output", ""],
       };
 
       expect(message.type).toBe("data");
       expect(message.sessionId).toBe("pty_12345");
-      expect(message.data).toBe("test output\n");
+      expect(message.data).toEqual(["test output", ""]);
     });
 
     it("should validate session_list message structure", () => {

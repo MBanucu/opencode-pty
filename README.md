@@ -60,6 +60,45 @@ opencode
 | `pty_list` | List all PTY sessions with status, PID, line count |
 | `pty_kill` | Terminate a PTY, optionally cleanup the buffer |
 
+## Web UI
+
+This plugin includes a modern React-based web interface for monitoring and interacting with PTY sessions.
+
+### Starting the Web UI
+
+Run the test server to start the web interface:
+
+```bash
+bun run test-web-server.ts
+```
+
+This will:
+- Start the web server on `http://localhost:8766`
+- Create a test PTY session to demonstrate functionality
+- Open the React web interface in your browser
+
+### Features
+
+- **Session List**: View all active PTY sessions with status indicators
+- **Real-time Output**: Live streaming of process output via WebSocket
+- **Interactive Input**: Send commands and input to running processes
+- **Session Management**: Kill sessions directly from the UI
+- **Connection Status**: Visual indicator of WebSocket connection status
+
+### Development
+
+For development with hot reloading:
+
+```bash
+# Terminal 1: Start the backend server
+bun run dev:backend
+
+# Terminal 2: Start the React dev server
+bun run dev
+```
+
+The React app will be available at `http://localhost:5173` with hot reloading.
+
 ## Usage Examples
 
 ### Start a dev server
@@ -200,7 +239,9 @@ Use `pty_kill` with `cleanup=true` to remove completely.
 git clone https://github.com/shekohex/opencode-pty.git
 cd opencode-pty
 bun install
-bun run tsc --noEmit  # Type check
+bun run typecheck  # Type check
+bun run build      # Build the React app for production
+bun run dev        # Start React dev server with hot reloading
 ```
 
 To load a local checkout in OpenCode:

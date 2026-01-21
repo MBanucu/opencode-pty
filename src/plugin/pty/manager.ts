@@ -7,8 +7,10 @@ import { createLogger } from "../logger.ts";
 const log = createLogger("manager");
 
 let client: OpencodeClient | null = null;
-type OutputCallback = (sessionId: string, data: string) => void;
+type OutputCallback = (sessionId: string, data: string[]) => void;
 const outputCallbacks: OutputCallback[] = [];
+type SessionUpdateCallback = (sessionId: string) => void;
+const sessionUpdateCallbacks: SessionUpdateCallback[] = [];
 
 export function initManager(opcClient: OpencodeClient): void {
   client = opcClient;
@@ -18,12 +20,31 @@ export function onOutput(callback: OutputCallback): void {
   outputCallbacks.push(callback);
 }
 
+export function onSessionUpdate(callback: SessionUpdateCallback): void {
+  sessionUpdateCallbacks.push(callback);
+}
+
+export function clearAllSessions(): void {
+  manager.clearAllSessions();
+}
+
 function notifyOutput(sessionId: string, data: string): void {
+  const lines = data.split('\n');
   for (const callback of outputCallbacks) {
     try {
-      callback(sessionId, data);
+      callback(sessionId, lines);
     } catch (err) {
       log.error("error in output callback", { error: String(err) });
+    }
+  }
+}
+
+function notifySessionUpdate(sessionId: string): void {
+  for (const callback of sessionUpdateCallbacks) {
+    try {
+      callback(sessionId);
+    } catch (err) {
+      log.error("error in session update callback", { error: String(err) });
     }
   }
 }
@@ -37,6 +58,23 @@ function generateId(): string {
 
 class PTYManager {
   private sessions: Map<string, PTYSession> = new Map();
+
+  clearAllSessions(): void {
+    // Kill all running processes
+    for (const session of this.sessions.values()) {
+      if (session.status === 'running') {
+        try {
+          session.process.kill();
+        } catch (err) {
+          log.warn("failed to kill process during clear", { id: session.id, error: String(err) });
+        }
+      }
+    }
+
+    // Clear all sessions
+    this.sessions.clear();
+    log.info("cleared all sessions");
+  }
 
   spawn(opts: SpawnOptions): PTYSessionInfo {
     const id = generateId();
@@ -85,6 +123,7 @@ class PTYManager {
       if (session.status === "running") {
         session.status = "exited";
         session.exitCode = exitCode;
+        notifySessionUpdate(id);
       }
 
       if (session.notifyOnExit && client) {

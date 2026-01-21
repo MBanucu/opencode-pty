@@ -71,9 +71,11 @@ EOF
     echo "Created $PROJECT_DIR/opencode.json"
     echo "Note: This uses Grok Code Fast 1 from OpenCode Zen as an example."
     echo "      You'll need to connect to OpenCode Zen and get your API key."
+    echo "      The plugin is loaded automatically from .opencode/plugins/"
 else
-    echo "opencode.json already exists. You may need to add the plugin manually:"
-    echo "  \"plugin\": [\"opencode-pty\"]"
+    echo "opencode.json already exists."
+    echo "Note: Local plugins in .opencode/plugins/ are loaded automatically."
+    echo "      No plugin entry needed in opencode.json for local plugins."
 fi
 
 echo ""

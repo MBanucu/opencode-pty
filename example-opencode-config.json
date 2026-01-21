@@ -1,9 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "opencode/grok-code",
-  "plugin": [
-    "file:/home/michi/dev/opencode-pty-branches/web-ui"
-  ],
   "permission": {
     "bash": {
       "*": "allow",

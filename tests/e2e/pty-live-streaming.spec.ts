@@ -24,7 +24,7 @@ test.describe('PTY Live Streaming', () => {
       await page.request.post('/api/sessions', {
         data: {
           command: 'bash',
-          args: ['-c', 'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do echo "$(date): Live update..."; sleep 1; done'],
+          args: ['-c', 'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do echo "$(date): Live update..."; sleep 0.1; done'],
           description: 'Live streaming test session',
         },
       });
@@ -105,7 +105,7 @@ test.describe('PTY Live Streaming', () => {
       await page.request.post('/api/sessions', {
         data: {
           command: 'bash',
-          args: ['-c', 'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do echo "$(date): Live update..."; sleep 1; done'],
+          args: ['-c', 'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do echo "$(date): Live update..."; sleep 0.1; done'],
           description: 'Live streaming test session',
         },
       });
@@ -157,8 +157,18 @@ test.describe('PTY Live Streaming', () => {
     const initialWsMessages = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0;
     log.info(`Initial WS messages: ${initialWsMessages}`);
 
-    // Wait a few seconds for potential WebSocket updates
-    await page.waitForTimeout(5000);
+    // Wait for at least 5 WebSocket streaming updates
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds at 100ms intervals
+    let currentWsMessages = initialWsMessages;
+    while (attempts < maxAttempts && currentWsMessages < initialWsMessages + 5) {
+      await page.waitForTimeout(100);
+      const currentDebugInfo = await page.locator('.output-container').textContent();
+      const currentDebugText = (currentDebugInfo || '') as string;
+      const currentWsMatch = currentDebugText.match(/WS messages: (\d+)/);
+      currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0;
+      attempts++;
+    }
 
     // Check final state
     const finalDebugInfo = await page.locator('.output-container').textContent();
@@ -172,14 +182,14 @@ test.describe('PTY Live Streaming', () => {
     const finalCount = await outputLines.count();
     log.info(`Final output lines: ${finalCount}`);
 
-    // The test requires actual WebSocket messages to validate streaming is working
-    if (finalWsMessages > initialWsMessages) {
-      log.info(`✅ Received ${finalWsMessages - initialWsMessages} WebSocket messages - streaming works!`);
+    // The test requires at least 5 WebSocket messages to validate streaming is working
+    if (finalWsMessages >= initialWsMessages + 5) {
+      log.info(`✅ Received at least 5 WebSocket messages (${finalWsMessages - initialWsMessages}) - streaming works!`);
     } else {
-      log.info(`❌ No WebSocket messages received - streaming is not working`);
+      log.info(`❌ Fewer than 5 WebSocket messages received - streaming is not working`);
       log.info(`WS messages: ${initialWsMessages} -> ${finalWsMessages}`);
       log.info(`Output lines: ${initialCount} -> ${finalCount}`);
-      throw new Error('Live streaming test failed: No WebSocket messages received');
+      throw new Error('Live streaming test failed: Fewer than 5 WebSocket messages received');
     }
 
     // Check that the new lines contain the expected timestamp format if output increased

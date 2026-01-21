@@ -36,6 +36,6 @@ export default defineConfig({
   webServer: {
     command: 'NODE_ENV=test bun run test-web-server.ts',
     url: 'http://localhost:8867',
-    reuseExistingServer: false, // Always start fresh for clean tests
+    reuseExistingServer: true, // Reuse existing server if running
   },
 });

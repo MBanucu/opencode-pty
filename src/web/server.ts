@@ -147,14 +147,62 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
       }
 
       if (url.pathname === "/") {
+        // In test mode, serve the built HTML with assets
+        if (process.env.NODE_ENV === 'test') {
+          return new Response(await Bun.file("./dist/web/index.html").bytes(), {
+            headers: { "Content-Type": "text/html" },
+          });
+        }
         return new Response(await Bun.file("./src/web/index.html").bytes(), {
           headers: { "Content-Type": "text/html" },
         });
       }
 
+      // Serve static assets from dist/web for test mode
+      if (process.env.NODE_ENV === 'test' && url.pathname.startsWith('/assets/')) {
+        try {
+          const filePath = `./dist/web${url.pathname}`;
+          const file = Bun.file(filePath);
+          if (await file.exists()) {
+            const contentType = url.pathname.endsWith('.js') ? 'application/javascript' :
+                               url.pathname.endsWith('.css') ? 'text/css' : 'text/plain';
+            return new Response(await file.bytes(), {
+              headers: { "Content-Type": contentType },
+            });
+          }
+        } catch (err) {
+          // File not found, continue to 404
+        }
+      }
+
       if (url.pathname === "/api/sessions" && req.method === "GET") {
         const sessions = manager.list();
         return Response.json(sessions);
+      }
+
+      if (url.pathname === "/api/sessions" && req.method === "POST") {
+        const body = await req.json() as { command: string; args?: string[]; description?: string; workdir?: string };
+        const session = manager.spawn({
+          command: body.command,
+          args: body.args || [],
+          description: body.description,
+          workdir: body.workdir,
+          parentSessionId: "web-api",
+        });
+        // Broadcast updated session list to all clients
+        for (const [ws] of wsClients) {
+          sendSessionList(ws);
+        }
+        return Response.json(session);
+      }
+
+      if (url.pathname === "/api/sessions/clear" && req.method === "POST") {
+        manager.clearAllSessions();
+        // Broadcast updated session list to all clients
+        for (const [ws] of wsClients) {
+          sendSessionList(ws);
+        }
+        return Response.json({ success: true });
       }
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+$/) && req.method === "GET") {
@@ -186,6 +234,20 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
           return new Response("Failed to kill session", { status: 400 });
         }
         return Response.json({ success: true });
+      }
+
+      if (url.pathname.match(/^\/api\/sessions\/[^/]+\/output$/) && req.method === "GET") {
+        const sessionId = url.pathname.split("/")[3];
+        if (!sessionId) return new Response("Invalid session ID", { status: 400 });
+        const result = manager.read(sessionId, 0, 100);
+        if (!result) {
+          return new Response("Session not found", { status: 404 });
+        }
+        return Response.json({
+          lines: result.lines,
+          totalLines: result.totalLines,
+          hasMore: result.hasMore
+        });
       }
 
       return new Response("Not found", { status: 404 });

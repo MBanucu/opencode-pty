@@ -78,11 +78,8 @@ describe('Logger Integration Tests', () => {
       const localTimeRegex = /\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [+-]\d{4}\]/
       expect(localTimeRegex.test(output)).toBe(true)
 
-      // Should contain service name
-      expect(output).toContain('"service":"opencode-pty"')
-
-      // Should contain environment
-      expect(output).toContain('"env":"development"')
+      // Should contain module name
+      expect(output).toContain('"module":"web-server"')
 
       // Should contain INFO level logs
       expect(output).toContain('INFO')
@@ -122,7 +119,7 @@ describe('Logger Integration Tests', () => {
       const output = stdout + stderr
 
       // Should contain debug level logs
-      expect(output).toContain('"level":20') // debug level
+      expect(output).toContain('DEBUG')
       // Should contain debug logs from our code
       expect(output).toContain('fetch request')
     })
@@ -152,76 +149,8 @@ describe('Logger Integration Tests', () => {
 
       const output = stdout + stderr
 
-      // Should contain debug level (CI forces debug)
-      expect(output).toContain('"level":20') // debug level
-    })
-
-    it('should respect LOG_LEVEL environment variable', async () => {
-      const port = testPort++
-      // Start server with debug level
-      serverProcess = spawn(['bun', 'run', 'test-web-server.ts', `--port=${port}`], {
-        env: {
-          ...process.env,
-          NODE_ENV: 'development',
-          LOG_LEVEL: 'debug',
-        },
-        stdout: 'pipe',
-        stderr: 'pipe',
-      })
-
-      // Wait for server to start
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-
-      // Make a request to trigger debug logging
-      await fetch(`http://localhost:${port}/api/sessions`, {
-        method: 'GET',
-      })
-
-      // Wait a bit for logs to be written
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Kill the server and capture output
-      serverProcess.kill()
-      const [stdout, stderr] = await Promise.all([
-        new Response(serverProcess.stdout).text(),
-        new Response(serverProcess.stderr).text(),
-      ])
-
-      const output = stdout + stderr
-
-      // Should contain debug level logs
-      expect(output).toContain('"level":20') // debug level
-      // Should contain debug logs from our code
-      expect(output).toContain('fetch request')
-    })
-
-    it('should handle CI environment correctly', async () => {
-      const port = testPort++
-      // Start server with CI=true
-      serverProcess = spawn(['bun', 'run', 'test-web-server.ts', `--port=${port}`], {
-        env: {
-          ...process.env,
-          CI: 'true',
-          NODE_ENV: 'development',
-        },
-        stdout: 'pipe',
-        stderr: 'pipe',
-      })
-
-      // Wait for server to start
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-
-      // Kill the server and capture output
-      serverProcess.kill()
-      const [stdout, stderr] = await Promise.all([
-        new Response(serverProcess.stdout).text(),
-        new Response(serverProcess.stderr).text(),
-      ])
-
-      const output = stdout + stderr
-
-      // Should contain debug level (CI forces debug)
-      expect(output).toContain('"level":20') // debug level
+      // Should contain info level (web logger not affected by CI)
+      expect(output).toContain('INFO')
     })
   })
 

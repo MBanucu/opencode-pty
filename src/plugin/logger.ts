@@ -29,43 +29,59 @@ let _pinoLogger: pino.Logger | null = null
 function createPinoLogger() {
   const isProduction = process.env.NODE_ENV === 'production'
 
-  return pino(
-    {
-      level:
-        process.env.LOG_LEVEL ||
-        (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
+  return pino({
+    level:
+      process.env.LOG_LEVEL ||
+      (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
 
-      // Format level as string for better readability
-      formatters: {
-        level: (label) => ({ level: label }),
-      },
-
-      // Base context for all logs
-      base: {
-        service: 'opencode-pty',
-        env: process.env.NODE_ENV || 'development',
-        version: getPackageVersion(),
-      },
-
-      // Redaction for any sensitive data (expand as needed)
-      redact: {
-        paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret'],
-        remove: true,
-      },
-
-      // Use ISO timestamps for better parsing
-      timestamp: pino.stdTimeFunctions.isoTime,
+    // Format level as string for better readability
+    formatters: {
+      level: (label) => ({ level: label }),
     },
-    pino.destination({
-      sync: true,
-      ...(isProduction
-        ? {}
-        : {
-            dest: process.stdout,
-            sync: true,
-          }),
-    })
-  )
+
+    // Base context for all logs
+    base: {
+      service: 'opencode-pty',
+      env: process.env.NODE_ENV || 'development',
+      version: getPackageVersion(),
+    },
+
+    // Redaction for any sensitive data (expand as needed)
+    redact: {
+      paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret'],
+      remove: true,
+    },
+
+    // Use ISO timestamps for better parsing
+    timestamp: pino.stdTimeFunctions.isoTime,
+
+    // Use transports for pretty printing
+    transport: {
+      targets: [
+        {
+          target: isProduction ? 'pino/file' : 'pino-pretty',
+          level:
+            process.env.LOG_LEVEL ||
+            (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
+          options: {
+            ...(isProduction
+              ? {
+                  destination: 1, // stdout
+                  mkdir: true,
+                  sync: true,
+                }
+              : {
+                  colorize: true,
+                  translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
+                  ignore: 'pid,hostname',
+                  singleLine: true,
+                  sync: true,
+                }),
+          },
+        },
+      ],
+    },
+  })
 }
 
 export function initLogger(client: PluginClient): void {

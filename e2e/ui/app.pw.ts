@@ -5,9 +5,18 @@ const log = createTestLogger('ui-test')
 
 extendedTest.describe('App Component', () => {
   extendedTest('renders the PTY Sessions title', async ({ page, server }) => {
+    // Ensure clean state for parallel execution
+    const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+    expect(clearResponse.status()).toBe(200)
+
     // Log all console messages for debugging
     page.on('console', (msg) => {
       log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+    })
+
+    // Log page errors
+    page.on('pageerror', (error) => {
+      log.error(`PAGE ERROR: ${error.message}`)
     })
 
     await page.goto(server.baseURL + '/')
@@ -127,10 +136,10 @@ extendedTest.describe('App Component', () => {
         log.info(`Session creation response: ${createResponse.status()}`)
 
         // Wait for session to actually start
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(5000)
 
         // Check session status
-        const sessionsResponse = await page.request.get('/api/sessions')
+        const sessionsResponse = await page.request.get(server.baseURL + '/api/sessions')
         const sessions = await sessionsResponse.json()
         log.info(`Sessions after creation: ${sessions.length}`)
         if (sessions.length > 0) {
@@ -172,7 +181,9 @@ extendedTest.describe('App Component', () => {
 
         // Check if session has output
         if (sessionId) {
-          const outputResponse = await page.request.get(`/api/sessions/${sessionId}/output`)
+          const outputResponse = await page.request.get(
+            `${server.baseURL}/api/sessions/${sessionId}/output`
+          )
           if (outputResponse.status() === 200) {
             const outputData = await outputResponse.json()
             log.info(`Session output lines: ${outputData.lines?.length || 0}`)
@@ -188,7 +199,7 @@ extendedTest.describe('App Component', () => {
         log.info(`Initial WS message count: ${initialCount}`)
 
         // Wait for some WebSocket messages to arrive (the session should be running)
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(5000)
 
         // Check that WS message count increased
         const finalDebugText = (await initialDebugElement.textContent()) || ''

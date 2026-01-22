@@ -36,16 +36,56 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         stdio: ['ignore', 'pipe', 'pipe'],
       })
 
-      proc.stdout?.on('data', (data) => console.log(`[W${workerInfo.workerIndex}] ${data}`))
-      proc.stderr?.on('data', (data) => console.error(`[W${workerInfo.workerIndex} ERR] ${data}`))
+      proc.stdout?.on('data', (data) => {
+        const output = data.toString()
+        console.log(`[W${workerInfo.workerIndex}] ${output}`)
+      })
+
+      proc.stderr?.on('data', (data) => {
+        console.error(`[W${workerInfo.workerIndex} ERR] ${data}`)
+      })
+
+      proc.on('exit', (code, signal) => {
+        console.log(
+          `[Worker ${workerInfo.workerIndex}] Server process exited with code ${code}, signal ${signal}`
+        )
+      })
+
+      proc.stderr?.on('data', (data) => {
+        console.error(`[W${workerInfo.workerIndex} ERR] ${data}`)
+      })
+
+      proc.on('exit', (code, signal) => {
+        console.log(
+          `[Worker ${workerInfo.workerIndex}] Server process exited with code ${code}, signal ${signal}`
+        )
+      })
 
       try {
-        await waitForServer(url)
+        await waitForServer(url, 15000) // Wait up to 15 seconds for server
         console.log(`[Worker ${workerInfo.workerIndex}] Server ready at ${url}`)
         await use({ baseURL: url, port })
+      } catch (error) {
+        console.error(`[Worker ${workerInfo.workerIndex}] Failed to start server: ${error}`)
+        throw error
       } finally {
-        proc.kill('SIGTERM')
-        await new Promise((resolve) => proc.on('exit', resolve))
+        // Ensure process is killed
+        if (!proc.killed) {
+          proc.kill('SIGTERM')
+          // Wait a bit, then force kill if still running
+          setTimeout(() => {
+            if (!proc.killed) {
+              proc.kill('SIGKILL')
+            }
+          }, 2000)
+        }
+        await new Promise((resolve) => {
+          if (proc.killed) {
+            resolve(void 0)
+          } else {
+            proc.on('exit', resolve)
+          }
+        })
         console.log(`[Worker ${workerInfo.workerIndex}] Server stopped`)
       }
     },

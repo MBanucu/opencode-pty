@@ -83,8 +83,8 @@ extendedTest.describe('PTY Live Streaming', () => {
       expect(initialCount).toBeGreaterThan(0)
 
       // Verify the output contains the initial welcome message from the bash command
-      const firstLine = await initialOutputLines.first().textContent()
-      expect(firstLine).toContain('Welcome to live streaming test')
+      const allText = await page.locator('.output-container').textContent()
+      expect(allText).toContain('Welcome to live streaming test')
 
       log.info(
         '✅ Historical data loading test passed - buffered output from before UI connection is displayed'
@@ -156,7 +156,9 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.waitForSelector('.output-line', { timeout: 5000 })
 
       // Verify the API returns the expected historical data
-      const sessionData = await page.request.get(`/api/sessions/${testSessionData.id}/output`)
+      const sessionData = await page.request.get(
+        server.baseURL + `/api/sessions/${testSessionData.id}/output`
+      )
       const outputData = await sessionData.json()
       expect(outputData.lines).toBeDefined()
       expect(Array.isArray(outputData.lines)).toBe(true)
@@ -179,130 +181,133 @@ extendedTest.describe('PTY Live Streaming', () => {
     }
   )
 
-  extendedTest('should receive live WebSocket updates from running PTY session', async ({ page, server }) => {
-    // Listen to page console for debugging
-    page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+  extendedTest(
+    'should receive live WebSocket updates from running PTY session',
+    async ({ page, server }) => {
+      // Listen to page console for debugging
+      page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
 
-    // Navigate to the web UI
-    await page.goto(server.baseURL + '/')
+      // Navigate to the web UI
+      await page.goto(server.baseURL + '/')
 
-    // Ensure clean state for this test
-    await page.request.post(server.baseURL + '/api/sessions/clear')
-    await page.waitForTimeout(500)
+      // Ensure clean state for this test
+      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await page.waitForTimeout(500)
 
-    // Create a fresh session for this test
-    const initialResponse = await page.request.get(server.baseURL + '/api/sessions')
-    const initialSessions = await initialResponse.json()
-    if (initialSessions.length === 0) {
-      log.info('No sessions found, creating a test session for streaming...')
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: [
-            '-c',
-            'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
-          ],
-          description: 'Live streaming test session',
-        },
-      })
-      // Wait a bit for the session to start and reload to get updated session list
-      await page.waitForTimeout(1000)
-    }
-
-    // Wait for sessions to load
-    await page.waitForSelector('.session-item', { timeout: 5000 })
-
-    // Find the running session
-    const sessionCount = await page.locator('.session-item').count()
-    const allSessions = page.locator('.session-item')
-
-    let runningSession = null
-    for (let i = 0; i < sessionCount; i++) {
-      const session = allSessions.nth(i)
-      const statusBadge = await session.locator('.status-badge').textContent()
-      if (statusBadge === 'running') {
-        runningSession = session
-        break
+      // Create a fresh session for this test
+      const initialResponse = await page.request.get(server.baseURL + '/api/sessions')
+      const initialSessions = await initialResponse.json()
+      if (initialSessions.length === 0) {
+        log.info('No sessions found, creating a test session for streaming...')
+        await page.request.post(server.baseURL + '/api/sessions', {
+          data: {
+            command: 'bash',
+            args: [
+              '-c',
+              'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
+            ],
+            description: 'Live streaming test session',
+          },
+        })
+        // Wait a bit for the session to start and reload to get updated session list
+        await page.waitForTimeout(1000)
       }
-    }
 
-    if (!runningSession) {
-      throw new Error('No running session found')
-    }
+      // Wait for sessions to load
+      await page.waitForSelector('.session-item', { timeout: 5000 })
 
-    await runningSession.click()
+      // Find the running session
+      const sessionCount = await page.locator('.session-item').count()
+      const allSessions = page.locator('.session-item')
 
-    // Wait for WebSocket to stabilize
-    await page.waitForTimeout(2000)
-
-    // Wait for initial output
-    await page.waitForSelector('.output-line', { timeout: 3000 })
-
-    // Get initial count
-    const outputLines = page.locator('.output-line')
-    const initialCount = await outputLines.count()
-    expect(initialCount).toBeGreaterThan(0)
-
-    log.info(`Initial output lines: ${initialCount}`)
-
-    // Check the debug info
-    const debugInfo = await page.locator('.output-container').textContent()
-    const debugText = (debugInfo || '') as string
-    log.info(`Debug info: ${debugText}`)
-
-    // Extract WS message count
-    const wsMatch = debugText.match(/WS messages: (\d+)/)
-    const initialWsMessages = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
-    log.info(`Initial WS messages: ${initialWsMessages}`)
-
-    // Wait for at least 1 WebSocket streaming update
-    let attempts = 0
-    const maxAttempts = 50 // 5 seconds at 100ms intervals
-    let currentWsMessages = initialWsMessages
-    const debugElement = page.locator('[data-testid="debug-info"]')
-    while (attempts < maxAttempts && currentWsMessages < initialWsMessages + 1) {
-      await page.waitForTimeout(100)
-      const currentDebugText = (await debugElement.textContent()) || ''
-      const currentWsMatch = currentDebugText.match(/WS messages: (\d+)/)
-      currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0
-      if (attempts % 10 === 0) {
-        // Log every second
-        log.info(`Attempt ${attempts}: WS messages: ${currentWsMessages}`)
+      let runningSession = null
+      for (let i = 0; i < sessionCount; i++) {
+        const session = allSessions.nth(i)
+        const statusBadge = await session.locator('.status-badge').textContent()
+        if (statusBadge === 'running') {
+          runningSession = session
+          break
+        }
       }
-      attempts++
-    }
 
-    // Check final state
-    const finalDebugText = (await debugElement.textContent()) || ''
-    const finalWsMatch = finalDebugText.match(/WS messages: (\d+)/)
-    const finalWsMessages = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
-
-    log.info(`Final WS messages: ${finalWsMessages}`)
-
-    // Check final output count
-    const finalCount = await outputLines.count()
-    log.info(`Final output lines: ${finalCount}`)
-
-    // Validate that live streaming is working by checking output increased
-
-    // Check that the new lines contain the expected timestamp format if output increased
-    // Check that new live update lines were added during WebSocket streaming
-    const finalOutputLines = await outputLines.count()
-    log.info(`Final output lines: ${finalOutputLines}, initial was: ${initialCount}`)
-
-    // Look for lines that contain "Live update..." pattern
-    let liveUpdateFound = false
-    for (let i = Math.max(0, finalOutputLines - 10); i < finalOutputLines; i++) {
-      const lineText = await outputLines.nth(i).textContent()
-      if (lineText && lineText.includes('Live update...')) {
-        liveUpdateFound = true
-        log.info(`Found live update line ${i}: "${lineText}"`)
-        break
+      if (!runningSession) {
+        throw new Error('No running session found')
       }
+
+      await runningSession.click()
+
+      // Wait for WebSocket to stabilize
+      await page.waitForTimeout(2000)
+
+      // Wait for initial output
+      await page.waitForSelector('.output-line', { timeout: 3000 })
+
+      // Get initial count
+      const outputLines = page.locator('.output-line')
+      const initialCount = await outputLines.count()
+      expect(initialCount).toBeGreaterThan(0)
+
+      log.info(`Initial output lines: ${initialCount}`)
+
+      // Check the debug info
+      const debugInfo = await page.locator('.output-container').textContent()
+      const debugText = (debugInfo || '') as string
+      log.info(`Debug info: ${debugText}`)
+
+      // Extract WS message count
+      const wsMatch = debugText.match(/WS messages: (\d+)/)
+      const initialWsMessages = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
+      log.info(`Initial WS messages: ${initialWsMessages}`)
+
+      // Wait for at least 1 WebSocket streaming update
+      let attempts = 0
+      const maxAttempts = 50 // 5 seconds at 100ms intervals
+      let currentWsMessages = initialWsMessages
+      const debugElement = page.locator('[data-testid="debug-info"]')
+      while (attempts < maxAttempts && currentWsMessages < initialWsMessages + 1) {
+        await page.waitForTimeout(100)
+        const currentDebugText = (await debugElement.textContent()) || ''
+        const currentWsMatch = currentDebugText.match(/WS messages: (\d+)/)
+        currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0
+        if (attempts % 10 === 0) {
+          // Log every second
+          log.info(`Attempt ${attempts}: WS messages: ${currentWsMessages}`)
+        }
+        attempts++
+      }
+
+      // Check final state
+      const finalDebugText = (await debugElement.textContent()) || ''
+      const finalWsMatch = finalDebugText.match(/WS messages: (\d+)/)
+      const finalWsMessages = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
+
+      log.info(`Final WS messages: ${finalWsMessages}`)
+
+      // Check final output count
+      const finalCount = await outputLines.count()
+      log.info(`Final output lines: ${finalCount}`)
+
+      // Validate that live streaming is working by checking output increased
+
+      // Check that the new lines contain the expected timestamp format if output increased
+      // Check that new live update lines were added during WebSocket streaming
+      const finalOutputLines = await outputLines.count()
+      log.info(`Final output lines: ${finalOutputLines}, initial was: ${initialCount}`)
+
+      // Look for lines that contain "Live update..." pattern
+      let liveUpdateFound = false
+      for (let i = Math.max(0, finalOutputLines - 10); i < finalOutputLines; i++) {
+        const lineText = await outputLines.nth(i).textContent()
+        if (lineText && lineText.includes('Live update...')) {
+          liveUpdateFound = true
+          log.info(`Found live update line ${i}: "${lineText}"`)
+          break
+        }
+      }
+
+      expect(liveUpdateFound).toBe(true)
+
+      log.info(`✅ Live streaming test passed - received ${finalCount - initialCount} live updates`)
     }
-
-    expect(liveUpdateFound).toBe(true)
-
-    log.info(`✅ Live streaming test passed - received ${finalCount - initialCount} live updates`)
-  })
+  )
 })

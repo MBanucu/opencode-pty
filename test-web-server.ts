@@ -25,9 +25,29 @@ const fakeClient = {
 initLogger(fakeClient)
 initManager(fakeClient)
 
+// Cleanup on process termination
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, cleaning up PTY sessions...')
+  manager.cleanupAll()
+  process.exit(0)
+})
+
+process.on('SIGINT', () => {
+  console.log('Received SIGINT, cleaning up PTY sessions...')
+  manager.cleanupAll()
+  process.exit(0)
+})
+
 // Use the specified port after cleanup
 function findAvailablePort(port: number): number {
-  // Try to kill any process on this port first
+  // Only kill processes if we're confident they belong to our test servers
+  // In parallel execution, avoid killing other workers' servers
+  if (process.env.TEST_WORKER_INDEX) {
+    // For parallel workers, assume the port is available since we assign unique ports
+    return port
+  }
+
+  // For single execution, clean up any stale processes
   Bun.spawnSync(['sh', '-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`])
   // Small delay to allow cleanup
   Bun.sleepSync(200)
@@ -68,7 +88,8 @@ if (process.env.NODE_ENV !== 'test' || process.env.VERBOSE === 'true') {
 
 // Write port to file for tests to read
 if (process.env.NODE_ENV === 'test') {
-  await Bun.write('/tmp/test-server-port.txt', port.toString())
+  const workerIndex = process.env.TEST_WORKER_INDEX || '0'
+  await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, port.toString())
 }
 
 // Health check for test mode

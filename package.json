@@ -36,7 +36,7 @@
     "typecheck:watch": "tsc --noEmit --watch",
     "test": "NODE_ENV=test bun test test/ src/plugin/ --exclude 'e2e/**' --exclude 'src/web/**'",
     "test:watch": "bun test --watch test/ src/plugin/ --exclude 'e2e/**' --exclude 'src/web/**'",
-    "test:e2e": "bun run build:dev && playwright test",
+    "test:e2e": "bun run build:dev && NODE_ENV=test playwright test",
     "test:all": "bun run test && bun run test:e2e",
     "dev": "vite --host",
     "dev:server": "bun run test-web-server.ts",

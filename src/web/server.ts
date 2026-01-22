@@ -208,25 +208,23 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       if (url.pathname === '/') {
         log.info({ nodeEnv: process.env.NODE_ENV }, 'Serving root')
-        // In test mode, serve the built HTML with assets
-        if (process.env.NODE_ENV === 'test') {
-          log.debug('Serving from dist/web/index.html')
-          return new Response(await Bun.file('./dist/web/index.html').bytes(), {
-            headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },
-          })
-        }
-        log.debug('Serving from src/web/index.html')
-        return new Response(await Bun.file('./src/web/index.html').bytes(), {
+        // In test mode, serve built HTML from dist/web, otherwise serve source
+        const htmlPath =
+          process.env.NODE_ENV === 'test' ? './dist/web/index.html' : './src/web/index.html'
+        log.debug({ htmlPath }, 'Serving HTML')
+        return new Response(await Bun.file(htmlPath).bytes(), {
           headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },
         })
       }
 
-      // Serve static assets from dist/web
+      // Serve static assets
       if (url.pathname.startsWith('/assets/')) {
         log.info({ pathname: url.pathname, nodeEnv: process.env.NODE_ENV }, 'Serving asset')
-        const distDir = resolve(process.cwd(), 'dist/web')
+        // Always serve assets from dist/web in both test and production
+        const baseDir = 'dist/web'
+        const assetDir = resolve(process.cwd(), baseDir)
         const assetPath = url.pathname.slice(1) // remove leading /
-        const filePath = join(distDir, assetPath)
+        const filePath = join(assetDir, assetPath)
         const file = Bun.file(filePath)
         const exists = await file.exists()
         if (exists) {
@@ -238,6 +236,28 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
           })
         } else {
           log.debug({ filePath }, 'Asset not found')
+        }
+      }
+
+      // Serve TypeScript files in test mode
+      if (
+        process.env.NODE_ENV === 'test' &&
+        (url.pathname.endsWith('.tsx') ||
+          url.pathname.endsWith('.ts') ||
+          url.pathname.endsWith('.jsx') ||
+          url.pathname.endsWith('.js'))
+      ) {
+        log.info({ pathname: url.pathname }, 'Serving TypeScript file in test mode')
+        const filePath = join(process.cwd(), 'src/web', url.pathname)
+        const file = Bun.file(filePath)
+        const exists = await file.exists()
+        if (exists) {
+          log.debug({ filePath }, 'TypeScript file served')
+          return new Response(await file.bytes(), {
+            headers: { 'Content-Type': 'application/javascript', ...getSecurityHeaders() },
+          })
+        } else {
+          log.debug({ filePath }, 'TypeScript file not found')
         }
       }
 

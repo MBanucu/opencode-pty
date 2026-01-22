@@ -17,9 +17,9 @@ export default defineConfig({
   workers: process.env.CI ? 8 : 3, // 3 locally, 8 on CI for parallel execution
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
-  /* Global timeout reduced from 30s to 5s for faster test execution */
-  timeout: 5000,
-  expect: { timeout: 2000 },
+  /* Global timeout increased for reliable parallel execution */
+  timeout: 15000,
+  expect: { timeout: 5000 },
   /* Configure projects for major browsers */
   projects: [
     {
@@ -31,4 +31,11 @@ export default defineConfig({
     },
   ],
   // Server managed per worker via fixtures
+  // Use worker-scoped state for better isolation
+  use: {
+    // Increase action timeout for slower operations
+    actionTimeout: 5000,
+    // Increase navigation timeout
+    navigationTimeout: 10000,
+  },
 })

@@ -5,7 +5,13 @@ const isDevelopment = import.meta.env.DEV
 const isTest = import.meta.env.MODE === 'test'
 
 // Determine log level
-const logLevel: pino.Level = isTest ? 'warn' : isDevelopment ? 'debug' : 'info'
+const logLevel: pino.Level = process.env.CI
+  ? 'debug'
+  : isTest
+    ? 'warn'
+    : isDevelopment
+      ? 'debug'
+      : 'info'
 
 // Create Pino logger for browser with basic configuration
 const pinoLogger = pino({

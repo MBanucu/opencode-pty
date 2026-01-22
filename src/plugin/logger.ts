@@ -30,7 +30,9 @@ function createPinoLogger() {
   const isProduction = process.env.NODE_ENV === 'production'
 
   return pino({
-    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
+    level:
+      process.env.LOG_LEVEL ||
+      (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
 
     // Format level as string for better readability
     formatters: {

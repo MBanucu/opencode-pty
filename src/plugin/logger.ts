@@ -34,6 +34,11 @@ function createPinoLogger() {
       process.env.LOG_LEVEL ||
       (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
 
+    // Format level as string for better readability
+    formatters: {
+      level: (label) => ({ level: label }),
+    },
+
     // Base context for all logs
     base: {
       service: 'opencode-pty',

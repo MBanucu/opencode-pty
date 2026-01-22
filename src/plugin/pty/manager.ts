@@ -190,12 +190,15 @@ class PTYManager {
   get(id: string): PTYSessionInfo | null {
     log.debug('Manager.get called', { id })
     const session = this.sessions.get(id)
-    log.debug('Manager.get result', {
-      id,
-      found: !!session,
-      command: session?.command,
-      status: session?.status,
-    })
+    log.debug(
+      {
+        id,
+        found: !!session,
+        command: session?.command,
+        status: session?.status,
+      },
+      'Manager.get result'
+    )
     return session ? this.toInfo(session) : null
   }
 

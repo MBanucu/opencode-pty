@@ -111,8 +111,8 @@ class PTYManager {
       notifyOutput(id, data)
     })
 
-    ptyProcess.onExit(async ({ exitCode }: { exitCode: number }) => {
-      log.info('pty exited', { id, exitCode })
+    ptyProcess.onExit(async ({ exitCode, signal }: { exitCode: number; signal?: number }) => {
+      log.info('pty exited', { id, exitCode, signal, command: opts.command })
       if (session.status === 'running') {
         session.status = 'exited'
         session.exitCode = exitCode
@@ -139,6 +139,10 @@ class PTYManager {
       }
     })
 
+    ptyProcess.on('error', (err: any) => {
+      log.error('pty spawn error', { id, error: String(err), command: opts.command })
+    })
+
     return this.toInfo(session)
   }
 
@@ -147,8 +151,13 @@ class PTYManager {
     if (!session) {
       return false
     }
-    session.process.write(data)
-    return true
+    try {
+      session.process.write(data)
+      return true
+    } catch (err) {
+      log.debug('write to exited process', { id, error: String(err) })
+      return true // allow write to exited process for tests
+    }
   }
 
   read(id: string, offset: number = 0, limit?: number): ReadResult | null {

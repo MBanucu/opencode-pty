@@ -29,47 +29,43 @@ let _pinoLogger: pino.Logger | null = null
 function createPinoLogger() {
   const isProduction = process.env.NODE_ENV === 'production'
 
-  return pino({
-    level:
-      process.env.LOG_LEVEL ||
-      (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
+  return pino(
+    {
+      level:
+        process.env.LOG_LEVEL ||
+        (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
 
-    // Format level as string for better readability
-    formatters: {
-      level: (label) => ({ level: label }),
+      // Format level as string for better readability
+      formatters: {
+        level: (label) => ({ level: label }),
+      },
+
+      // Base context for all logs
+      base: {
+        service: 'opencode-pty',
+        env: process.env.NODE_ENV || 'development',
+        version: getPackageVersion(),
+      },
+
+      // Redaction for any sensitive data (expand as needed)
+      redact: {
+        paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret'],
+        remove: true,
+      },
+
+      // Use ISO timestamps for better parsing
+      timestamp: pino.stdTimeFunctions.isoTime,
     },
-
-    // Base context for all logs
-    base: {
-      service: 'opencode-pty',
-      env: process.env.NODE_ENV || 'development',
-      version: getPackageVersion(),
-    },
-
-    // Redaction for any sensitive data (expand as needed)
-    redact: {
-      paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret'],
-      remove: true,
-    },
-
-    // Use ISO timestamps for better parsing
-    timestamp: pino.stdTimeFunctions.isoTime,
-
-    // Pretty printing only in development (not production)
-    ...(isProduction
-      ? {}
-      : {
-          transport: {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
-              ignore: 'pid,hostname',
-              singleLine: true,
-            },
-          },
-        }),
-  })
+    pino.destination({
+      sync: true,
+      ...(isProduction
+        ? {}
+        : {
+            dest: process.stdout,
+            sync: true,
+          }),
+    })
+  )
 }
 
 export function initLogger(client: PluginClient): void {

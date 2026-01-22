@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Session } from '../types.ts'
 import pinoLogger from '../logger.ts'
 import { TerminalRenderer } from './TerminalRenderer.tsx'
@@ -9,7 +9,7 @@ export function App() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [output, setOutput] = useState<string[]>([])
-  const [inputValue, setInputValue] = useState('')
+
   const [connected, setConnected] = useState(false)
   const [wsMessageCount, setWsMessageCount] = useState(0)
 
@@ -301,7 +301,6 @@ export function App() {
       }
       activeSessionRef.current = session
       setActiveSession(session)
-      setInputValue('')
       // Reset WebSocket message counter when switching sessions
       setWsMessageCount(0)
       wsMessageCountRef.current = 0
@@ -340,36 +339,37 @@ export function App() {
     }
   }, [])
 
-  const handleSendInput = useCallback(async () => {
-    if (!inputValue.trim() || !activeSession) {
-      return
-    }
-
-    try {
-      const baseUrl = `${location.protocol}//${location.host}`
-      const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}/input`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: inputValue + '\n' }),
-      })
-
-      if (response.ok) {
-        setInputValue('')
-      } else {
-        const errorText = await response.text().catch(() => 'Unable to read error response')
-        logger.error(
-          {
-            status: response.status,
-            statusText: response.statusText,
-            error: errorText,
-          },
-          'Failed to send input'
-        )
+  const handleSendInput = useCallback(
+    async (data: string) => {
+      if (!data.trim() || !activeSession) {
+        return
       }
-    } catch (error) {
-      logger.error({ error }, 'Network error sending input')
-    }
-  }, [inputValue, activeSession])
+
+      try {
+        const baseUrl = `${location.protocol}//${location.host}`
+        const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}/input`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data }),
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => 'Unable to read error response')
+          logger.error(
+            {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText,
+            },
+            'Failed to send input'
+          )
+        }
+      } catch (error) {
+        logger.error({ error }, 'Network error sending input')
+      }
+    },
+    [activeSession]
+  )
 
   const handleKillSession = useCallback(async () => {
     if (!activeSession) {
@@ -404,16 +404,6 @@ export function App() {
       logger.error({ error }, 'Network error killing session')
     }
   }, [activeSession])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        handleSendInput()
-      }
-    },
-    [handleSendInput]
-  )
 
   return (
     <div className="container">
@@ -464,28 +454,13 @@ export function App() {
               {output.length === 0 ? (
                 <div className="empty-state">Waiting for output...</div>
               ) : (
-                <TerminalRenderer output={output} />
+                <TerminalRenderer
+                  output={output}
+                  onSendInput={handleSendInput}
+                  onInterrupt={handleKillSession}
+                  disabled={activeSession.status !== 'running'}
+                />
               )}
-            </div>
-            <div className="input-container">
-              <input
-                type="text"
-                className="input-field"
-                placeholder={
-                  activeSession.status === 'running' ? 'Type input...' : 'Session not running'
-                }
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={activeSession.status !== 'running'}
-              />
-              <button
-                className="send-btn"
-                onClick={handleSendInput}
-                disabled={activeSession.status !== 'running' || !inputValue.trim()}
-              >
-                Send
-              </button>
             </div>
 
             {/* Debug info for testing - hidden in production */}

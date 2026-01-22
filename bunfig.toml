@@ -1,3 +1,2 @@
 [test]
-include = ["test/**/*.test.ts", "src/plugin/**/*.test.ts"]
-exclude = ["src/web/**", "tests/**"]
+root = "test"

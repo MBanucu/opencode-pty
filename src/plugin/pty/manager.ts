@@ -193,7 +193,9 @@ class PTYManager {
     if (session.status === 'running') {
       try {
         session.process.kill()
-      } catch {}
+      } catch {
+        // Ignore kill errors
+      }
       session.status = 'killed'
     }
 

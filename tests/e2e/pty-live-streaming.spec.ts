@@ -26,7 +26,7 @@ test.describe('PTY Live Streaming', () => {
           command: 'bash',
           args: [
             '-c',
-            'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do echo "$(date): Live update..."; sleep 0.1; done',
+            'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
           ],
           description: 'Live streaming test session',
         },
@@ -69,7 +69,7 @@ test.describe('PTY Live Streaming', () => {
 
     // Check that the title contains the session info
     const headerTitle = await page.locator('.output-header .output-title').textContent()
-    expect(headerTitle).toContain('bash')
+    expect(headerTitle).toContain('Live streaming test session')
 
     // Now wait for output to appear
     await page.waitForSelector('.output-line', { timeout: 5000 })
@@ -110,7 +110,7 @@ test.describe('PTY Live Streaming', () => {
           command: 'bash',
           args: [
             '-c',
-            'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do echo "$(date): Live update..."; sleep 0.1; done',
+            'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
           ],
           description: 'Live streaming test session',
         },
@@ -203,7 +203,7 @@ test.describe('PTY Live Streaming', () => {
     // Check that the new lines contain the expected timestamp format if output increased
     if (finalCount > initialCount) {
       const lastTimestampLine = await outputLines.nth(finalCount - 2).textContent()
-      expect(lastTimestampLine).toMatch(/Mi \d+\. Jan \d+:\d+:\d+ CET \d+: Live update\.\.\./)
+      expect(lastTimestampLine).toMatch(/\w{3} \d+\. \w{3} \d+:\d+:\d+ \w{3} \d+: Live update\.\.\./)
     }
 
     log.info(`✅ Live streaming test passed - received ${finalCount - initialCount} live updates`)

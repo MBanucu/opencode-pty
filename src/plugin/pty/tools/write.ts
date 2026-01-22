@@ -3,6 +3,9 @@ import { manager } from '../manager.ts'
 import { checkCommandPermission } from '../permissions.ts'
 import DESCRIPTION from './write.txt'
 
+const ETX = String.fromCharCode(3)
+const EOT = String.fromCharCode(4)
+
 /**
  * Parse escape sequences in a string to their actual byte values.
  * Handles: \n, \r, \t, \xNN (hex), \uNNNN (unicode), \\
@@ -35,7 +38,7 @@ function extractCommands(data: string): string[] {
   const lines = data.split(/[\n\r]+/)
   for (const line of lines) {
     const trimmed = line.trim()
-    if (trimmed && !trimmed.startsWith('\x03') && !trimmed.startsWith('\x04')) {
+    if (trimmed && !trimmed.startsWith(ETX) && !trimmed.startsWith(EOT)) {
       commands.push(trimmed)
     }
   }
@@ -83,8 +86,8 @@ export const ptyWrite = tool({
 
     const preview = args.data.length > 50 ? args.data.slice(0, 50) + '...' : args.data
     const displayPreview = preview
-      .replace(/\x03/g, '^C')
-      .replace(/\x04/g, '^D')
+      .replace(new RegExp(ETX, 'g'), '^C')
+      .replace(new RegExp(EOT, 'g'), '^D')
       .replace(/\n/g, '\\n')
       .replace(/\r/g, '\\r')
     return `Sent ${args.data.length} bytes to ${args.id}: "${displayPreview}"`

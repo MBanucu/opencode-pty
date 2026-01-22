@@ -109,22 +109,27 @@ export const myTool = tool({
 src/
 ├── plugin.ts           # Main plugin entry point
 ├── types.ts            # Plugin-level types
-├── logger.ts           # Logging utilities
-└── plugin/             # Plugin-specific code
-    ├── pty/            # PTY-specific code
-    │   ├── types.ts    # PTY types and interfaces
-    │   ├── manager.ts  # PTY session management
-    │   ├── buffer.ts   # Output buffering (RingBuffer)
-    │   ├── permissions.ts # Permission checking
-    │   ├── wildcard.ts # Wildcard matching utilities
-    │   └── tools/      # Tool implementations
-    │       ├── spawn.ts # pty_spawn tool
-    │       ├── write.ts # pty_write tool
-    │       ├── read.ts  # pty_read tool
-    │       ├── list.ts  # pty_list tool
-    │       ├── kill.ts  # pty_kill tool
-    │       └── *.txt    # Tool descriptions
-    └── types.ts         # Plugin types
+├── plugin/             # Plugin-specific code
+│   ├── logger.ts       # Logging utilities
+│   ├── pty/            # PTY-specific code
+│   │   ├── types.ts    # PTY types and interfaces
+│   │   ├── manager.ts  # PTY session management
+│   │   ├── buffer.ts   # Output buffering (RingBuffer)
+│   │   ├── permissions.ts # Permission checking
+│   │   ├── wildcard.ts # Wildcard matching utilities
+│   │   └── tools/      # Tool implementations
+│   │       ├── spawn.ts # pty_spawn tool
+│   │       ├── write.ts # pty_write tool
+│   │       ├── read.ts  # pty_read tool
+│   │       ├── list.ts  # pty_list tool
+│   │       ├── kill.ts  # pty_kill tool
+│   │       └── *.txt    # Tool descriptions
+│   └── types.ts         # Plugin types
+└── web/                # Web UI components and server
+    ├── components/     # React components
+    ├── types.ts        # Web UI types
+    ├── server.ts       # Web server
+    └── index.html      # HTML entry point
 ```
 
 ### Constants and Magic Numbers

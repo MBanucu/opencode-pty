@@ -1,5 +1,5 @@
 import type { PluginClient } from '../types.ts'
-import { Wildcard } from './wildcard.ts'
+import { allStructured } from './wildcard.ts'
 import { createLogger } from '../logger.ts'
 
 const log = createLogger('permissions')
@@ -43,7 +43,9 @@ async function showToast(
   if (!_client) return
   try {
     await _client.tui.showToast({ body: { message, variant } })
-  } catch {}
+  } catch {
+    // Ignore toast errors
+  }
 }
 
 export async function checkCommandPermission(command: string, args: string[]): Promise<void> {
@@ -68,7 +70,7 @@ export async function checkCommandPermission(command: string, args: string[]): P
     return
   }
 
-  const action = Wildcard.allStructured({ head: command, tail: args }, bashPerms)
+  const action = allStructured({ head: command, tail: args }, bashPerms)
 
   if (action === 'deny') {
     throw new Error(

@@ -8,6 +8,7 @@ export default defineConfig({
   build: {
     outDir: '../../dist/web',
     emptyOutDir: true,
+    minify: false, // Disable minification
   },
   server: {
     port: 3000,

@@ -48,7 +48,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'env NODE_ENV=test bun run test-web-server.ts',
+    command: 'env NODE_ENV=test LOG_LEVEL=warn bun run test-web-server.ts',
     url: `http://localhost:${testPort}`,
     reuseExistingServer: true, // Reuse existing server if running
   },

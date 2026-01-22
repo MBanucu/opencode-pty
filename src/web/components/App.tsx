@@ -1,20 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import type { Session } from '../types.ts'
+import { createLogger } from '../logger.ts'
 
-// Configure logger - reduce logging in test environment
-const isTest =
-  typeof window !== 'undefined' &&
-  window.location?.hostname === 'localhost' &&
-  window.location?.port === '8867'
-const logger = {
-  info: (...args: any[]) => {
-    if (!isTest) console.log(...args)
-  },
-  error: (...args: any[]) => console.error(...args),
-}
+const logger = createLogger('App')
 
 export function App() {
-  if (!isTest) logger.info('[Browser] App component rendering/mounting')
 
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
@@ -26,6 +16,14 @@ export function App() {
   const wsRef = useRef<WebSocket | null>(null)
   const outputRef = useRef<HTMLDivElement>(null)
   const activeSessionRef = useRef<Session | null>(null)
+  const wsMessageCountRef = useRef(0)
+
+  // Keep ref in sync with activeSession state
+  useEffect(() => {
+    activeSessionRef.current = activeSession
+  }, [activeSession])
+
+
 
   const refreshSessions = useCallback(async () => {
     try {
@@ -34,50 +32,50 @@ export function App() {
       if (response.ok) {
         const sessions = await response.json()
         setSessions(Array.isArray(sessions) ? sessions : [])
-        logger.info('[Browser] Refreshed sessions:', sessions.length)
       }
-    } catch (error) {
-      logger.error('[Browser] Failed to refresh sessions:', error)
-    }
+      } catch (error) {
+        logger.error({ error }, 'Failed to refresh sessions')
+      }
   }, [])
 
   // Connect to WebSocket on mount
   useEffect(() => {
     const ws = new WebSocket(`ws://${location.host}`)
-    ws.onopen = () => {
-      console.log('[WS] Connected')
-      setConnected(true)
-      // Request initial session list
-      ws.send(JSON.stringify({ type: 'session_list' }))
-    }
+     ws.onopen = () => {
+       logger.info('WebSocket connected')
+       setConnected(true)
+       // Request initial session list
+       ws.send(JSON.stringify({ type: 'session_list' }))
+     }
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
-        console.log('[WS] Message:', data)
+        logger.debug({ type: data.type, sessionId: data.sessionId }, 'WebSocket message received')
         if (data.type === 'session_list') {
           setSessions(data.sessions || [])
           // Auto-select first running session if none selected
-          if (data.sessions.length > 0 && !activeSession) {
-            const runningSession = data.sessions.find((s: Session) => s.status === 'running')
-            const sessionToSelect = runningSession || data.sessions[0]
-            console.log('[WS] Auto-selecting session:', sessionToSelect.id)
-            setActiveSession(sessionToSelect)
-          }
+           if (data.sessions.length > 0 && !activeSession) {
+             const runningSession = data.sessions.find((s: Session) => s.status === 'running')
+             const sessionToSelect = runningSession || data.sessions[0]
+             logger.info({ sessionId: sessionToSelect.id }, 'Auto-selecting session')
+             setActiveSession(sessionToSelect)
+           }
         } else if (data.type === 'data' && activeSessionRef.current?.id === data.sessionId) {
           setOutput(prev => [...prev, ...data.data])
-          setWsMessageCount(prev => prev + 1)
+          wsMessageCountRef.current++
+          setWsMessageCount(wsMessageCountRef.current)
         }
       } catch (error) {
-        console.error('[WS] Failed to parse message:', error)
+        logger.error({ error }, 'Failed to parse WebSocket message')
       }
     }
     ws.onclose = () => {
-      console.log('[WS] Disconnected')
-      setConnected(false)
-    }
+       logger.info('WebSocket disconnected')
+       setConnected(false)
+     }
     ws.onerror = (error) => {
-      console.error('[WS] Error:', error)
-    }
+       logger.error({ error }, 'WebSocket error')
+     }
     wsRef.current = ws
     return () => ws.close()
   }, [])
@@ -88,64 +86,45 @@ export function App() {
   }, [refreshSessions])
 
   const handleSessionClick = useCallback(async (session: Session) => {
-    logger.info('[Browser] handleSessionClick called with session:', session.id, session.status)
     try {
       // Validate session object first
       if (!session?.id) {
-        logger.error('[Browser] Invalid session object passed to handleSessionClick:', session)
+        logger.error({ session }, 'Invalid session object passed to handleSessionClick')
         return
       }
 
-      logger.info('[Browser] Setting active session:', session.id)
       setActiveSession(session)
       setInputValue('')
 
       // Subscribe to this session for live updates
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        logger.info('[Browser] Subscribing to session for live updates:', session.id)
         wsRef.current.send(JSON.stringify({ type: 'subscribe', sessionId: session.id }))
       } else {
-        logger.info('[Browser] WebSocket not ready for subscription, retrying in 100ms')
         setTimeout(() => {
           if (wsRef.current?.readyState === WebSocket.OPEN) {
-            logger.info('[Browser] Subscribing to session for live updates (retry):', session.id)
             wsRef.current.send(JSON.stringify({ type: 'subscribe', sessionId: session.id }))
           }
         }, 100)
       }
 
-      // Always fetch output (buffered content for all sessions)
-      logger.info('[Browser] Fetching output for session:', session.id, 'status:', session.status)
-
       try {
         const baseUrl = `${location.protocol}//${location.host}`
-        logger.info(
-          '[Browser] Making fetch request to:',
-          `${baseUrl}/api/sessions/${session.id}/output`
-        )
-
         const response = await fetch(`${baseUrl}/api/sessions/${session.id}/output`)
-        logger.info('[Browser] Fetch completed, response status:', response.status)
 
         if (response.ok) {
           const outputData = await response.json()
-          logger.info('[Browser] Successfully parsed JSON, lines:', outputData.lines?.length || 0)
-          logger.info('[Browser] Setting output with lines:', outputData.lines)
           setOutput(outputData.lines || [])
-          logger.info('[Browser] Output state updated')
         } else {
           const errorText = await response.text().catch(() => 'Unable to read error response')
-          logger.error('[Browser] Fetch failed - Status:', response.status, 'Error:', errorText)
+          logger.error({ status: response.status, error: errorText }, 'Fetch failed')
           setOutput([])
         }
-
       } catch (fetchError) {
-        logger.error('[Browser] Network error fetching output:', fetchError)
+        logger.error({ error: fetchError }, 'Network error fetching output')
         setOutput([])
       }
-      logger.info(`[Browser] Fetch process completed for ${session.id}`)
     } catch (error) {
-      logger.error('[Browser] Unexpected error in handleSessionClick:', error)
+      logger.error({ error }, 'Unexpected error in handleSessionClick')
       // Ensure UI remains stable
       setOutput([])
     }
@@ -153,16 +132,8 @@ export function App() {
 
   const handleSendInput = useCallback(async () => {
     if (!inputValue.trim() || !activeSession) {
-      logger.info('[Browser] Send input skipped - no input or no active session')
       return
     }
-
-    logger.info(
-      '[Browser] Sending input:',
-      inputValue.length,
-      'characters to session:',
-      activeSession.id
-    )
 
     try {
       const baseUrl = `${location.protocol}//${location.host}`
@@ -172,64 +143,49 @@ export function App() {
         body: JSON.stringify({ data: inputValue + '\n' }),
       })
 
-      logger.info('[Browser] Input send response:', response.status, response.statusText)
-
       if (response.ok) {
-        logger.info('[Browser] Input sent successfully, clearing input field')
         setInputValue('')
       } else {
         const errorText = await response.text().catch(() => 'Unable to read error response')
-        logger.error(
-          '[Browser] Failed to send input - Status:',
-          response.status,
-          response.statusText,
-          'Error:',
-          errorText
-        )
+        logger.error({
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        }, 'Failed to send input')
       }
     } catch (error) {
-      logger.error('[Browser] Network error sending input:', error)
+      logger.error({ error }, 'Network error sending input')
     }
   }, [inputValue, activeSession])
 
   const handleKillSession = useCallback(async () => {
     if (!activeSession) {
-      logger.info('[Browser] Kill session skipped - no active session')
       return
     }
 
-    logger.info('[Browser] Attempting to kill session:', activeSession.id, activeSession.title)
-
     if (!confirm(`Are you sure you want to kill session "${activeSession.title}"?`)) {
-      logger.info('[Browser] User cancelled session kill')
       return
     }
 
     try {
       const baseUrl = `${location.protocol}//${location.host}`
-      logger.info('[Browser] Sending kill request to server')
       const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}/kill`, {
         method: 'POST',
       })
 
-      logger.info('[Browser] Kill response:', response.status, response.statusText)
-
       if (response.ok) {
-        logger.info('[Browser] Session killed successfully, clearing UI state')
         setActiveSession(null)
         setOutput([])
       } else {
         const errorText = await response.text().catch(() => 'Unable to read error response')
-        logger.error(
-          '[Browser] Failed to kill session - Status:',
-          response.status,
-          response.statusText,
-          'Error:',
-          errorText
-        )
+        logger.error({
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        }, 'Failed to kill session')
       }
     } catch (error) {
-      logger.error('[Browser] Network error killing session:', error)
+      logger.error({ error }, 'Network error killing session')
     }
   }, [activeSession])
 
@@ -292,27 +248,32 @@ export function App() {
               {output.length === 0 ? (
                 <div className="empty-state">Waiting for output...</div>
               ) : (
-                output.map((line, index) => (
-                  <div key={index} className="output-line" style={{ whiteSpace: 'pre' }}>
-                    {line}
-                  </div>
-                ))
-              )}
+                 output.map((line, index) => (
+                   <div key={index} className="output-line" style={{ whiteSpace: 'pre' }}>
+                     {line}
+                   </div>
+                 ))
+               )}
 
-              {/* Debug info */}
-              <div
-                style={{
-                  fontSize: '10px',
-                  color: '#666',
-                  marginTop: '10px',
-                  borderTop: '1px solid #ccc',
-                  paddingTop: '5px',
-                }}
-              >
-                Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}
-                {wsMessageCount}
-              </div>
-            </div>
+               {/* Debug info for testing */}
+               <div
+                 style={{
+                   display: 'none', // Hidden in production, visible for tests
+                   fontSize: '10px',
+                   color: '#666',
+                   marginTop: '10px',
+                   borderTop: '1px solid #ccc',
+                   paddingTop: '5px',
+                 }}
+                 data-testid="debug-info"
+               >
+                 Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}
+                 {wsMessageCount} (activeRef: {activeSessionRef.current?.id || 'none'})
+                 <br />
+                 Debug: wsMessageCountRef: {wsMessageCountRef.current}
+               </div>
+
+             </div>
             <div className="input-container">
               <input
                 type="text"

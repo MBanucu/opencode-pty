@@ -187,7 +187,10 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         const distDir = resolve(process.cwd(), 'dist/web')
         const assetPath = url.pathname.slice(1) // remove leading /
         const filePath = join(distDir, assetPath)
-        await Bun.write('/tmp/debug.log', `cwd: ${process.cwd()}, distDir: ${distDir}, assetPath: ${assetPath}, filePath: ${filePath}\n`)
+        await Bun.write(
+          '/tmp/debug.log',
+          `cwd: ${process.cwd()}, distDir: ${distDir}, assetPath: ${assetPath}, filePath: ${filePath}\n`
+        )
         const file = Bun.file(filePath)
         const exists = await file.exists()
         await Bun.write('/tmp/debug.log', `exists: ${exists}\n`, { createPath: false })

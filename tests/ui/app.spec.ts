@@ -39,7 +39,9 @@ test.describe('App Component', () => {
   })
 
   test.describe('WebSocket Message Handling', () => {
-    test('increments WS message counter when receiving data for active session', async ({ page }) => {
+    test('increments WS message counter when receiving data for active session', async ({
+      page,
+    }) => {
       // Listen to page console for debugging
       page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
       page.on('pageerror', (error) => log.error('PAGE ERROR: ' + error.message))
@@ -84,7 +86,7 @@ test.describe('App Component', () => {
       await page.waitForSelector('.output-header .output-title', { timeout: 3000 })
 
       // Get initial WS message count
-      const initialDebugText = await page.locator('.output-container').textContent() || ''
+      const initialDebugText = (await page.locator('.output-container').textContent()) || ''
       const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
       const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
 
@@ -92,7 +94,7 @@ test.describe('App Component', () => {
       await page.waitForTimeout(3000)
 
       // Check that WS message count increased
-      const finalDebugText = await page.locator('.output-container').textContent() || ''
+      const finalDebugText = (await page.locator('.output-container').textContent()) || ''
       const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
       const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
 
@@ -140,13 +142,13 @@ test.describe('App Component', () => {
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
       // Get initial count
-      const initialDebugText = await page.locator('.output-container').textContent() || ''
+      const initialDebugText = (await page.locator('.output-container').textContent()) || ''
       const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
       const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
 
       // Wait a bit and check count again
       await page.waitForTimeout(2000)
-      const finalDebugText = await page.locator('.output-container').textContent() || ''
+      const finalDebugText = (await page.locator('.output-container').textContent()) || ''
       const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
       const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
 
@@ -191,18 +193,20 @@ test.describe('App Component', () => {
       // Wait for some messages
       await page.waitForTimeout(2000)
 
-      const firstSessionDebug = await page.locator('.output-container').textContent() || ''
+      const firstSessionDebug = (await page.locator('.output-container').textContent()) || ''
       const firstSessionWsMatch = firstSessionDebug.match(/WS messages:\s*(\d+)/)
-      const firstSessionCount = firstSessionWsMatch && firstSessionWsMatch[1] ? parseInt(firstSessionWsMatch[1]) : 0
+      const firstSessionCount =
+        firstSessionWsMatch && firstSessionWsMatch[1] ? parseInt(firstSessionWsMatch[1]) : 0
 
       // Switch to second session
       await sessionItems.nth(1).click()
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
       // The counter should reset or be lower for the new session
-      const secondSessionDebug = await page.locator('.output-container').textContent() || ''
+      const secondSessionDebug = (await page.locator('.output-container').textContent()) || ''
       const secondSessionWsMatch = secondSessionDebug.match(/WS messages:\s*(\d+)/)
-      const secondSessionCount = secondSessionWsMatch && secondSessionWsMatch[1] ? parseInt(secondSessionWsMatch[1]) : 0
+      const secondSessionCount =
+        secondSessionWsMatch && secondSessionWsMatch[1] ? parseInt(secondSessionWsMatch[1]) : 0
 
       // Counter should be lower for the new session (or reset to 0)
       expect(secondSessionCount).toBeLessThanOrEqual(firstSessionCount)
@@ -234,7 +238,7 @@ test.describe('App Component', () => {
       // Wait for messages
       await page.waitForTimeout(2000)
 
-      const debugText = await page.locator('.output-container').textContent() || ''
+      const debugText = (await page.locator('.output-container').textContent()) || ''
       const wsMatch = debugText.match(/WS messages:\s*(\d+)/)
       const count = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
 

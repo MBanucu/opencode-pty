@@ -87,6 +87,8 @@
   "dependencies": {
     "@opencode-ai/plugin": "^1.1.31",
     "@opencode-ai/sdk": "^1.1.31",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "bun-pty": "^0.4.8",
     "pino": "^10.2.1",
     "pino-pretty": "^13.1.3",

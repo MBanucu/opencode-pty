@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import type { Session } from '../types.ts'
 import pinoLogger from '../logger.ts'
+import { TerminalRenderer } from './TerminalRenderer.tsx'
 
 const logger = pinoLogger.child({ module: 'App' })
 
@@ -13,7 +14,7 @@ export function App() {
   const [wsMessageCount, setWsMessageCount] = useState(0)
 
   const wsRef = useRef<WebSocket | null>(null)
-  const outputRef = useRef<HTMLDivElement>(null)
+
   const activeSessionRef = useRef<Session | null>(null)
   const wsMessageCountRef = useRef(0)
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -459,15 +460,11 @@ export function App() {
                 Kill Session
               </button>
             </div>
-            <div className="output-container" ref={outputRef}>
+            <div className="output-container">
               {output.length === 0 ? (
                 <div className="empty-state">Waiting for output...</div>
               ) : (
-                output.map((line, index) => (
-                  <div key={index} className="output-line" style={{ whiteSpace: 'pre' }}>
-                    {line}
-                  </div>
-                ))
+                <TerminalRenderer output={output} />
               )}
             </div>
             <div className="input-container">

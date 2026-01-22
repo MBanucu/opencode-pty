@@ -21,6 +21,7 @@ describe('Web Server', () => {
 
   afterEach(() => {
     stopWebServer()
+    manager.cleanupAll() // Ensure cleanup after each test
   })
 
   describe('Server Lifecycle', () => {

@@ -12,7 +12,7 @@ function validateRegex(pattern: string): boolean {
     // Check for potentially dangerous patterns that can cause exponential backtracking
     // This is a basic check - more sophisticated validation could be added
     const dangerousPatterns = [
-      /\(\?\:.*\)\*.*\(\?\:.*\)\*/, // nested optional groups with repetition
+      /\(\?:.*\)\*.*\(\?:.*\)\*/, // nested optional groups with repetition
       /.*\(\.\*\?\)\{2,\}.*/, // overlapping non-greedy quantifiers
       /.*\(.*\|.*\)\{3,\}.*/, // complex alternation with repetition
     ]

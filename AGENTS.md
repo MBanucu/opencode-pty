@@ -203,8 +203,8 @@ Follow conventional commit format:
 
 ### Dependencies
 
-- **@opencode-ai/plugin**: ^1.1.3 (Core plugin framework)
-- **@opencode-ai/sdk**: ^1.1.3 (SDK for client interactions)
+- **@opencode-ai/plugin**: ^1.1.31 (Core plugin framework)
+- **@opencode-ai/sdk**: ^1.1.31 (SDK for client interactions)
 - **bun-pty**: ^0.4.2 (PTY implementation)
 - **@types/bun**: 1.3.1 (TypeScript definitions for Bun)
 - **typescript**: ^5 (peer dependency)

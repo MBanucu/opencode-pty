@@ -22,19 +22,6 @@ export function App() {
     activeSessionRef.current = activeSession
   }, [activeSession])
 
-  const refreshSessions = useCallback(async () => {
-    try {
-      const baseUrl = `${location.protocol}//${location.host}`
-      const response = await fetch(`${baseUrl}/api/sessions`)
-      if (response.ok) {
-        const sessions = await response.json()
-        setSessions(Array.isArray(sessions) ? sessions : [])
-      }
-    } catch (error) {
-      logger.error({ error }, 'Failed to refresh sessions')
-    }
-  }, [])
-
   // Connect to WebSocket on mount
   useEffect(() => {
     const ws = new WebSocket(`ws://${location.host}`)
@@ -160,10 +147,7 @@ export function App() {
     return () => ws.close()
   }, [])
 
-  // Initial session refresh as fallback
-  useEffect(() => {
-    refreshSessions()
-  }, [refreshSessions])
+  // Initial session refresh as fallback - called during WebSocket setup
 
   const handleSessionClick = useCallback(async (session: Session) => {
     try {

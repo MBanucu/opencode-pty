@@ -90,14 +90,14 @@ This will:
 
 The web server provides a REST API for session management:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/sessions` | List all PTY sessions |
-| `POST` | `/api/sessions` | Create a new PTY session |
-| `GET` | `/api/sessions/:id` | Get session details |
-| `GET` | `/api/sessions/:id/output` | Get session output buffer |
-| `DELETE` | `/api/sessions/:id` | Kill and cleanup a session |
-| `GET` | `/health` | Server health check with metrics |
+| Method   | Endpoint                   | Description                      |
+| -------- | -------------------------- | -------------------------------- |
+| `GET`    | `/api/sessions`            | List all PTY sessions            |
+| `POST`   | `/api/sessions`            | Create a new PTY session         |
+| `GET`    | `/api/sessions/:id`        | Get session details              |
+| `GET`    | `/api/sessions/:id/output` | Get session output buffer        |
+| `DELETE` | `/api/sessions/:id`        | Kill and cleanup a session       |
+| `GET`    | `/health`                  | Server health check with metrics |
 
 #### Session Creation
 

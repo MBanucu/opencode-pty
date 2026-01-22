@@ -17,37 +17,6 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
   initPermissions(client, directory)
   initManager(client)
 
-  const webServerUrl = startWebServer()
-  log.info({ webServerUrl }, 'PTY plugin initialized')
-
-  // Register the /server-url slash command
-  try {
-    const response = await client.config.get()
-    if (response.error) {
-      throw new Error(String(response.error))
-    }
-    if (!response.data) {
-      throw new Error('No config data received')
-    }
-    const currentCommands = response.data.command || {}
-    const updatedCommands = {
-      ...currentCommands,
-      'server-url': {
-        template:
-          'Get the URL of the running PTY web server instance by calling the pty_server_url tool and display it.',
-        description: 'Get the link to the running PTY web server',
-      },
-    }
-    await client.config.update({
-      body: {
-        command: updatedCommands,
-      },
-    })
-    log.info('Registered /server-url slash command')
-  } catch (error) {
-    log.warn({ error: String(error) }, 'Failed to register /server-url slash command')
-  }
-
   return {
     tool: {
       pty_spawn: ptySpawn,
@@ -56,6 +25,16 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       pty_list: ptyList,
       pty_kill: ptyKill,
       pty_server_url: ptyServerUrl,
+    },
+    config: async (input) => {
+      if (!input.command) {
+        input.command = {}
+      }
+      input.command['background-pty-server-url'] = {
+        template: 'Get the URL of the running PTY web server instance by calling the pty_server_url tool and display it.',
+        description: 'Get the link to the running PTY web server',
+      };
+      startWebServer()
     },
     event: async ({ event }) => {
       if (!event) {

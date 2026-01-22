@@ -43,6 +43,7 @@
     "build": "bun run clean && bun run typecheck && vite build",
     "build:dev": "vite build --mode development",
     "build:prod": "bun run build --mode production",
+    "build:plugin": "bun build --target bun --outfile=dist/opencode-pty.js index.ts",
     "clean": "rm -rf dist playwright-report test-results",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",

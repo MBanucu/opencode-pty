@@ -209,8 +209,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
       if (url.pathname === '/') {
         log.info({ nodeEnv: process.env.NODE_ENV }, 'Serving root')
         // In test mode, serve built HTML from dist/web, otherwise serve source
-        const htmlPath =
-          process.env.NODE_ENV === 'test' ? './dist/web/index.html' : './src/web/index.html'
+        const htmlPath = import.meta.dir ? `${import.meta.dir}/../../dist/web/index.html` : "./dist/web/index.html";
         log.debug({ htmlPath }, 'Serving HTML')
         return new Response(await Bun.file(htmlPath).bytes(), {
           headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },

@@ -129,8 +129,8 @@ describe('Web Server', () => {
     it('should return individual session', async () => {
       // Create a test session first
       const session = manager.spawn({
-        command: 'echo',
-        args: ['test'],
+        command: 'bash',
+        args: ['-c', 'sleep 0.1'],
         description: 'Test session',
         parentSessionId: 'test',
       })
@@ -140,7 +140,8 @@ describe('Web Server', () => {
 
       const sessionData = await response.json()
       expect(sessionData.id).toBe(session.id)
-      expect(sessionData.command).toBe('echo')
+      expect(sessionData.command).toBe('bash')
+      expect(sessionData.args).toEqual(['-c', 'sleep 0.1'])
     })
 
     it('should return 404 for non-existent session', async () => {
@@ -178,8 +179,8 @@ describe('Web Server', () => {
 
     it('should handle kill session', async () => {
       const session = manager.spawn({
-        command: 'echo',
-        args: ['test'],
+        command: 'bash',
+        args: ['-c', 'sleep 1'],
         description: 'Test session',
         parentSessionId: 'test',
       })

@@ -8,7 +8,7 @@ const isTest = import.meta.env.MODE === 'test'
 const logLevel: pino.Level = isTest ? 'warn' : isDevelopment ? 'debug' : 'info'
 
 // Create Pino logger for browser with basic configuration
-const logger = pino({
+const pinoLogger = pino({
   level: logLevel,
   browser: {
     asObject: true, // Always log as objects
@@ -19,7 +19,10 @@ const logger = pino({
 })
 
 // Create child logger factory for specific modules
-export const createLogger = (module: string) => logger.child({ module })
+export const createLogger = (module: string) => pinoLogger.child({ module })
+
+// Convenience function for creating child loggers (recommended pattern)
+export const getLogger = (context: Record<string, unknown> = {}) => pinoLogger.child(context)
 
 // Default app logger
-export default logger
+export default pinoLogger

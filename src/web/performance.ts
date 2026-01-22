@@ -1,5 +1,5 @@
 // Performance monitoring utilities
-import { createLogger } from '../plugin/logger.ts'
+import { createLogger } from './logger.ts'
 import { PERFORMANCE_MEASURE_LIMIT } from '../shared/constants.ts'
 
 const log = createLogger('performance')
@@ -69,7 +69,7 @@ export function trackWebVitals(): void {
         const entries = list.getEntries()
         const lastEntry = entries[entries.length - 1] as any
         if (lastEntry) {
-          log.debug('LCP measured', { value: lastEntry.startTime })
+          log.debug({ value: lastEntry.startTime }, 'LCP measured')
         }
       })
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] })
@@ -78,7 +78,7 @@ export function trackWebVitals(): void {
       const fidObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
         entries.forEach((entry: any) => {
-          log.debug('FID measured', { value: entry.processingStart - entry.startTime })
+          log.debug({ value: entry.processingStart - entry.startTime }, 'FID measured')
         })
       })
       fidObserver.observe({ entryTypes: ['first-input'] })
@@ -92,11 +92,11 @@ export function trackWebVitals(): void {
             clsValue += entry.value
           }
         })
-        log.debug('CLS measured', { value: clsValue })
+        log.debug({ value: clsValue }, 'CLS measured')
       })
       clsObserver.observe({ entryTypes: ['layout-shift'] })
     } catch (e) {
-      log.warn('Performance tracking not fully supported', { error: e })
+      log.warn({ error: e }, 'Performance tracking not fully supported')
     }
   }
 }

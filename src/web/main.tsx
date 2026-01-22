@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { App } from './components/App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { trackWebVitals, PerformanceMonitor } from './performance.ts'
-import { createLogger } from '../plugin/logger.ts'
+import { createLogger } from './logger.ts'
 import './index.css'
 
 const log = createLogger('web-ui')

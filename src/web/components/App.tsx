@@ -37,7 +37,10 @@ export function App() {
         logger.debug({ type: data.type, sessionId: data.sessionId }, 'WebSocket message received')
         if (data.type === 'session_list') {
           logger.info(
-            { sessionCount: data.sessions?.length, activeSessionId: activeSession?.id },
+            {
+              sessionCount: data.sessions?.length,
+              activeSessionId: activeSession?.id,
+            },
             'Processing session_list message'
           )
           setSessions(data.sessions || [])

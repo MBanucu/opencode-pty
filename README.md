@@ -294,6 +294,171 @@ To load a local checkout in OpenCode:
 }
 ```
 
+## Building OpenCode Plugins
+
+Here's a practical guide to building an **OpenCode** plugin using **Bun** so it loads correctly from the `.opencode/plugins/` directory (project-local plugins).
+
+OpenCode has excellent built-in support for Bun — it automatically runs `bun install` on startup when it finds a `package.json` in the `.opencode/` folder, and it loads TypeScript/JavaScript files directly from `.opencode/plugins/` without any separate build step in most cases.
+
+### Two main approaches in 2025/2026
+
+**Approach A – Recommended for most plugins (no build step)**  
+Put plain `.ts` or `.js` files directly into `.opencode/plugins/`. OpenCode loads & executes them natively via Bun.
+
+**Approach B – When you want a proper build / bundling / multiple files**  
+Use Bun to compile/transpile → output JavaScript into `.opencode/plugins/`.
+
+### Approach A – Simple & most common (no build)
+
+1. In your project root create the folders if they don't exist:
+
+   ```
+   mkdir -p .opencode/plugins
+   ```
+
+2. Create `package.json` **in `.opencode/`** (not inside plugins/) — even if almost empty:
+
+   ```json
+   {
+     "name": "my-opencode-plugins",
+     "private": true,
+     "dependencies": {
+       "@opencode-ai/plugin": "^1.x" // optional but strongly recommended
+     }
+   }
+   ```
+
+   → OpenCode will run `bun install` automatically the next time you start `opencode`.
+
+3. Create your plugin file — e.g. `.opencode/plugins/my-cool-feature.ts`
+
+   ```ts
+   import type { Plugin } from '@opencode-ai/plugin'
+
+   export const plugin: Plugin = {
+     name: 'my-cool-feature',
+
+     hooks: {
+       // Most popular hook — runs after each agent turn
+       'agent:post-turn': async ({ client, message }) => {
+         if (message.role === 'assistant') {
+           // Example: auto-format code blocks the agent just wrote
+           await client.sendMessage({
+             role: 'system',
+             content: 'Consider running biome format on changed files…',
+           })
+         }
+       },
+
+       // Another common one
+       'session:start': async ({ client }) => {
+         await client.sendMessage({
+           role: 'system',
+           content: '🔥 my-cool-feature plugin is active!',
+         })
+       },
+     },
+   }
+   ```
+
+4. (optional) Add to project `opencode.json` or `opencode.jsonc` to explicitly enable/disable:
+
+   ```json
+   {
+     "plugins": {
+       "my-cool-feature": {
+         "enabled": true
+       }
+     }
+   }
+   ```
+
+5. Just run `opencode` → the plugin should be loaded automatically.
+
+### Approach B – Using Bun to build (for larger plugins / tsconfig / bundling)
+
+Use this when your plugin has many files, complex types, or you want to use `bun build`.
+
+1. Create a source folder (outside `.opencode/` or inside it)
+
+   Example structure:
+
+   ```
+   my-plugin/
+   ├── src/
+   │   └── index.ts
+   ├── .opencode/
+   │   ├── plugins/           ← built files will go here
+   │   └── package.json
+   ├── bunfig.toml            (optional)
+   └── tsconfig.json
+   ```
+
+2. `src/index.ts` — same content as above
+
+3. `tsconfig.json` (example)
+
+   ```json
+   {
+     "compilerOptions": {
+       "target": "ESNext",
+       "module": "ESNext",
+       "moduleResolution": "Bundler",
+       "outDir": ".opencode/plugins",
+       "strict": true,
+       "skipLibCheck": true
+     },
+     "include": ["src"]
+   }
+   ```
+
+4. Add build script to `.opencode/package.json`
+
+   ```json
+   {
+     "name": "my-plugins",
+     "private": true,
+     "scripts": {
+       "build": "bun build ./../src/index.ts --outdir ./plugins --target bun"
+     },
+     "dependencies": {
+       "@opencode-ai/plugin": "^1.x"
+     }
+   }
+   ```
+
+5. Build & test
+
+   ```bash
+   cd .opencode
+   bun run build
+   # or just
+   bun build ../src/index.ts --outdir ./plugins --target bun
+   ```
+
+   → you now have `plugins/index.js` (or whatever name you chose)
+
+6. Start `opencode` — it loads `.js` files from `.opencode/plugins/` the same way as `.ts`
+
+### Quick checklist – what usually goes wrong
+
+- No `package.json` in `.opencode/` → external dependencies won't install
+- Plugin file doesn't export `plugin` with correct shape → ignored silently
+- Syntax error in plugin → usually logged when starting `opencode`
+- Using `import ... from "npm:..."` without `package.json` → fails
+- Forgetting to restart `opencode` after changes
+
+### One-liner starter (most common case)
+
+```bash
+mkdir -p .opencode/{plugins,}
+echo '{"dependencies":{"@opencode-ai/plugin":"^1"}}' > .opencode/package.json
+```
+
+Then drop `.ts` files into `.opencode/plugins/` and restart.
+
+Good luck with your plugin — and check https://opencode.ai/docs/plugins for the latest hook & tool API reference.
+
 ## License
 
 MIT

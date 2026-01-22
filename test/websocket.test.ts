@@ -102,6 +102,9 @@ describe('WebSocket Functionality', () => {
         parentSessionId: 'test',
       })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const messages: any[] = []
       ws.onmessage = (event) => {
         messages.push(JSON.parse(event.data))
@@ -236,6 +239,9 @@ describe('WebSocket Functionality', () => {
         parentSessionId: 'test-subscription',
       })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const messages: any[] = []
       ws.onmessage = (event) => {
         messages.push(JSON.parse(event.data))
@@ -286,12 +292,18 @@ describe('WebSocket Functionality', () => {
         parentSessionId: 'test-multi-1',
       })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const session2 = manager.spawn({
         command: 'echo',
         args: ['session2'],
         description: 'Session 2',
         parentSessionId: 'test-multi-2',
       })
+
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const messages: any[] = []
       ws.onmessage = (event) => {

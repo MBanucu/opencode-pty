@@ -33,6 +33,9 @@ describe('PTY Manager Integration', () => {
         parentSessionId: 'test',
       })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       // Create WebSocket connection and subscribe
       const ws = new WebSocket('ws://localhost:8775')
       const receivedMessages: any[] = []

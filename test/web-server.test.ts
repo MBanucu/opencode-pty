@@ -140,6 +140,9 @@ describe('Web Server', () => {
       })
       log.debug('Spawned session', { id: session.id, command: session.command })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
       log.debug('Fetch response', { status: response.status })
       expect(response.status).toBe(200)
@@ -168,6 +171,9 @@ describe('Web Server', () => {
         parentSessionId: 'test-input',
       })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/input`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -190,6 +196,9 @@ describe('Web Server', () => {
         description: 'Test session',
         parentSessionId: 'test',
       })
+
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/kill`, {
         method: 'POST',

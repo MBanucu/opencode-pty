@@ -34,12 +34,18 @@ describe('Web Server Integration', () => {
         parentSessionId: 'multi-test',
       })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       const session2 = manager.spawn({
         command: 'echo',
         args: ['Session 2'],
         description: 'Multi-session test 2',
         parentSessionId: 'multi-test',
       })
+
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       // Create multiple WebSocket clients
       const ws1 = new WebSocket('ws://localhost:8781')
@@ -96,6 +102,9 @@ describe('Web Server Integration', () => {
         parentSessionId: 'error-test',
       })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       response = await fetch(`http://localhost:8782/api/sessions/${session.id}/input`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -139,6 +148,9 @@ describe('Web Server Integration', () => {
         parentSessionId: 'perf-test',
       })
 
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
       // Make multiple concurrent requests
       const promises = []
       for (let i = 0; i < 10; i++) {
@@ -161,6 +173,9 @@ describe('Web Server Integration', () => {
         description: 'Cleanup test',
         parentSessionId: 'cleanup-test',
       })
+
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const ws = new WebSocket('ws://localhost:8784')
       await new Promise((resolve) => {

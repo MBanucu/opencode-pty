@@ -128,24 +128,31 @@ describe('Web Server', () => {
 
     it('should return individual session', async () => {
       // Create a test session first
+      console.log('Spawning session with command: bash')
       const session = manager.spawn({
         command: 'bash',
         args: ['-c', 'sleep 0.1'],
         description: 'Test session',
         parentSessionId: 'test',
       })
+      console.log('Spawned session:', session.id, 'command:', session.command)
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
+      console.log('Fetch response status:', response.status)
       expect(response.status).toBe(200)
 
       const sessionData = await response.json()
+      console.log('Session data:', JSON.stringify(sessionData))
       expect(sessionData.id).toBe(session.id)
       expect(sessionData.command).toBe('bash')
       expect(sessionData.args).toEqual(['-c', 'sleep 0.1'])
     })
 
     it('should return 404 for non-existent session', async () => {
-      const response = await fetch(`${serverUrl}/api/sessions/nonexistent`)
+      const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
+      console.log('Fetching non-existent session:', nonexistentId)
+      const response = await fetch(`${serverUrl}/api/sessions/${nonexistentId}`)
+      console.log('Response status:', response.status)
       expect(response.status).toBe(404)
     })
 

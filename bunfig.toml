@@ -1,2 +1,3 @@
 [test]
-exclude = ["tests/e2e/**"]
+include = ["test/**/*.test.ts", "src/plugin/**/*.test.ts"]
+exclude = ["src/web/**", "tests/**"]

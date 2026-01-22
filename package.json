@@ -33,8 +33,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun run test:unit",
-    "test:unit": "bun test test/ src/plugin/ --exclude 'src/web/**'",
+    "test": "bun test test/ src/plugin/ --exclude 'tests/**' --exclude 'src/web/**'",
+    "test:unit": "bun test test/*.test.ts src/plugin/ --exclude 'src/web/**' --exclude 'tests/**'",
     "test:integration": "playwright test",
     "test:all": "bun run test:unit && bun run test:integration",
     "dev": "vite --host",

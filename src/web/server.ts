@@ -6,6 +6,37 @@ import { join, resolve } from 'path'
 
 const log = createLogger('web-server')
 
+// Security headers for all responses
+function getSecurityHeaders(): Record<string, string> {
+  const isProduction = process.env.NODE_ENV === 'production'
+
+  return {
+    // Content Security Policy - strict in production
+    'Content-Security-Policy': isProduction
+      ? "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data:; font-src 'self'"
+      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: http: https:; img-src 'self' data:; font-src 'self'",
+    // Security headers
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+    // HTTPS enforcement (when behind reverse proxy)
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  }
+}
+
+// Helper for JSON responses with security headers
+function secureJsonResponse(data: any, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      ...getSecurityHeaders()
+    }
+  })
+}
+
 let server: Server<WSClient> | null = null
 const wsClients: Map<ServerWebSocket<WSClient>, WSClient> = new Map()
 
@@ -161,7 +192,10 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
           data: { socket: null as any, subscribedSessions: new Set() },
         })
         if (success) return // Upgrade succeeded, no response needed
-        return new Response('WebSocket upgrade failed', { status: 400 })
+        return new Response('WebSocket upgrade failed', {
+          status: 400,
+          headers: getSecurityHeaders()
+        })
       }
 
       if (url.pathname === '/') {
@@ -171,12 +205,12 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         if (process.env.NODE_ENV === 'test') {
           console.log('Serving from dist/web/index.html')
           return new Response(await Bun.file('./dist/web/index.html').bytes(), {
-            headers: { 'Content-Type': 'text/html' },
+            headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },
           })
         }
         console.log('Serving from src/web/index.html')
         return new Response(await Bun.file('./src/web/index.html').bytes(), {
-          headers: { 'Content-Type': 'text/html' },
+          headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },
         })
       }
 
@@ -203,7 +237,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
           console.log(`Asset found ${filePath}`)
           log.info('Asset found', { filePath, contentType })
           return new Response(await file.bytes(), {
-            headers: { 'Content-Type': contentType },
+            headers: { 'Content-Type': contentType, ...getSecurityHeaders() },
           })
         } else {
           console.log(`Asset not found ${filePath}`)
@@ -218,9 +252,13 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
          const totalSessions = sessions.length
          const wsConnections = wsClients.size
 
-         return Response.json({
+         // Calculate response time (rough approximation)
+         const startTime = Date.now()
+
+         const healthResponse = {
            status: 'healthy',
            timestamp: new Date().toISOString(),
+           uptime: process.uptime(),
            sessions: {
              total: totalSessions,
              active: activeSessions,
@@ -228,13 +266,23 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
            websocket: {
              connections: wsConnections,
            },
-           uptime: process.uptime(),
-         })
+           memory: process.memoryUsage ? {
+             rss: process.memoryUsage().rss,
+             heapUsed: process.memoryUsage().heapUsed,
+             heapTotal: process.memoryUsage().heapTotal,
+           } : undefined,
+         }
+
+         // Add response time
+         const responseTime = Date.now() - startTime
+         ;(healthResponse as any).responseTime = responseTime
+
+         return secureJsonResponse(healthResponse)
        }
 
        if (url.pathname === '/api/sessions' && req.method === 'GET') {
-         const sessions = manager.list()
-         return Response.json(sessions)
+        const sessions = manager.list()
+        return secureJsonResponse(sessions)
        }
 
       if (url.pathname === '/api/sessions' && req.method === 'POST') {
@@ -252,11 +300,11 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
           workdir: body.workdir,
           parentSessionId: 'web-api',
         })
-        // Broadcast updated session list to all clients
-        for (const [ws] of wsClients) {
-          sendSessionList(ws)
-        }
-        return Response.json(session)
+         // Broadcast updated session list to all clients
+         for (const [ws] of wsClients) {
+           sendSessionList(ws)
+         }
+         return secureJsonResponse(session)
       }
 
       if (url.pathname === '/api/sessions/clear' && req.method === 'POST') {
@@ -265,7 +313,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         for (const [ws] of wsClients) {
           sendSessionList(ws)
         }
-        return Response.json({ success: true })
+        return secureJsonResponse({ success: true })
       }
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+$/) && req.method === 'GET') {
@@ -286,7 +334,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         if (!success) {
           return new Response('Failed to write to session', { status: 400 })
         }
-        return Response.json({ success: true })
+        return secureJsonResponse({ success: true })
       }
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+\/kill$/) && req.method === 'POST') {
@@ -296,7 +344,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         if (!success) {
           return new Response('Failed to kill session', { status: 400 })
         }
-        return Response.json({ success: true })
+        return secureJsonResponse({ success: true })
       }
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+\/output$/) && req.method === 'GET') {
@@ -306,10 +354,17 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         if (!result) {
           return new Response('Session not found', { status: 404 })
         }
-        return Response.json({
-          lines: result.lines,
-          totalLines: result.totalLines,
-          hasMore: result.hasMore,
+        const session = manager.get(sessionId)
+        if (!session) {
+          return new Response('Session not found', { status: 404 })
+        }
+        return secureJsonResponse({
+          id: session.id,
+          command: session.command,
+          args: session.args,
+          status: session.status,
+          title: session.title,
+          createdAt: session.createdAt,
         })
       }
 

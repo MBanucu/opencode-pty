@@ -1,4 +1,7 @@
 import React from 'react'
+import { createLogger } from '../logger.ts'
+
+const log = createLogger('ErrorBoundary')
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -16,16 +19,23 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     this.state = { hasError: false }
   }
 
+  handleReset = () => {
+    log.info('User attempting error boundary reset')
+    this.setState({ hasError: false, error: undefined, errorInfo: undefined })
+  }
+
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    console.error('[Browser] React Error Boundary caught error:', error)
+    log.error({ error: error.message, stack: error.stack }, 'React Error Boundary caught error')
     return { hasError: true, error }
   }
 
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[Browser] React Error Boundary details:')
-    console.error('[Browser] Error:', error)
-    console.error('[Browser] Error Info:', errorInfo)
-    console.error('[Browser] Component Stack:', errorInfo.componentStack)
+    log.error({
+      error: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      errorBoundary: 'main'
+    }, 'React Error Boundary caught detailed error')
 
     this.setState({
       error,
@@ -63,20 +73,34 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               {this.state.errorInfo?.componentStack}
             </pre>
           </details>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              marginTop: '10px',
-              padding: '8px 16px',
-              backgroundColor: '#1976d2',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            Reload Page
-          </button>
+          <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
+            <button
+              onClick={this.handleReset}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#4caf50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#1976d2',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              Reload Page
+            </button>
+          </div>
         </div>
       )
     }

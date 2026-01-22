@@ -59,7 +59,7 @@ function broadcastSessionData(sessionId: string, data: string[]): void {
   let sentCount = 0
   for (const [ws, client] of wsClients) {
     if (client.subscribedSessions.has(sessionId)) {
-      log.debug('Sending to subscribed client')
+      log.debug({ sessionId }, 'Sending to subscribed client')
       try {
         ws.send(messageStr)
         sentCount++
@@ -67,6 +67,9 @@ function broadcastSessionData(sessionId: string, data: string[]): void {
         log.error({ error: String(err) }, 'Failed to send to client')
       }
     }
+  }
+  if (sentCount === 0) {
+    log.warn({ sessionId, clientCount: wsClients.size }, 'No clients subscribed to session')
   }
   log.info({ sentCount }, 'Broadcast complete')
 }
@@ -105,11 +108,15 @@ function handleWebSocketMessage(
     switch (message.type) {
       case 'subscribe':
         if (message.sessionId) {
+          log.info({ sessionId: message.sessionId }, 'Client subscribing to session')
           const success = subscribeToSession(wsClient, message.sessionId)
           if (!success) {
+            log.warn({ sessionId: message.sessionId }, 'Subscription failed - session not found')
             ws.send(
               JSON.stringify({ type: 'error', error: `Session ${message.sessionId} not found` })
             )
+          } else {
+            log.info({ sessionId: message.sessionId }, 'Subscription successful')
           }
         }
         break
@@ -177,13 +184,22 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
     async fetch(req, server) {
       const url = new URL(req.url)
+      log.debug(
+        { url: req.url, method: req.method, upgrade: req.headers.get('upgrade') },
+        'fetch request'
+      )
 
       // Handle WebSocket upgrade
       if (req.headers.get('upgrade') === 'websocket') {
+        log.info('WebSocket upgrade request')
         const success = server.upgrade(req, {
           data: { socket: null as any, subscribedSessions: new Set() },
         })
-        if (success) return // Upgrade succeeded, no response needed
+        if (success) {
+          log.info('WebSocket upgrade success')
+          return new Response(null, { status: 101 }) // Upgrade succeeded
+        }
+        log.warn('WebSocket upgrade failed')
         return new Response('WebSocket upgrade failed', {
           status: 400,
           headers: getSecurityHeaders(),

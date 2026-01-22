@@ -25,42 +25,37 @@ const fakeClient = {
 initLogger(fakeClient)
 initManager(fakeClient)
 
-// Find an available port
-function findAvailablePort(startPort: number = 8867): number {
-  for (let port = startPort; port < startPort + 100; port++) {
-    try {
-      // Try to kill any process on this port
-      Bun.spawnSync(['sh', '-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`])
-      // Try to create a server to check if port is free
-      const testServer = Bun.serve({
-        port,
-        fetch() {
-          return new Response('test')
-        },
-      })
-      testServer.stop()
-      return port
-    } catch (error) {
-      // Port in use, try next
-      continue
-    }
-  }
-  throw new Error('No available port found')
+// Find an available port - use the specified port after cleanup
+function findAvailablePort(port: number): number {
+  // Try to kill any process on this port first
+  Bun.spawnSync(['sh', '-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`])
+  // Small delay to allow cleanup
+  Bun.sleepSync(100)
+  // Try to create a server to check if port is free
+  const testServer = Bun.serve({
+    port,
+    fetch() {
+      return new Response('test')
+    },
+  })
+  testServer.stop()
+  return port
 }
 
 // Allow port to be specified via command line argument for parallel test workers
 const portArg = process.argv.find((arg) => arg.startsWith('--port='))
 const specifiedPort = portArg ? parseInt(portArg.split('=')[1] || '0', 10) : null
-let port = specifiedPort && specifiedPort > 0 ? specifiedPort : findAvailablePort()
+let basePort = specifiedPort && specifiedPort > 0 ? specifiedPort : 8877
 
-// For parallel workers, ensure unique ports
+// For parallel workers, ensure unique start ports
 if (process.env.TEST_WORKER_INDEX) {
   const workerIndex = parseInt(process.env.TEST_WORKER_INDEX, 10)
-  port = 8867 + workerIndex
+  basePort = 8877 + workerIndex
 }
 
-// Clear any existing sessions from previous runs
-manager.clearAllSessions()
+let port = findAvailablePort(basePort)
+
+console.log(`Test server starting on port ${port}`)
 
 const url = startWebServer({ port })
 

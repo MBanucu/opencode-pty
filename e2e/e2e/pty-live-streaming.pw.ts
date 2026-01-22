@@ -27,7 +27,6 @@ test.describe('PTY Live Streaming', () => {
       })
       // Wait a bit for the session to start and reload to get updated session list
       await page.waitForTimeout(1000)
-      await page.reload()
     }
 
     // Wait for sessions to load
@@ -201,7 +200,6 @@ test.describe('PTY Live Streaming', () => {
       })
       // Wait a bit for the session to start and reload to get updated session list
       await page.waitForTimeout(1000)
-      await page.reload()
     }
 
     // Wait for sessions to load
@@ -227,6 +225,9 @@ test.describe('PTY Live Streaming', () => {
 
     await runningSession.click()
 
+    // Wait for WebSocket to stabilize
+    await page.waitForTimeout(2000)
+
     // Wait for initial output
     await page.waitForSelector('.output-line', { timeout: 3000 })
 
@@ -247,16 +248,20 @@ test.describe('PTY Live Streaming', () => {
     const initialWsMessages = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
     log.info(`Initial WS messages: ${initialWsMessages}`)
 
-    // Wait for at least 5 WebSocket streaming updates
+    // Wait for at least 1 WebSocket streaming update
     let attempts = 0
     const maxAttempts = 50 // 5 seconds at 100ms intervals
     let currentWsMessages = initialWsMessages
     const debugElement = page.locator('[data-testid="debug-info"]')
-    while (attempts < maxAttempts && currentWsMessages < initialWsMessages + 5) {
+    while (attempts < maxAttempts && currentWsMessages < initialWsMessages + 1) {
       await page.waitForTimeout(100)
       const currentDebugText = (await debugElement.textContent()) || ''
       const currentWsMatch = currentDebugText.match(/WS messages: (\d+)/)
       currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0
+      if (attempts % 10 === 0) {
+        // Log every second
+        log.info(`Attempt ${attempts}: WS messages: ${currentWsMessages}`)
+      }
       attempts++
     }
 

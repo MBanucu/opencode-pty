@@ -31,6 +31,7 @@ export function onOutput(callback: OutputCallback): void {
 }
 
 function notifyOutput(sessionId: string, data: string): void {
+  log.debug({ sessionId, dataLength: data.length }, 'notifyOutput called')
   const lines = data.split('\n')
   for (const callback of outputCallbacks) {
     try {

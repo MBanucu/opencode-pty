@@ -5,11 +5,9 @@ const log = createTestLogger('ui-test')
 
 test.describe('App Component', () => {
   test('renders the PTY Sessions title', async ({ page }) => {
-    // Only log console errors and warnings for debugging failures
+    // Log all console messages for debugging
     page.on('console', (msg) => {
-      if (msg.type() === 'error' || msg.type() === 'warning') {
-        log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-      }
+      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
     await page.goto('/')
@@ -17,23 +15,35 @@ test.describe('App Component', () => {
   })
 
   test('shows connected status when WebSocket connects', async ({ page }) => {
-    // Only log console errors and warnings for debugging failures
+    // Log all console messages for debugging
     page.on('console', (msg) => {
-      if (msg.type() === 'error' || msg.type() === 'warning') {
-        log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-      }
+      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
     await page.goto('/')
     await expect(page.getByText('● Connected')).toBeVisible()
   })
 
-  test('shows no active sessions message when empty', async ({ page }) => {
-    // Only log console errors and warnings for debugging failures
+  test('receives WebSocket session_list messages', async ({ page }) => {
+    let sessionListReceived = false
+    // Log all console messages and check for session_list
     page.on('console', (msg) => {
-      if (msg.type() === 'error' || msg.type() === 'warning') {
-        log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+      if (msg.text().includes('session_list')) {
+        sessionListReceived = true
       }
+    })
+
+    await page.goto('/')
+    // Wait for WebSocket to connect and receive messages
+    await page.waitForTimeout(1000)
+    expect(sessionListReceived).toBe(true)
+  })
+
+  test('shows no active sessions message when empty', async ({ page }) => {
+    // Log all console messages for debugging
+    page.on('console', (msg) => {
+      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
     // Clear all sessions first to ensure empty state
@@ -48,11 +58,9 @@ test.describe('App Component', () => {
   })
 
   test('shows empty state when no session is selected', async ({ page }) => {
-    // Only log console errors and warnings for debugging failures
+    // Log all console messages for debugging
     page.on('console', (msg) => {
-      if (msg.type() === 'error' || msg.type() === 'warning') {
-        log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-      }
+      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
     await page.goto('/')
@@ -66,11 +74,9 @@ test.describe('App Component', () => {
     test('increments WS message counter when receiving data for active session', async ({
       page,
     }) => {
-      // Only log console errors and warnings, plus page errors for debugging failures
+      // Log all console messages for debugging
       page.on('console', (msg) => {
-        if (msg.type() === 'error' || msg.type() === 'warning') {
-          log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-        }
+        log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
       })
       page.on('pageerror', (error) => log.error('PAGE ERROR: ' + error.message))
 
@@ -153,11 +159,9 @@ test.describe('App Component', () => {
     })
 
     test('does not increment WS counter for messages from inactive sessions', async ({ page }) => {
-      // Only log console errors and warnings for debugging failures
+      // Log all console messages for debugging
       page.on('console', (msg) => {
-        if (msg.type() === 'error' || msg.type() === 'warning') {
-          log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-        }
+        log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
       })
 
       // This test would require multiple sessions and verifying that messages
@@ -213,11 +217,9 @@ test.describe('App Component', () => {
     })
 
     test('resets WS counter when switching sessions', async ({ page }) => {
-      // Only log console errors and warnings for debugging failures
+      // Log all console messages for debugging
       page.on('console', (msg) => {
-        if (msg.type() === 'error' || msg.type() === 'warning') {
-          log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-        }
+        log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
       })
 
       await page.goto('/')
@@ -275,11 +277,9 @@ test.describe('App Component', () => {
     })
 
     test('maintains WS counter state during page refresh', async ({ page }) => {
-      // Only log console errors and warnings for debugging failures
+      // Log all console messages for debugging
       page.on('console', (msg) => {
-        if (msg.type() === 'error' || msg.type() === 'warning') {
-          log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-        }
+        log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
       })
 
       await page.goto('/')

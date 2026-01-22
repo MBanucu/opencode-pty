@@ -1,7 +1,8 @@
-import pino from 'pino'
+import pino, { type LevelWithSilentOrString } from 'pino'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { PluginClient } from './types.ts'
+import { getLogLevel } from '../shared/logger-config.ts'
 
 // Get package version from package.json
 function getPackageVersion(): string {
@@ -16,9 +17,7 @@ function getPackageVersion(): string {
 let _client: PluginClient | null = null
 
 const isProduction = process.env.NODE_ENV === 'production'
-const logLevel =
-  process.env.LOG_LEVEL ||
-  (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info')
+const logLevel: LevelWithSilentOrString = getLogLevel()
 
 // Create Pino logger with production best practices
 const pinoLogger = pino({

@@ -5,25 +5,22 @@ import { createLogger } from '../logger.ts'
 const logger = createLogger('App')
 
 export function App() {
-
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [output, setOutput] = useState<string[]>([])
   const [inputValue, setInputValue] = useState('')
   const [connected, setConnected] = useState(false)
-  const [autoSelected, setAutoSelected] = useState(false)
   const [wsMessageCount, setWsMessageCount] = useState(0)
   const wsRef = useRef<WebSocket | null>(null)
   const outputRef = useRef<HTMLDivElement>(null)
   const activeSessionRef = useRef<Session | null>(null)
   const wsMessageCountRef = useRef(0)
+  const [refMessageCount, setRefMessageCount] = useState(0)
 
   // Keep ref in sync with activeSession state
   useEffect(() => {
     activeSessionRef.current = activeSession
   }, [activeSession])
-
-
 
   const refreshSessions = useCallback(async () => {
     try {
@@ -33,20 +30,20 @@ export function App() {
         const sessions = await response.json()
         setSessions(Array.isArray(sessions) ? sessions : [])
       }
-      } catch (error) {
-        logger.error({ error }, 'Failed to refresh sessions')
-      }
+    } catch (error) {
+      logger.error({ error }, 'Failed to refresh sessions')
+    }
   }, [])
 
   // Connect to WebSocket on mount
   useEffect(() => {
     const ws = new WebSocket(`ws://${location.host}`)
-     ws.onopen = () => {
-       logger.info('WebSocket connected')
-       setConnected(true)
-       // Request initial session list
-       ws.send(JSON.stringify({ type: 'session_list' }))
-     }
+    ws.onopen = () => {
+      logger.info('WebSocket connected')
+      setConnected(true)
+      // Request initial session list
+      ws.send(JSON.stringify({ type: 'session_list' }))
+    }
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
@@ -54,28 +51,29 @@ export function App() {
         if (data.type === 'session_list') {
           setSessions(data.sessions || [])
           // Auto-select first running session if none selected
-           if (data.sessions.length > 0 && !activeSession) {
-             const runningSession = data.sessions.find((s: Session) => s.status === 'running')
-             const sessionToSelect = runningSession || data.sessions[0]
-             logger.info({ sessionId: sessionToSelect.id }, 'Auto-selecting session')
-             setActiveSession(sessionToSelect)
-           }
+          if (data.sessions.length > 0 && !activeSession) {
+            const runningSession = data.sessions.find((s: Session) => s.status === 'running')
+            const sessionToSelect = runningSession || data.sessions[0]
+            logger.info({ sessionId: sessionToSelect.id }, 'Auto-selecting session')
+            setActiveSession(sessionToSelect)
+          }
         } else if (data.type === 'data' && activeSessionRef.current?.id === data.sessionId) {
-          setOutput(prev => [...prev, ...data.data])
+          setOutput((prev) => [...prev, ...data.data])
           wsMessageCountRef.current++
           setWsMessageCount(wsMessageCountRef.current)
+          setRefMessageCount(wsMessageCountRef.current)
         }
       } catch (error) {
         logger.error({ error }, 'Failed to parse WebSocket message')
       }
     }
     ws.onclose = () => {
-       logger.info('WebSocket disconnected')
-       setConnected(false)
-     }
+      logger.info('WebSocket disconnected')
+      setConnected(false)
+    }
     ws.onerror = (error) => {
-       logger.error({ error }, 'WebSocket error')
-     }
+      logger.error({ error }, 'WebSocket error')
+    }
     wsRef.current = ws
     return () => ws.close()
   }, [])
@@ -98,6 +96,7 @@ export function App() {
       // Reset WebSocket message counter when switching sessions
       setWsMessageCount(0)
       wsMessageCountRef.current = 0
+      setRefMessageCount(0)
 
       // Subscribe to this session for live updates
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -150,11 +149,14 @@ export function App() {
         setInputValue('')
       } else {
         const errorText = await response.text().catch(() => 'Unable to read error response')
-        logger.error({
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText
-        }, 'Failed to send input')
+        logger.error(
+          {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText,
+          },
+          'Failed to send input'
+        )
       }
     } catch (error) {
       logger.error({ error }, 'Network error sending input')
@@ -181,11 +183,14 @@ export function App() {
         setOutput([])
       } else {
         const errorText = await response.text().catch(() => 'Unable to read error response')
-        logger.error({
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText
-        }, 'Failed to kill session')
+        logger.error(
+          {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText,
+          },
+          'Failed to kill session'
+        )
       }
     } catch (error) {
       logger.error({ error }, 'Network error killing session')
@@ -251,32 +256,31 @@ export function App() {
               {output.length === 0 ? (
                 <div className="empty-state">Waiting for output...</div>
               ) : (
-                 output.map((line, index) => (
-                   <div key={index} className="output-line" style={{ whiteSpace: 'pre' }}>
-                     {line}
-                   </div>
-                 ))
-               )}
+                output.map((line, index) => (
+                  <div key={index} className="output-line" style={{ whiteSpace: 'pre' }}>
+                    {line}
+                  </div>
+                ))
+              )}
 
-               {/* Debug info for testing */}
-               <div
-                 style={{
-                   display: 'none', // Hidden in production, visible for tests
-                   fontSize: '10px',
-                   color: '#666',
-                   marginTop: '10px',
-                   borderTop: '1px solid #ccc',
-                   paddingTop: '5px',
-                 }}
-                 data-testid="debug-info"
-               >
+              {/* Debug info for testing */}
+              <div
+                style={{
+                  display: 'none', // Hidden in production, visible for tests
+                  fontSize: '10px',
+                  color: '#666',
+                  marginTop: '10px',
+                  borderTop: '1px solid #ccc',
+                  paddingTop: '5px',
+                }}
+                data-testid="debug-info"
+              >
                  Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}
-                 {wsMessageCount} (activeRef: {activeSessionRef.current?.id || 'none'})
-                 <br />
-                 Debug: wsMessageCountRef: {wsMessageCountRef.current}
-               </div>
-
-             </div>
+                 {wsMessageCount} (activeRef: {activeSession?.id || 'none'})
+                <br />
+                Debug: wsMessageCountRef: {refMessageCount}
+              </div>
+            </div>
             <div className="input-container">
               <input
                 type="text"

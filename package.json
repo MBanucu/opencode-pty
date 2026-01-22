@@ -33,7 +33,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun run build && bun run test:unit && bun run test:integration",
+    "test": "bun run test:unit && bun run test:integration",
     "test:unit": "bun test --exclude 'tests/**' --exclude 'src/web/**' test/ src/plugin/",
     "test:integration": "playwright test",
     "dev": "vite --host",

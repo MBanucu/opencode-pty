@@ -8,7 +8,7 @@ export default defineConfig({
   build: {
     outDir: '../../dist/web',
     emptyOutDir: true,
-    minify: false, // Disable minification
+    minify: process.env.NODE_ENV === 'production' ? 'esbuild' : false, // Enable minification for production
   },
   server: {
     port: 3000,

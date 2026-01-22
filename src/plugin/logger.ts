@@ -89,15 +89,15 @@ export function createLogger(module: string): Logger {
   const log = (level: LogLevel, message: string, extra?: Record<string, unknown>): void => {
     const logData = extra ? { ...extra, service } : { service }
 
-    if (_client) {
-      // Use OpenCode plugin logging when available
+    if (_client && !process.env.CI) {
+      // Use OpenCode plugin logging when available (except in CI where we want direct Pino output)
       _client.app
         .log({
           body: { service, level, message, extra },
         })
         .catch(() => {})
     } else {
-      // Use Pino logger as fallback
+      // Use Pino logger as fallback (always in CI for test visibility)
       _pinoLogger![level](logData, message)
     }
   }

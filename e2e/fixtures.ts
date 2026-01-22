@@ -31,8 +31,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const proc: ChildProcess = spawn('bun', ['run', 'test-web-server.ts', `--port=${port}`], {
         env: {
           ...process.env,
-          NODE_ENV: 'test',
-          LOG_LEVEL: 'debug',
           TEST_WORKER_INDEX: workerInfo.workerIndex.toString(),
         },
         stdio: ['ignore', 'pipe', 'pipe'],

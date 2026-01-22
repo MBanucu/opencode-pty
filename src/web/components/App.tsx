@@ -95,6 +95,9 @@ export function App() {
 
       setActiveSession(session)
       setInputValue('')
+      // Reset WebSocket message counter when switching sessions
+      setWsMessageCount(0)
+      wsMessageCountRef.current = 0
 
       // Subscribe to this session for live updates
       if (wsRef.current?.readyState === WebSocket.OPEN) {

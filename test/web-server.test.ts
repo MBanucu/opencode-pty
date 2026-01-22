@@ -149,14 +149,17 @@ describe('Web Server', () => {
     })
 
     it('should handle input to session', async () => {
-      // Create a running session (can't easily test with echo since it exits immediately)
-      // This tests the API structure even if the session isn't running
+      // Create a long-running session to test successful input
       const session = manager.spawn({
-        command: 'echo',
-        args: ['test'],
-        description: 'Test session',
-        parentSessionId: 'test',
+        command: 'bash',
+        args: ['-c', 'sleep 30'],
+        description: 'Test session for input',
+        parentSessionId: 'test-input',
       })
+
+      // Verify session is running
+      const sessionInfo = manager.get(session.id)
+      expect(sessionInfo?.status).toBe('running')
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/input`, {
         method: 'POST',
@@ -164,9 +167,13 @@ describe('Web Server', () => {
         body: JSON.stringify({ data: 'test input\n' }),
       })
 
-      // Should return success even if session is exited
+      // Should return success for running session
+      expect(response.status).toBe(200)
       const result = await response.json()
-      expect(result).toHaveProperty('success')
+      expect(result).toHaveProperty('success', true)
+
+      // Clean up
+      manager.kill(session.id, true)
     })
 
     it('should handle kill session', async () => {

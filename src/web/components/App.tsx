@@ -41,6 +41,52 @@ export function App() {
     }
   }, [])
 
+  // Connect to WebSocket on mount
+  useEffect(() => {
+    const ws = new WebSocket(`ws://${location.host}`)
+    ws.onopen = () => {
+      console.log('[WS] Connected')
+      setConnected(true)
+      // Request initial session list
+      ws.send(JSON.stringify({ type: 'session_list' }))
+    }
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        console.log('[WS] Message:', data)
+        if (data.type === 'session_list') {
+          setSessions(data.sessions || [])
+          // Auto-select first running session if none selected
+          if (data.sessions.length > 0 && !activeSession) {
+            const runningSession = data.sessions.find((s: Session) => s.status === 'running')
+            const sessionToSelect = runningSession || data.sessions[0]
+            console.log('[WS] Auto-selecting session:', sessionToSelect.id)
+            setActiveSession(sessionToSelect)
+          }
+        } else if (data.type === 'data' && activeSessionRef.current?.id === data.sessionId) {
+          setOutput(prev => [...prev, ...data.data])
+          setWsMessageCount(prev => prev + 1)
+        }
+      } catch (error) {
+        console.error('[WS] Failed to parse message:', error)
+      }
+    }
+    ws.onclose = () => {
+      console.log('[WS] Disconnected')
+      setConnected(false)
+    }
+    ws.onerror = (error) => {
+      console.error('[WS] Error:', error)
+    }
+    wsRef.current = ws
+    return () => ws.close()
+  }, [])
+
+  // Initial session refresh as fallback
+  useEffect(() => {
+    refreshSessions()
+  }, [refreshSessions])
+
   const handleSessionClick = useCallback(async (session: Session) => {
     logger.info('[Browser] handleSessionClick called with session:', session.id, session.status)
     try {

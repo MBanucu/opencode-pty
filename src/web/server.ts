@@ -2,6 +2,7 @@ import type { Server, ServerWebSocket } from 'bun'
 import { manager, onOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import { createLogger } from '../plugin/logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
+import { join, resolve } from 'path'
 
 const log = createLogger('web-server')
 
@@ -133,6 +134,8 @@ const wsHandler = {
 export function startWebServer(config: Partial<ServerConfig> = {}): string {
   const finalConfig = { ...defaultConfig, ...config }
 
+  console.log(`Starting server with NODE_ENV=${process.env.NODE_ENV}, CWD=${process.cwd()}`)
+
   if (server) {
     log.warn('web server already running')
     return `http://${server.hostname}:${server.port}`
@@ -162,34 +165,46 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
       }
 
       if (url.pathname === '/') {
+        console.log(`Serving root, NODE_ENV=${process.env.NODE_ENV}`)
+        log.info('Serving root', { nodeEnv: process.env.NODE_ENV })
         // In test mode, serve the built HTML with assets
         if (process.env.NODE_ENV === 'test') {
+          console.log('Serving from dist/web/index.html')
           return new Response(await Bun.file('./dist/web/index.html').bytes(), {
             headers: { 'Content-Type': 'text/html' },
           })
         }
+        console.log('Serving from src/web/index.html')
         return new Response(await Bun.file('./src/web/index.html').bytes(), {
           headers: { 'Content-Type': 'text/html' },
         })
       }
 
-      // Serve static assets from dist/web for test mode
-      if (process.env.NODE_ENV === 'test' && url.pathname.startsWith('/assets/')) {
-        try {
-          const filePath = `./dist/web${url.pathname}`
-          const file = Bun.file(filePath)
-          if (await file.exists()) {
-            const contentType = url.pathname.endsWith('.js')
-              ? 'application/javascript'
-              : url.pathname.endsWith('.css')
-                ? 'text/css'
-                : 'text/plain'
-            return new Response(await file.bytes(), {
-              headers: { 'Content-Type': contentType },
-            })
-          }
-        } catch (err) {
-          // File not found, continue to 404
+      // Serve static assets from dist/web
+      if (url.pathname.startsWith('/assets/')) {
+        console.log(`Serving asset ${url.pathname}, NODE_ENV=${process.env.NODE_ENV}`)
+        log.info('Serving asset', { pathname: url.pathname, nodeEnv: process.env.NODE_ENV })
+        const distDir = resolve(process.cwd(), 'dist/web')
+        const assetPath = url.pathname.slice(1) // remove leading /
+        const filePath = join(distDir, assetPath)
+        await Bun.write('/tmp/debug.log', `cwd: ${process.cwd()}, distDir: ${distDir}, assetPath: ${assetPath}, filePath: ${filePath}\n`)
+        const file = Bun.file(filePath)
+        const exists = await file.exists()
+        await Bun.write('/tmp/debug.log', `exists: ${exists}\n`, { createPath: false })
+        if (exists) {
+          const contentType = url.pathname.endsWith('.js')
+            ? 'application/javascript'
+            : url.pathname.endsWith('.css')
+              ? 'text/css'
+              : 'text/plain'
+          console.log(`Asset found ${filePath}`)
+          log.info('Asset found', { filePath, contentType })
+          return new Response(await file.bytes(), {
+            headers: { 'Content-Type': contentType },
+          })
+        } else {
+          console.log(`Asset not found ${filePath}`)
+          log.error('Asset not found', { filePath })
         }
       }
 

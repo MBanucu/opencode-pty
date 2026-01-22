@@ -14,7 +14,7 @@ test.use({
 test.describe('PTY Live Streaming', () => {
   test('should display buffered output from running PTY session immediately', async ({ page }) => {
     // Navigate to the web UI (test server should be running)
-    await page.goto('http://localhost:8867')
+    await page.goto('/')
 
     // Check if there are sessions, if not, create one for testing
     const initialResponse = await page.request.get('/api/sessions')
@@ -98,7 +98,7 @@ test.describe('PTY Live Streaming', () => {
     page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
 
     // Navigate to the web UI
-    await page.goto('http://localhost:8867')
+    await page.goto('/')
 
     // Check if there are sessions, if not, create one for testing
     const initialResponse = await page.request.get('/api/sessions')

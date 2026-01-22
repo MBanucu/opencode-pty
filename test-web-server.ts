@@ -5,6 +5,12 @@ import { startWebServer } from './src/web/server.ts'
 const logLevels = { debug: 0, info: 1, warn: 2, error: 3 }
 const currentLevel = logLevels[process.env.LOG_LEVEL as keyof typeof logLevels] ?? logLevels.info
 
+// For debugging
+if (!process.env.NODE_ENV) {
+  console.log('NODE_ENV not set, setting to test')
+  process.env.NODE_ENV = 'test'
+}
+
 const fakeClient = {
   app: {
     log: async (opts: any) => {
@@ -44,7 +50,7 @@ function findAvailablePort(startPort: number = 8867): number {
 }
 
 const port = findAvailablePort()
-console.log(`Using port ${port} for tests`)
+console.log(`Using port ${port} for tests, NODE_ENV=${process.env.NODE_ENV}, CWD=${process.cwd()}`)
 
 // Clear any existing sessions from previous runs
 manager.clearAllSessions()

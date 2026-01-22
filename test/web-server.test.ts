@@ -55,6 +55,58 @@ describe('Web Server', () => {
       serverUrl = startWebServer({ port: 8771 })
     })
 
+    it('should serve built assets when NODE_ENV=test', async () => {
+      // Set test mode to serve from dist
+      process.env.NODE_ENV = 'test'
+
+      try {
+        const response = await fetch(`${serverUrl}/`)
+        expect(response.status).toBe(200)
+        const html = await response.text()
+
+        // Should contain built HTML with assets
+        expect(html).toContain('<!doctype html>')
+        expect(html).toContain('PTY Sessions Monitor')
+        expect(html).toContain('/assets/')
+        expect(html).not.toContain('/main.tsx')
+
+        // Extract asset URLs from HTML
+        const jsMatch = html.match(/src="\/assets\/([^"]+\.js)"/)
+        const cssMatch = html.match(/href="\/assets\/([^"]+\.css)"/)
+
+        if (jsMatch) {
+          const jsAsset = jsMatch[1]
+          const jsResponse = await fetch(`${serverUrl}/assets/${jsAsset}`)
+          expect(jsResponse.status).toBe(200)
+          expect(jsResponse.headers.get('content-type')).toBe('application/javascript')
+        }
+
+        if (cssMatch) {
+          const cssAsset = cssMatch[1]
+          const cssResponse = await fetch(`${serverUrl}/assets/${cssAsset}`)
+          expect(cssResponse.status).toBe(200)
+          expect(cssResponse.headers.get('content-type')).toBe('text/css')
+        }
+      } finally {
+        delete process.env.NODE_ENV
+      }
+    })
+
+    it('should serve dev HTML when NODE_ENV is not set', async () => {
+      // Ensure NODE_ENV is not set
+      delete process.env.NODE_ENV
+
+      const response = await fetch(`${serverUrl}/`)
+      expect(response.status).toBe(200)
+      const html = await response.text()
+
+      // Should contain dev HTML with main.tsx
+      expect(html).toContain('<!doctype html>')
+      expect(html).toContain('PTY Sessions Monitor')
+      expect(html).toContain('/main.tsx')
+      expect(html).not.toContain('/assets/')
+    })
+
     it('should serve HTML on root path', async () => {
       const response = await fetch(`${serverUrl}/`)
       expect(response.status).toBe(200)

@@ -29,7 +29,7 @@ export default defineConfig({
   workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-options. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')'. */
     baseURL: `http://localhost:${testPort}`,
@@ -48,7 +48,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'NODE_ENV=test bun run test-web-server.ts',
+    command: 'env NODE_ENV=test bun run test-web-server.ts',
     url: `http://localhost:${testPort}`,
     reuseExistingServer: true, // Reuse existing server if running
   },

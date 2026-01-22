@@ -23,10 +23,10 @@ test.describe('Server Clean Start', () => {
 
   test('should start with empty session list via browser', async ({ page }) => {
     // Clear any existing sessions first
-    await page.request.post('http://localhost:8867/api/sessions/clear')
+    await page.request.post('/api/sessions/clear')
 
     // Navigate to the web UI (test server should be running)
-    await page.goto('http://localhost:8867')
+    await page.goto('/')
 
     // Wait for the page to load
     await page.waitForLoadState('networkidle')

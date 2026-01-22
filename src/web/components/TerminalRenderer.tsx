@@ -76,7 +76,16 @@ export function TerminalRenderer({
     if (!term || disabled || !onSendInput) return
 
     const onDataHandler = (data: string) => {
-      logger.debug({ data: JSON.stringify(data) }, 'onData received')
+      logger.debug(
+        {
+          raw: JSON.stringify(data),
+          hex: Array.from(data)
+            .map((c) => c.charCodeAt(0).toString(16).padStart(2, '0'))
+            .join(' '),
+          length: data.length,
+        },
+        'onData → backend'
+      )
       onSendInput(data) // Send every keystroke chunk
     }
 
@@ -84,7 +93,13 @@ export function TerminalRenderer({
       if (domEvent.ctrlKey && domEvent.key.toLowerCase() === 'c') {
         // Let ^C go through to backend, but also call interrupt
         if (onInterrupt) onInterrupt()
+      } else if (domEvent.key === 'Enter') {
+        // Handle Enter key since onData doesn't fire for it
+        console.log('onKey: Enter pressed')
+        onSendInput('\r')
+        domEvent.preventDefault()
       }
+      // Space key is now handled by onData, no special case needed
     }
 
     const dataDisposable = term.onData(onDataHandler)

@@ -1,14 +1,48 @@
-import { test, expect } from './fixtures'
+import { test as extendedTest, expect } from './fixtures'
 
-test.describe('PTY Input Capture', () => {
-  test('should capture and send printable character input (letters)', async ({ page, server }) => {
-    // Navigate to the test server
+extendedTest.describe('PTY Input Capture', () => {
+  extendedTest(
+    'should capture and send printable character input (letters)',
+    async ({ page, server }) => {
+      // Navigate to the test server
+      await page.goto(server.baseURL)
+
+      // Capture browser console logs after navigation
+      page.on('console', (msg) => console.log('PAGE LOG:', msg.text()))
+
+      // Test console logging
+      await page.evaluate(() => console.log('Test console log from browser'))
+      await page.waitForSelector('h1:has-text("PTY Sessions")')
+
+      const inputRequests: string[] = []
+      await page.route('**/api/sessions/*/input', async (route) => {
+        const request = route.request()
+        if (request.method() === 'POST') {
+          const postData = request.postDataJSON()
+          inputRequests.push(postData.data)
+        }
+        await route.continue()
+      })
+
+      await page.locator('.output-container').click()
+      await page.focus('.xterm')
+      await page.keyboard.type('hello')
+
+      await page.waitForTimeout(500)
+
+      // Should have sent 'h', 'e', 'l', 'l', 'o'
+      expect(inputRequests).toContain('h')
+      expect(inputRequests).toContain('e')
+      expect(inputRequests).toContain('l')
+      expect(inputRequests).toContain('o')
+    }
+  )
+
+  extendedTest('should capture spacebar input', async ({ page, server }) => {
     await page.goto(server.baseURL)
-
-    // Wait for app to load
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()))
     await page.waitForSelector('h1:has-text("PTY Sessions")')
 
-    // Intercept POST requests to input endpoint
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
       const request = route.request()
@@ -19,44 +53,51 @@ test.describe('PTY Input Capture', () => {
       await route.continue()
     })
 
-    // Type "hello" using keyboard (space has known issue)
-    await page.keyboard.type('hello')
+    // Wait for session to be active
+    await page.waitForSelector('[data-active-session]')
 
-    // Wait a bit for requests to be sent
-    await page.waitForTimeout(500)
+    await page.locator('.output-container').click()
+    await page.focus('.xterm')
+    await page.keyboard.press(' ')
 
-    // Verify each character was captured and sent
-    expect(inputRequests).toContain('h')
-    expect(inputRequests).toContain('e')
-    expect(inputRequests).toContain('l')
-    expect(inputRequests).toContain('o')
+    await page.waitForTimeout(1000)
+
+    // Should have sent exactly one space character
+    expect(inputRequests.filter((req) => req === ' ')).toHaveLength(1)
   })
 
-  test('should handle Enter key for command submission', async ({ page, server }) => {
+  extendedTest('should capture "ls" command with Enter key', async ({ page, server }) => {
     await page.goto(server.baseURL)
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()))
     await page.waitForSelector('h1:has-text("PTY Sessions")')
 
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
-      if (route.request().method() === 'POST') {
-        inputRequests.push(route.request().postDataJSON().data)
+      const request = route.request()
+      if (request.method() === 'POST') {
+        const postData = request.postDataJSON()
+        inputRequests.push(postData.data)
       }
       await route.continue()
     })
 
+    // Wait for session to be active
+    await page.waitForSelector('[data-active-session]')
+
     await page.locator('.output-container').click()
+    await page.focus('.xterm')
     await page.keyboard.type('ls')
     await page.keyboard.press('Enter')
 
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
 
-    // Should have sent 'l', 's', '\n' (or '\r\n')
+    // Should have sent 'l', 's', and '\r' (Enter)
     expect(inputRequests).toContain('l')
     expect(inputRequests).toContain('s')
-    expect(inputRequests.some((req) => req.includes('\n') || req.includes('\r'))).toBe(true)
+    expect(inputRequests).toContain('\r')
   })
 
-  test('should send backspace sequences', async ({ page, server }) => {
+  extendedTest('should send backspace sequences', async ({ page, server }) => {
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
 
@@ -79,7 +120,7 @@ test.describe('PTY Input Capture', () => {
     expect(inputRequests.some((req) => req.includes('\x7f') || req.includes('\b'))).toBe(true)
   })
 
-  test('should handle Ctrl+C interrupt', async ({ page, server }) => {
+  extendedTest('should handle Ctrl+C interrupt', async ({ page, server }) => {
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
 
@@ -93,31 +134,43 @@ test.describe('PTY Input Capture', () => {
       await route.continue()
     })
 
+    // For Ctrl+C, also check for session kill request
+    const killRequests: string[] = []
+    await page.route('**/api/sessions/*/kill', async (route) => {
+      if (route.request().method() === 'POST') {
+        killRequests.push('kill')
+      }
+      await route.continue()
+    })
+
     await page.locator('.output-container').click()
-    await page.keyboard.type('hello world')
+    await page.keyboard.type('hello')
 
     await page.waitForTimeout(500)
 
-    // Verify each character was captured and sent
+    // Verify characters were captured
     expect(inputRequests).toContain('h')
     expect(inputRequests).toContain('e')
     expect(inputRequests).toContain('l')
     expect(inputRequests).toContain('o')
-    expect(inputRequests).toContain(' ')
-    expect(inputRequests).toContain('w')
-    expect(inputRequests).toContain('o')
-    expect(inputRequests).toContain('r')
-    expect(inputRequests).toContain('l')
-    expect(inputRequests).toContain('d')
+
+    await page.keyboard.press('Control+c')
+
+    await page.waitForTimeout(500)
+
+    // Should trigger kill request
+    expect(killRequests.length).toBeGreaterThan(0)
   })
 
-  test('should not capture input when session is inactive', async ({ page, server }) => {
+  extendedTest('should not capture input when session is inactive', async ({ page, server }) => {
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
 
+    // Handle confirm dialog
+    page.on('dialog', (dialog) => dialog.accept())
+
     // Kill the active session
     await page.locator('.kill-btn').click()
-    await page.locator('button:has-text("Kill Session")').click() // Confirm dialog
 
     // Wait for session to be inactive
     await page.waitForTimeout(1000)

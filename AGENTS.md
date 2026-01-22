@@ -6,6 +6,32 @@ This file contains essential information for agentic coding assistants working i
 
 **opencode-pty** is an OpenCode plugin that provides interactive PTY (pseudo-terminal) management. It enables AI agents to run background processes, send interactive input, and read output on demand. The plugin supports multiple concurrent PTY sessions with features like output buffering, regex filtering, and permission integration.
 
+The plugin includes both API tools for programmatic access and a web-based UI with xterm.js terminal emulation for direct interactive sessions. Users can spawn, manage, and interact with PTY sessions through a modern web interface with real-time output streaming and keyboard input handling.
+
+## Interactive Terminal Features
+
+### Web-Based Terminal UI
+
+- **xterm.js Integration**: Full-featured terminal emulator with ANSI sequence support, cursor handling, and proper text rendering
+- **Real-time Input Handling**: Direct keyboard input capture including letters, numbers, spaces, Enter, Backspace, and Ctrl+C
+- **Live Output Streaming**: WebSocket-based real-time output updates from PTY sessions
+- **Session Management**: Visual sidebar showing all active sessions with status indicators, PIDs, and line counts
+- **Auto-selection**: Automatically selects running sessions for immediate interaction
+
+### Input Capture
+
+- **Printable Characters**: Letters, numbers, symbols captured via xterm.js onData events
+- **Special Keys**: Enter (sends '\r'), Space, Backspace handled via onKey events
+- **Control Sequences**: Ctrl+C triggers session interruption and kill functionality
+- **Input Validation**: Only sends input when active session exists and input is non-empty
+
+### Session Interaction
+
+- **Click to Select**: Click any session in the sidebar to switch active terminal
+- **Kill Sessions**: Button to terminate running sessions with confirmation
+- **Connection Status**: Real-time WebSocket connection indicator
+- **Output History**: Loads and displays historical output when selecting sessions
+
 ## Build/Lint/Test Commands
 
 ### Type Checking
@@ -39,6 +65,14 @@ bun test --match "spawn"
 ### Linting
 
 No dedicated linter configured. TypeScript strict mode serves as the primary code quality gate.
+
+### Web UI Testing
+
+```bash
+bun run test:e2e
+```
+
+Runs end-to-end tests using Playwright to validate the web interface functionality, including input capture, session management, and real-time output streaming.
 
 ## Code Style Guidelines
 

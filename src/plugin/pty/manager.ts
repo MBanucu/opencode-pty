@@ -31,7 +31,11 @@ export function onOutput(callback: OutputCallback): void {
 }
 
 function notifyOutput(sessionId: string, data: string): void {
-  log.debug({ sessionId, dataLength: data.length }, 'notifyOutput called')
+  log.debug({
+    sessionId,
+    dataLength: data.length,
+    data: data.length > DEFAULT_TERMINAL_COLS / 2 ? data.slice(0, DEFAULT_TERMINAL_COLS / 2) + '...' : data
+  }, 'notifyOutput called')
   const lines = data.split('\n')
   for (const callback of outputCallbacks) {
     try {
@@ -147,7 +151,11 @@ class PTYManager {
   }
 
   write(id: string, data: string): boolean {
-    log.debug({ id, dataLength: data.length }, 'Manager.write called')
+    log.debug({
+      id,
+      dataLength: data.length,
+      data: data.length > DEFAULT_TERMINAL_COLS / 2 ? data.slice(0, DEFAULT_TERMINAL_COLS / 2) + '...' : data
+    }, 'Manager.write called')
     const session = this.sessions.get(id)
     if (!session) {
       log.debug({ id }, 'Manager.write: session not found')

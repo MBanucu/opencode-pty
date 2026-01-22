@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Session } from '../types.ts'
 import pinoLogger from '../logger.ts'
 import { TerminalRenderer } from './TerminalRenderer.tsx'
+import { Sidebar } from './Sidebar.tsx'
 
 const logger = pinoLogger.child({ module: 'App' })
 
@@ -345,7 +346,7 @@ export function App() {
         { data: JSON.stringify(data), sessionId: activeSession?.id },
         'Sending input to PTY'
       )
-      if (!data.trim() || !activeSession) {
+      if (!data || !activeSession) {
         return
       }
 
@@ -410,41 +411,13 @@ export function App() {
   }, [activeSession])
 
   return (
-    <div className="container">
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <h1>PTY Sessions</h1>
-        </div>
-        <div className={`connection-status ${connected ? 'connected' : 'disconnected'}`}>
-          {connected ? '● Connected' : '○ Disconnected'}
-        </div>
-        <div className="session-list">
-          {sessions.length === 0 ? (
-            <div style={{ padding: '16px', color: '#8b949e', textAlign: 'center' }}>
-              No active sessions
-            </div>
-          ) : (
-            sessions.map((session) => (
-              <div
-                key={session.id}
-                className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
-                onClick={() => handleSessionClick(session)}
-              >
-                <div className="session-title">{session.title}</div>
-                <div className="session-info">
-                  <span>{session.command}</span>
-                  <span className={`status-badge status-${session.status}`}>{session.status}</span>
-                </div>
-                <div className="session-info" style={{ marginTop: '4px' }}>
-                  <span>PID: {session.pid}</span>
-                  <span>{session.lineCount} lines</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
+    <div className="container" data-active-session={activeSession?.id}>
+      <Sidebar
+        sessions={sessions}
+        activeSession={activeSession}
+        onSessionClick={handleSessionClick}
+        connected={connected}
+      />
       <div className="main">
         {activeSession ? (
           <>
@@ -459,26 +432,15 @@ export function App() {
                 <div className="empty-state">Waiting for output...</div>
               ) : (
                 <TerminalRenderer
+                  key={activeSession?.id}
                   output={output}
                   onSendInput={handleSendInput}
                   onInterrupt={handleKillSession}
-                  disabled={activeSession.status !== 'running'}
+                  disabled={activeSession?.status !== 'running'}
                 />
               )}
             </div>
-
-            {/* Debug info for testing - hidden in production */}
-            <div
-              style={{
-                display: 'block', // Always visible for debugging
-                fontSize: '10px',
-                color: '#666',
-                marginTop: '10px',
-                borderTop: '1px solid #ccc',
-                paddingTop: '5px',
-              }}
-              data-testid="debug-info"
-            >
+            <div className="debug-info">
               Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}
               {wsMessageCount}
             </div>

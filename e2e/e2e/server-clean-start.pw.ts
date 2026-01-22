@@ -1,15 +1,16 @@
 import { test, expect } from '@playwright/test'
+import { test as extendedTest } from '../fixtures'
 import { createTestLogger } from '../test-logger.ts'
 
 const log = createTestLogger('e2e-server-clean')
 
-test.describe('Server Clean Start', () => {
-  test('should start with empty session list via API', async ({ request }) => {
+extendedTest.describe('Server Clean Start', () => {
+  extendedTest('should start with empty session list via API', async ({ request, server }) => {
     // Clear any existing sessions first
-    await request.post('/api/sessions/clear')
+    await request.post(server.baseURL + '/api/sessions/clear')
 
     // Test the API directly to check sessions
-    const response = await request.get('/api/sessions')
+    const response = await request.get(server.baseURL + '/api/sessions')
 
     expect(response.ok()).toBe(true)
     const sessions = await response.json()
@@ -21,16 +22,13 @@ test.describe('Server Clean Start', () => {
     log.info('Server started cleanly with no sessions via API')
   })
 
-  test('should start with empty session list via browser', async ({ page }) => {
+  extendedTest('should start with empty session list via browser', async ({ page, server }) => {
     // Navigate to the web UI
-    await page.goto('/')
+    await page.goto(server.baseURL + '/')
 
     // Clear any existing sessions from previous tests
-    const clearResponse = await page.request.delete('/api/sessions')
-    if (clearResponse && clearResponse.status() === 200) {
-      await page.waitForTimeout(500) // Wait for cleanup
-      await page.reload() // Reload to get fresh state
-    }
+    const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+    expect(clearResponse.status()).toBe(200)
 
     // Check that there are no sessions in the sidebar
     const sessionItems = page.locator('.session-item')

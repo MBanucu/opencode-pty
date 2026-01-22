@@ -1,194 +1,201 @@
 import { test, expect } from '@playwright/test'
+import { test as extendedTest } from '../fixtures'
 import { createTestLogger } from '../test-logger.ts'
 
 const log = createTestLogger('e2e-live-streaming')
 
-test.describe('PTY Live Streaming', () => {
-  test('should load historical buffered output when connecting to running PTY session', async ({
-    page,
-  }) => {
-    // Navigate to the web UI (test server should be running)
-    await page.goto('/')
+extendedTest.describe('PTY Live Streaming', () => {
+  extendedTest(
+    'should load historical buffered output when connecting to running PTY session',
+    async ({ page, server }) => {
+      // Navigate to the web UI (test server should be running)
+      await page.goto(server.baseURL + '/')
 
-    // Check if there are sessions, if not, create one for testing
-    const initialResponse = await page.request.get('/api/sessions')
-    const initialSessions = await initialResponse.json()
-    if (initialSessions.length === 0) {
-      log.info('No sessions found, creating a test session for streaming...')
-      await page.request.post('/api/sessions', {
+      // Check if there are sessions, if not, create one for testing
+      const initialResponse = await page.request.get(server.baseURL + '/api/sessions')
+      const initialSessions = await initialResponse.json()
+      if (initialSessions.length === 0) {
+        log.info('No sessions found, creating a test session for streaming...')
+        await page.request.post(server.baseURL + '/api/sessions', {
+          data: {
+            command: 'bash',
+            args: [
+              '-c',
+              'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
+            ],
+            description: 'Live streaming test session',
+          },
+        })
+        // Wait a bit for the session to start and reload to get updated session list
+        await page.waitForTimeout(1000)
+      }
+
+      // Wait for sessions to load
+      await page.waitForSelector('.session-item', { timeout: 5000 })
+
+      // Find the running session (there should be at least one)
+      const sessionCount = await page.locator('.session-item').count()
+      log.info(`📊 Found ${sessionCount} sessions`)
+
+      // Find a running session
+      const allSessions = page.locator('.session-item')
+      let runningSession = null
+      for (let i = 0; i < sessionCount; i++) {
+        const session = allSessions.nth(i)
+        const statusBadge = await session.locator('.status-badge').textContent()
+        if (statusBadge === 'running') {
+          runningSession = session
+          break
+        }
+      }
+
+      if (!runningSession) {
+        throw new Error('No running session found')
+      }
+
+      log.info('✅ Found running session')
+
+      // Click on the running session
+      await runningSession.click()
+
+      // Check if the session became active (header should appear)
+      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
+
+      // Check that the title contains the session info
+      const headerTitle = await page.locator('.output-header .output-title').textContent()
+      expect(headerTitle).toContain('Live streaming test session')
+
+      // Now wait for output to appear
+      await page.waitForSelector('.output-line', { timeout: 5000 })
+
+      // Get initial output count
+      const initialOutputLines = page.locator('.output-line')
+      const initialCount = await initialOutputLines.count()
+      log.info(`Initial output lines: ${initialCount}`)
+
+      // Check debug info using data-testid
+      const debugElement = page.locator('[data-testid="debug-info"]')
+      await debugElement.waitFor({ timeout: 10000 })
+      const debugText = await debugElement.textContent()
+      log.info(`Debug info: ${debugText}`)
+
+      // Verify we have some initial output
+      expect(initialCount).toBeGreaterThan(0)
+
+      // Verify the output contains the initial welcome message from the bash command
+      const firstLine = await initialOutputLines.first().textContent()
+      expect(firstLine).toContain('Welcome to live streaming test')
+
+      log.info(
+        '✅ Historical data loading test passed - buffered output from before UI connection is displayed'
+      )
+    }
+  )
+
+  extendedTest(
+    'should preserve and display complete historical output buffer',
+    async ({ page, server }) => {
+      // This test verifies that historical data (produced before UI connects) is preserved and loaded
+      // when connecting to a running PTY session. This is crucial for users who reconnect to long-running sessions.
+
+      // Navigate to the web UI first
+      await page.goto(server.baseURL + '/')
+
+      // Ensure clean state - clear any existing sessions from previous tests
+      const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+      expect(clearResponse.status()).toBe(200)
+      await page.waitForTimeout(500) // Allow cleanup to complete
+
+      // Create a fresh session that produces identifiable historical output
+      log.info('Creating fresh session with historical output markers...')
+      await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
           args: [
             '-c',
-            'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
+            'echo "=== START HISTORICAL ==="; echo "Line A"; echo "Line B"; echo "Line C"; echo "=== END HISTORICAL ==="; while true; do echo "LIVE: $(date +%S)"; sleep 2; done',
           ],
-          description: 'Live streaming test session',
+          description: `Historical buffer test - ${Date.now()}`,
         },
       })
-      // Wait a bit for the session to start and reload to get updated session list
-      await page.waitForTimeout(1000)
-    }
 
-    // Wait for sessions to load
-    await page.waitForSelector('.session-item', { timeout: 5000 })
+      // Wait for session to produce historical output (before UI connects)
+      await page.waitForTimeout(2000) // Give time for historical output to accumulate
 
-    // Find the running session (there should be at least one)
-    const sessionCount = await page.locator('.session-item').count()
-    log.info(`📊 Found ${sessionCount} sessions`)
+      // Check session status via API to ensure it's running
+      const sessionsResponse = await page.request.get(server.baseURL + '/api/sessions')
+      const sessions = await sessionsResponse.json()
+      const testSessionData = sessions.find((s: any) =>
+        s.title?.startsWith('Historical buffer test')
+      )
+      expect(testSessionData).toBeDefined()
+      expect(testSessionData.status).toBe('running')
 
-    // Find a running session
-    const allSessions = page.locator('.session-item')
-    let runningSession = null
-    for (let i = 0; i < sessionCount; i++) {
-      const session = allSessions.nth(i)
-      const statusBadge = await session.locator('.status-badge').textContent()
-      if (statusBadge === 'running') {
-        runningSession = session
-        break
+      // Now connect via UI and check that historical data is loaded
+      await page.reload()
+      await page.waitForSelector('.session-item', { timeout: 5000 })
+
+      // Find and click the running session
+      const allSessions = page.locator('.session-item')
+      const sessionCount = await allSessions.count()
+      let testSession = null
+      for (let i = 0; i < sessionCount; i++) {
+        const session = allSessions.nth(i)
+        const statusBadge = await session.locator('.status-badge').textContent()
+        if (statusBadge === 'running') {
+          testSession = session
+          break
+        }
       }
-    }
 
-    if (!runningSession) {
-      throw new Error('No running session found')
-    }
-
-    log.info('✅ Found running session')
-
-    // Click on the running session
-    await runningSession.click()
-
-    // Check if the session became active (header should appear)
-    await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
-
-    // Check that the title contains the session info
-    const headerTitle = await page.locator('.output-header .output-title').textContent()
-    expect(headerTitle).toContain('Live streaming test session')
-
-    // Now wait for output to appear
-    await page.waitForSelector('.output-line', { timeout: 5000 })
-
-    // Get initial output count
-    const initialOutputLines = page.locator('.output-line')
-    const initialCount = await initialOutputLines.count()
-    log.info(`Initial output lines: ${initialCount}`)
-
-    // Check debug info using data-testid
-    const debugElement = page.locator('[data-testid="debug-info"]')
-    await debugElement.waitFor({ timeout: 10000 })
-    const debugText = await debugElement.textContent()
-    log.info(`Debug info: ${debugText}`)
-
-    // Verify we have some initial output
-    expect(initialCount).toBeGreaterThan(0)
-
-    // Verify the output contains the initial welcome message from the bash command
-    const firstLine = await initialOutputLines.first().textContent()
-    expect(firstLine).toContain('Welcome to live streaming test')
-
-    log.info(
-      '✅ Historical data loading test passed - buffered output from before UI connection is displayed'
-    )
-  })
-
-  test('should preserve and display complete historical output buffer', async ({ page }) => {
-    // This test verifies that historical data (produced before UI connects) is preserved and loaded
-    // when connecting to a running PTY session. This is crucial for users who reconnect to long-running sessions.
-
-    // Navigate to the web UI first
-    await page.goto('/')
-
-    // Ensure clean state - clear any existing sessions from previous tests
-    const clearResponse = await page.request.post('/api/sessions/clear')
-    expect(clearResponse.status()).toBe(200)
-    await page.waitForTimeout(500) // Allow cleanup to complete
-
-    // Create a fresh session that produces identifiable historical output
-    log.info('Creating fresh session with historical output markers...')
-    await page.request.post('/api/sessions', {
-      data: {
-        command: 'bash',
-        args: [
-          '-c',
-          'echo "=== START HISTORICAL ==="; echo "Line A"; echo "Line B"; echo "Line C"; echo "=== END HISTORICAL ==="; while true; do echo "LIVE: $(date +%S)"; sleep 2; done',
-        ],
-        description: `Historical buffer test - ${Date.now()}`,
-      },
-    })
-
-    // Wait for session to produce historical output (before UI connects)
-    await page.waitForTimeout(2000) // Give time for historical output to accumulate
-
-    // Check session status via API to ensure it's running
-    const sessionsResponse = await page.request.get('/api/sessions')
-    const sessions = await sessionsResponse.json()
-    const testSessionData = sessions.find((s: any) => s.title?.startsWith('Historical buffer test'))
-    expect(testSessionData).toBeDefined()
-    expect(testSessionData.status).toBe('running')
-
-    // Now connect via UI and check that historical data is loaded
-    await page.reload()
-    await page.waitForSelector('.session-item', { timeout: 5000 })
-
-    // Find and click the running session
-    const allSessions = page.locator('.session-item')
-    const sessionCount = await allSessions.count()
-    let testSession = null
-    for (let i = 0; i < sessionCount; i++) {
-      const session = allSessions.nth(i)
-      const statusBadge = await session.locator('.status-badge').textContent()
-      if (statusBadge === 'running') {
-        testSession = session
-        break
+      if (!testSession) {
+        throw new Error('Historical buffer test session not found')
       }
+
+      await testSession.click()
+      await page.waitForSelector('.output-line', { timeout: 5000 })
+
+      // Verify the API returns the expected historical data
+      const sessionData = await page.request.get(`/api/sessions/${testSessionData.id}/output`)
+      const outputData = await sessionData.json()
+      expect(outputData.lines).toBeDefined()
+      expect(Array.isArray(outputData.lines)).toBe(true)
+      expect(outputData.lines.length).toBeGreaterThan(0)
+
+      // Check that historical output is present in the UI
+      const allText = await page.locator('.output-container').textContent()
+      expect(allText).toContain('=== START HISTORICAL ===')
+      expect(allText).toContain('Line A')
+      expect(allText).toContain('Line B')
+      expect(allText).toContain('Line C')
+      expect(allText).toContain('=== END HISTORICAL ===')
+
+      // Verify live updates are also working
+      expect(allText).toMatch(/LIVE: \d{2}/)
+
+      log.info(
+        '✅ Historical buffer preservation test passed - pre-connection data is loaded correctly'
+      )
     }
+  )
 
-    if (!testSession) {
-      throw new Error('Historical buffer test session not found')
-    }
-
-    await testSession.click()
-    await page.waitForSelector('.output-line', { timeout: 5000 })
-
-    // Verify the API returns the expected historical data
-    const sessionData = await page.request.get(`/api/sessions/${testSessionData.id}/output`)
-    const outputData = await sessionData.json()
-    expect(outputData.lines).toBeDefined()
-    expect(Array.isArray(outputData.lines)).toBe(true)
-    expect(outputData.lines.length).toBeGreaterThan(0)
-
-    // Check that historical output is present in the UI
-    const allText = await page.locator('.output-container').textContent()
-    expect(allText).toContain('=== START HISTORICAL ===')
-    expect(allText).toContain('Line A')
-    expect(allText).toContain('Line B')
-    expect(allText).toContain('Line C')
-    expect(allText).toContain('=== END HISTORICAL ===')
-
-    // Verify live updates are also working
-    expect(allText).toMatch(/LIVE: \d{2}/)
-
-    log.info(
-      '✅ Historical buffer preservation test passed - pre-connection data is loaded correctly'
-    )
-  })
-
-  test('should receive live WebSocket updates from running PTY session', async ({ page }) => {
+  extendedTest('should receive live WebSocket updates from running PTY session', async ({ page, server }) => {
     // Listen to page console for debugging
     page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
 
     // Navigate to the web UI
-    await page.goto('/')
+    await page.goto(server.baseURL + '/')
 
     // Ensure clean state for this test
-    await page.request.post('/api/sessions/clear')
+    await page.request.post(server.baseURL + '/api/sessions/clear')
     await page.waitForTimeout(500)
 
     // Create a fresh session for this test
-    const initialResponse = await page.request.get('/api/sessions')
+    const initialResponse = await page.request.get(server.baseURL + '/api/sessions')
     const initialSessions = await initialResponse.json()
     if (initialSessions.length === 0) {
       log.info('No sessions found, creating a test session for streaming...')
-      await page.request.post('/api/sessions', {
+      await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
           args: [

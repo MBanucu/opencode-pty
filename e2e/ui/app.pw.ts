@@ -1,30 +1,30 @@
-import { test, expect } from '@playwright/test'
+import { test as extendedTest, expect } from '../fixtures'
 import { createTestLogger } from '../test-logger.ts'
 
 const log = createTestLogger('ui-test')
 
-test.describe('App Component', () => {
-  test('renders the PTY Sessions title', async ({ page }) => {
+extendedTest.describe('App Component', () => {
+  extendedTest('renders the PTY Sessions title', async ({ page, server }) => {
     // Log all console messages for debugging
     page.on('console', (msg) => {
       log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
-    await page.goto('/')
+    await page.goto(server.baseURL + '/')
     await expect(page.getByText('PTY Sessions')).toBeVisible()
   })
 
-  test('shows connected status when WebSocket connects', async ({ page }) => {
+  extendedTest('shows connected status when WebSocket connects', async ({ page, server }) => {
     // Log all console messages for debugging
     page.on('console', (msg) => {
       log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
-    await page.goto('/')
+    await page.goto(server.baseURL + '/')
     await expect(page.getByText('● Connected')).toBeVisible()
   })
 
-  test('receives WebSocket session_list messages', async ({ page }) => {
+  extendedTest('receives WebSocket session_list messages', async ({ page, server }) => {
     let sessionListReceived = false
     // Log all console messages and check for session_list
     page.on('console', (msg) => {
@@ -34,23 +34,23 @@ test.describe('App Component', () => {
       }
     })
 
-    await page.goto('/')
+    await page.goto(server.baseURL + '/')
     // Wait for WebSocket to connect and receive messages
     await page.waitForTimeout(1000)
     expect(sessionListReceived).toBe(true)
   })
 
-  test('shows no active sessions message when empty', async ({ page }) => {
+  extendedTest('shows no active sessions message when empty', async ({ page, server }) => {
     // Log all console messages for debugging
     page.on('console', (msg) => {
       log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
     // Clear all sessions first to ensure empty state
-    const clearResponse = await page.request.post('/api/sessions/clear')
+    const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
     expect(clearResponse.status()).toBe(200)
 
-    await page.goto('/')
+    await page.goto(server.baseURL + '/')
 
     // Wait for WebSocket to connect
     await expect(page.getByText('● Connected')).toBeVisible()
@@ -59,17 +59,17 @@ test.describe('App Component', () => {
     await expect(page.getByText('No active sessions')).toBeVisible()
   })
 
-  test('shows empty state when no session is selected', async ({ page }) => {
+  extendedTest('shows empty state when no session is selected', async ({ page, server }) => {
     // Log all console messages for debugging
     page.on('console', (msg) => {
       log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
     // Clear any existing sessions
-    const clearResponse = await page.request.post('/api/sessions/clear')
+    const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
     expect(clearResponse.status()).toBe(200)
 
-    await page.goto('/')
+    await page.goto(server.baseURL + '/')
 
     // Set skip autoselect to prevent automatic selection
     await page.evaluate(() => {
@@ -77,7 +77,7 @@ test.describe('App Component', () => {
     })
 
     // Create a session
-    const createResponse = await page.request.post('/api/sessions', {
+    const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'echo',
         args: ['test'],
@@ -95,176 +95,186 @@ test.describe('App Component', () => {
     await expect(emptyState).toHaveText('Select a session from the sidebar to view its output')
   })
 
-  test.describe('WebSocket Message Handling', () => {
-    test('increments WS message counter when receiving data for active session', async ({
-      page,
-    }) => {
-      test.setTimeout(15000) // Increase timeout for slow session startup
-      // Log all console messages for debugging
-      page.on('console', (msg) => {
-        log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-      })
-      page.on('pageerror', (error) => log.error('PAGE ERROR: ' + error.message))
+  extendedTest.describe('WebSocket Message Handling', () => {
+    extendedTest(
+      'increments WS message counter when receiving data for active session',
+      async ({ page, server }) => {
+        extendedTest.setTimeout(15000) // Increase timeout for slow session startup
+        // Log all console messages for debugging
+        page.on('console', (msg) => {
+          log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+        })
+        page.on('pageerror', (error) => log.error('PAGE ERROR: ' + error.message))
 
-      // Navigate and wait for initial setup
-      await page.goto('/')
+        // Navigate and wait for initial setup
+        await page.goto(server.baseURL + '/')
 
-      // Clear any existing sessions for clean test state
-      await page.request.post('/api/sessions/clear')
+        // Clear any existing sessions for clean test state
+        await page.request.post(server.baseURL + '/api/sessions/clear')
 
-      // Create a test session that produces continuous output
-      log.info('Creating fresh test session for WebSocket counter test')
-      const createResponse = await page.request.post('/api/sessions', {
-        data: {
-          command: 'bash',
-          args: [
-            '-c',
-            'echo "Welcome to live streaming test"; while true; do echo "$(date +"%H:%M:%S"): Live update"; sleep 0.1; done',
-          ],
-          description: 'Live streaming test session',
-        },
-      })
-      log.info(`Session creation response: ${createResponse.status()}`)
+        // Create a test session that produces continuous output
+        log.info('Creating fresh test session for WebSocket counter test')
+        const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+          data: {
+            command: 'bash',
+            args: [
+              '-c',
+              'echo "Welcome to live streaming test"; while true; do echo "$(date +"%H:%M:%S"): Live update"; sleep 0.1; done',
+            ],
+            description: 'Live streaming test session',
+          },
+        })
+        log.info(`Session creation response: ${createResponse.status()}`)
 
-      // Wait for session to actually start
-      await page.waitForTimeout(3000)
+        // Wait for session to actually start
+        await page.waitForTimeout(3000)
 
-      // Check session status
-      const sessionsResponse = await page.request.get('/api/sessions')
-      const sessions = await sessionsResponse.json()
-      log.info(`Sessions after creation: ${sessions.length}`)
-      if (sessions.length > 0) {
-        log.info(`Session status: ${sessions[0].status}, PID: ${sessions[0].pid}`)
+        // Check session status
+        const sessionsResponse = await page.request.get('/api/sessions')
+        const sessions = await sessionsResponse.json()
+        log.info(`Sessions after creation: ${sessions.length}`)
+        if (sessions.length > 0) {
+          log.info(`Session status: ${sessions[0].status}, PID: ${sessions[0].pid}`)
+        }
+
+        // Don't reload - wait for the session to appear in the UI
+        await page.waitForSelector('.session-item', { timeout: 5000 })
+
+        // Wait for session to appear
+        await page.waitForSelector('.session-item', { timeout: 5000 })
+
+        // Check session status
+        const sessionItems = page.locator('.session-item')
+        const sessionCount = await sessionItems.count()
+        log.info(`Found ${sessionCount} sessions`)
+
+        // Click on the first session
+        const firstSession = sessionItems.first()
+        const statusBadge = await firstSession.locator('.status-badge').textContent()
+        log.info(`Session status: ${statusBadge}`)
+
+        log.info('Clicking on first session...')
+        await firstSession.click()
+        log.info('Session clicked, waiting for output header...')
+
+        // Wait for session to be active and debug element to appear
+        await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
+        await page.waitForSelector('[data-testid="debug-info"]', { timeout: 2000 })
+        log.info('Debug element found!')
+
+        // Get session ID from debug element
+        const initialDebugElement = page.locator('[data-testid="debug-info"]')
+        await initialDebugElement.waitFor({ state: 'attached', timeout: 1000 })
+        const initialDebugText = (await initialDebugElement.textContent()) || ''
+        const activeMatch = initialDebugText.match(/active:\s*([^\s,]+)/)
+        const sessionId = activeMatch && activeMatch[1] ? activeMatch[1] : null
+        log.info(`Active session ID: ${sessionId}`)
+
+        // Check if session has output
+        if (sessionId) {
+          const outputResponse = await page.request.get(`/api/sessions/${sessionId}/output`)
+          if (outputResponse.status() === 200) {
+            const outputData = await outputResponse.json()
+            log.info(`Session output lines: ${outputData.lines?.length || 0}`)
+          } else {
+            log.info(
+              `Session output check failed: ${outputResponse.status()} ${await outputResponse.text()}`
+            )
+          }
+        }
+
+        const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
+        const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
+        log.info(`Initial WS message count: ${initialCount}`)
+
+        // Wait for some WebSocket messages to arrive (the session should be running)
+        await page.waitForTimeout(3000)
+
+        // Check that WS message count increased
+        const finalDebugText = (await initialDebugElement.textContent()) || ''
+        const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
+        const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
+        log.info(`Final WS message count: ${finalCount}`)
+
+        // The test should fail if no messages were received
+        expect(finalCount).toBeGreaterThan(initialCount)
       }
+    )
 
-      // Don't reload - wait for the session to appear in the UI
-      await page.waitForSelector('.session-item', { timeout: 5000 })
+    extendedTest(
+      'does not increment WS counter for messages from inactive sessions',
+      async ({ page, server }) => {
+        // Log all console messages for debugging
+        page.on('console', (msg) => {
+          log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+        })
 
-      // Wait for session to appear
-      await page.waitForSelector('.session-item', { timeout: 5000 })
+        // This test would require multiple sessions and verifying that messages
+        // for non-active sessions don't increment the counter
+        await page.goto(server.baseURL + '/')
 
-      // Check session status
-      const sessionItems = page.locator('.session-item')
-      const sessionCount = await sessionItems.count()
-      log.info(`Found ${sessionCount} sessions`)
+        // Clear any existing sessions for clean test state
+        await page.request.post(server.baseURL + '/api/sessions/clear')
 
-      // Click on the first session
-      const firstSession = sessionItems.first()
-      const statusBadge = await firstSession.locator('.status-badge').textContent()
-      log.info(`Session status: ${statusBadge}`)
+        // Create first session
+        await page.request.post(server.baseURL + '/api/sessions', {
+          data: {
+            command: 'bash',
+            args: ['-c', 'while true; do echo "session1 $(date +%s)"; sleep 0.1; done'],
+            description: 'Session 1',
+          },
+        })
 
-      log.info('Clicking on first session...')
-      await firstSession.click()
-      log.info('Session clicked, waiting for output header...')
+        // Create second session
+        await page.request.post(server.baseURL + '/api/sessions', {
+          data: {
+            command: 'bash',
+            args: ['-c', 'while true; do echo "session2 $(date +%s)"; sleep 0.1; done'],
+            description: 'Session 2',
+          },
+        })
 
-      // Wait for session to be active and debug element to appear
-      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
-      await page.waitForSelector('[data-testid="debug-info"]', { timeout: 2000 })
-      log.info('Debug element found!')
+        await page.waitForTimeout(1000)
+        await page.reload()
 
-      // Get session ID from debug element
-      const initialDebugElement = page.locator('[data-testid="debug-info"]')
-      await initialDebugElement.waitFor({ state: 'attached', timeout: 1000 })
-      const initialDebugText = (await initialDebugElement.textContent()) || ''
-      const activeMatch = initialDebugText.match(/active:\s*([^\s,]+)/)
-      const sessionId = activeMatch && activeMatch[1] ? activeMatch[1] : null
-      log.info(`Active session ID: ${sessionId}`)
+        // Wait for sessions to load
+        await page.waitForSelector('.session-item', { timeout: 5000 })
 
-      // Check if session has output
-      if (sessionId) {
-        const outputResponse = await page.request.get(`/api/sessions/${sessionId}/output`)
-        const outputData = await outputResponse.json()
-        log.info(`Session output lines: ${outputData.lines?.length || 0}`)
+        // Click on first session
+        const sessionItems = page.locator('.session-item')
+        await sessionItems.nth(0).click()
+
+        // Wait for it to be active
+        await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
+
+        // Get initial count
+        const debugElement = page.locator('[data-testid="debug-info"]')
+        await debugElement.waitFor({ state: 'attached', timeout: 1000 })
+        const initialDebugText = (await debugElement.textContent()) || ''
+        const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
+        const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
+
+        // Wait a bit and check count again
+        await page.waitForTimeout(2000)
+        const finalDebugText = (await debugElement.textContent()) || ''
+        const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
+        const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
+
+        // Should have received messages for the active session
+        expect(finalCount).toBeGreaterThan(initialCount)
       }
+    )
 
-      const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
-      const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
-      log.info(`Initial WS message count: ${initialCount}`)
-
-      // Wait for some WebSocket messages to arrive (the session should be running)
-      await page.waitForTimeout(3000)
-
-      // Check that WS message count increased
-      const finalDebugText = (await initialDebugElement.textContent()) || ''
-      const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
-      const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
-      log.info(`Final WS message count: ${finalCount}`)
-
-      // The test should fail if no messages were received
-      expect(finalCount).toBeGreaterThan(initialCount)
-    })
-
-    test('does not increment WS counter for messages from inactive sessions', async ({ page }) => {
+    extendedTest('resets WS counter when switching sessions', async ({ page, server }) => {
       // Log all console messages for debugging
       page.on('console', (msg) => {
         log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
       })
 
-      // This test would require multiple sessions and verifying that messages
-      // for non-active sessions don't increment the counter
-      await page.goto('/')
-
-      // Clear any existing sessions for clean test state
-      await page.request.post('/api/sessions/clear')
-
-      // Create first session
-      await page.request.post('/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'while true; do echo "session1 $(date +%s)"; sleep 0.1; done'],
-          description: 'Session 1',
-        },
-      })
-
-      // Create second session
-      await page.request.post('/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'while true; do echo "session2 $(date +%s)"; sleep 0.1; done'],
-          description: 'Session 2',
-        },
-      })
-
-      await page.waitForTimeout(1000)
-      await page.reload()
-
-      // Wait for sessions to load
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-
-      // Click on first session
-      const sessionItems = page.locator('.session-item')
-      await sessionItems.nth(0).click()
-
-      // Wait for it to be active
-      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
-
-      // Get initial count
-      const debugElement = page.locator('[data-testid="debug-info"]')
-      await debugElement.waitFor({ state: 'attached', timeout: 1000 })
-      const initialDebugText = (await debugElement.textContent()) || ''
-      const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
-      const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
-
-      // Wait a bit and check count again
-      await page.waitForTimeout(2000)
-      const finalDebugText = (await debugElement.textContent()) || ''
-      const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
-      const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
-
-      // Should have received messages for the active session
-      expect(finalCount).toBeGreaterThan(initialCount)
-    })
-
-    test('resets WS counter when switching sessions', async ({ page }) => {
-      // Log all console messages for debugging
-      page.on('console', (msg) => {
-        log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-      })
-
-      await page.goto('/')
+      await page.goto(server.baseURL + '/')
 
       // Create two sessions
-      await page.request.post('/api/sessions', {
+      await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
           args: ['-c', 'while true; do echo "session1"; sleep 0.1; done'],
@@ -272,7 +282,7 @@ test.describe('App Component', () => {
         },
       })
 
-      await page.request.post('/api/sessions', {
+      await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
           args: ['-c', 'while true; do echo "session2"; sleep 0.1; done'],
@@ -315,19 +325,19 @@ test.describe('App Component', () => {
       expect(secondSessionCount).toBeLessThanOrEqual(firstSessionCount)
     })
 
-    test('maintains WS counter state during page refresh', async ({ page }) => {
+    extendedTest('maintains WS counter state during page refresh', async ({ page, server }) => {
       // Log all console messages for debugging
       page.on('console', (msg) => {
         log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
       })
 
-      await page.goto('/')
+      await page.goto(server.baseURL + '/')
 
       // Clear any existing sessions for clean test state
-      await page.request.post('/api/sessions/clear')
+      await page.request.post(server.baseURL + '/api/sessions/clear')
 
       // Create a streaming session
-      await page.request.post('/api/sessions', {
+      await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
           args: ['-c', 'while true; do echo "streaming"; sleep 0.1; done'],

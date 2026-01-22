@@ -1,8 +1,7 @@
 // Performance monitoring utilities
-import { createLogger } from './logger.ts'
-import { PERFORMANCE_MEASURE_LIMIT } from '../shared/constants.ts'
+import pinoLogger from './logger.ts'
 
-const log = createLogger('performance')
+const log = pinoLogger.child({ module: 'performance' })
 export class PerformanceMonitor {
   private static marks: Map<string, number> = new Map()
   private static measures: Array<{ name: string; duration: number; timestamp: number }> = []

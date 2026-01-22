@@ -1,5 +1,5 @@
 import { spawn, type IPty } from 'bun-pty'
-import { createLogger } from '../logger.ts'
+import logger from '../logger.ts'
 import { RingBuffer } from './buffer.ts'
 import type { PTYSession, PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from './types.ts'
 import type { OpencodeClient } from '@opencode-ai/sdk'
@@ -16,7 +16,7 @@ export function setOnSessionUpdate(callback: () => void) {
   onSessionUpdate = callback
 }
 
-const log = createLogger('manager')
+const log = logger.child({ service: 'pty.manager' })
 
 let client: OpencodeClient | null = null
 type OutputCallback = (sessionId: string, data: string[]) => void
@@ -36,7 +36,7 @@ function notifyOutput(sessionId: string, data: string): void {
     try {
       callback(sessionId, lines)
     } catch (err) {
-      log.error('error in output callback', { error: String(err) })
+      log.error({ error: String(err) }, 'error in output callback')
     }
   }
 }
@@ -58,7 +58,7 @@ class PTYManager {
         try {
           session.process.kill()
         } catch (err) {
-          log.warn('failed to kill process during clear', { id: session.id, error: String(err) })
+          log.warn({ id: session.id, error: String(err) }, 'failed to kill process during clear')
         }
       }
     }
@@ -76,7 +76,7 @@ class PTYManager {
     const title =
       opts.title ?? (`${opts.command} ${args.join(' ')}`.trim() || `Terminal ${id.slice(-4)}`)
 
-    log.debug('Spawning PTY', { id, command: opts.command, args, workdir })
+    log.debug({ id, command: opts.command, args, workdir }, 'Spawning PTY')
 
     const ptyProcess: IPty = spawn(opts.command, args, {
       name: 'xterm-256color',
@@ -112,7 +112,7 @@ class PTYManager {
     })
 
     ptyProcess.onExit(async ({ exitCode, signal }) => {
-      log.info('pty exited', { id, exitCode, signal, command: opts.command })
+      log.info({ id, exitCode, signal, command: opts.command }, 'pty exited')
       if (session.status === 'running') {
         session.status = 'exited'
         session.exitCode = exitCode
@@ -128,13 +128,16 @@ class PTYManager {
               parts: [{ type: 'text', text: message }],
             },
           })
-          log.info('sent exit notification', {
-            id,
-            exitCode,
-            parentSessionId: session.parentSessionId,
-          })
+          log.info(
+            {
+              id,
+              exitCode,
+              parentSessionId: session.parentSessionId,
+            },
+            'sent exit notification'
+          )
         } catch (err) {
-          log.error('failed to send exit notification', { id, error: String(err) })
+          log.error({ id, error: String(err) }, 'failed to send exit notification')
         }
       }
     })
@@ -143,17 +146,17 @@ class PTYManager {
   }
 
   write(id: string, data: string): boolean {
-    log.debug('Manager.write called', { id, dataLength: data.length })
+    log.debug({ id, dataLength: data.length }, 'Manager.write called')
     const session = this.sessions.get(id)
     if (!session) {
-      log.debug('Manager.write: session not found', { id })
+      log.debug({ id }, 'Manager.write: session not found')
       return false
     }
     try {
       session.process.write(data)
       return true
     } catch (err) {
-      log.debug('write to exited process', { id, error: String(err) })
+      log.debug({ id, error: String(err) }, 'write to exited process')
       return true // allow write to exited process for tests
     }
   }
@@ -188,7 +191,7 @@ class PTYManager {
   }
 
   get(id: string): PTYSessionInfo | null {
-    log.debug('Manager.get called', { id })
+    log.debug({ id }, 'Manager.get called')
     const session = this.sessions.get(id)
     log.debug(
       {
@@ -208,7 +211,7 @@ class PTYManager {
       return false
     }
 
-    log.info('killing pty', { id, cleanup })
+    log.info({ id, cleanup }, 'killing pty')
 
     if (session.status === 'running') {
       try {
@@ -228,7 +231,7 @@ class PTYManager {
   }
 
   cleanupBySession(parentSessionId: string): void {
-    log.info('cleaning up ptys for session', { parentSessionId })
+    log.info({ parentSessionId }, 'cleaning up ptys for session')
     for (const [id, session] of this.sessions) {
       if (session.parentSessionId === parentSessionId) {
         this.kill(id, true)

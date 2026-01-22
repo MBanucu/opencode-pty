@@ -1,11 +1,11 @@
 import type { Server, ServerWebSocket } from 'bun'
 import { manager, onOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
-import { createLogger } from '../plugin/logger.ts'
+import logger from './logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
 import { join, resolve } from 'path'
 import { DEFAULT_SERVER_PORT, DEFAULT_READ_LIMIT, ASSET_CONTENT_TYPES } from './constants.ts'
 
-const log = createLogger('web-server')
+const log = logger.child({ module: 'web-server' })
 
 const defaultConfig: ServerConfig = {
   port: DEFAULT_SERVER_PORT,

@@ -1,4 +1,4 @@
-import { createLogger, initLogger } from './plugin/logger.ts'
+import logger, { initLogger } from './plugin/logger.ts'
 import type { PluginContext, PluginResult } from './plugin/types.ts'
 import { initManager, manager } from './plugin/pty/manager.ts'
 import { initPermissions } from './plugin/pty/permissions.ts'
@@ -9,7 +9,7 @@ import { ptyList } from './plugin/pty/tools/list.ts'
 import { ptyKill } from './plugin/pty/tools/kill.ts'
 import { startWebServer } from './web/server.ts'
 
-const log = createLogger('plugin')
+const log = logger.child({ service: 'pty.plugin' })
 
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initLogger(client)
@@ -17,7 +17,7 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
   initManager(client)
 
   const webServerUrl = startWebServer()
-  log.info('PTY plugin initialized', { webServerUrl })
+  log.info({ webServerUrl }, 'PTY plugin initialized')
 
   return {
     tool: {
@@ -35,7 +35,7 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       if (event.type === 'session.deleted') {
         const sessionId = (event as { properties: { info: { id: string } } }).properties?.info?.id
         if (sessionId) {
-          log.info('cleaning up PTYs for deleted session', { sessionId })
+          log.info({ sessionId }, 'cleaning up PTYs for deleted session')
           manager.cleanupBySession(sessionId)
         }
       }

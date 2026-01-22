@@ -150,7 +150,7 @@ describe('Web Server', () => {
       const sessionData = await response.json()
       log.debug('Session data', sessionData)
       expect(sessionData.id).toBe(session.id)
-      expect(sessionData.command).toBeDefined()
+      expect(sessionData.command).toBe('cat')
       expect(sessionData.args).toEqual(['test output'])
     })
 
@@ -165,10 +165,10 @@ describe('Web Server', () => {
     it('should handle input to session', async () => {
       // Create a session to test input
       const session = manager.spawn({
-        command: 'echo',
-        args: ['test output'],
-        description: 'Test session for input',
-        parentSessionId: 'test-input',
+        command: 'cat',
+        args: [],
+        description: 'Test session',
+        parentSessionId: 'test',
       })
 
       // Wait for PTY to start

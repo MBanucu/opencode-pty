@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import type { Session } from '../types.ts'
-import { createLogger } from '../logger.ts'
+import pinoLogger from '../logger.ts'
 
-const logger = createLogger('App')
+const logger = pinoLogger.child({ module: 'App' })
 
 export function App() {
   const [sessions, setSessions] = useState<Session[]>([])

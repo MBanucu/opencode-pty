@@ -1,7 +1,7 @@
 import React from 'react'
-import { createLogger } from '../logger.ts'
+import pinoLogger from '../logger.ts'
 
-const log = createLogger('ErrorBoundary')
+const log = pinoLogger.child({ module: 'ErrorBoundary' })
 
 interface ErrorBoundaryState {
   hasError: boolean

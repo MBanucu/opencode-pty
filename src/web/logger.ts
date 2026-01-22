@@ -24,11 +24,5 @@ const pinoLogger = pino({
   },
 })
 
-// Create child logger factory for specific modules
-export const createLogger = (module: string) => pinoLogger.child({ module })
-
-// Convenience function for creating child loggers (recommended pattern)
-export const getLogger = (context: Record<string, unknown> = {}) => pinoLogger.child(context)
-
 // Default app logger
 export default pinoLogger

@@ -3,15 +3,6 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { PluginClient } from './types.ts'
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error'
-
-interface Logger {
-  debug(message: string, extra?: Record<string, unknown>): void
-  info(message: string, extra?: Record<string, unknown>): void
-  warn(message: string, extra?: Record<string, unknown>): void
-  error(message: string, extra?: Record<string, unknown>): void
-}
-
 // Get package version from package.json
 function getPackageVersion(): string {
   try {
@@ -23,119 +14,77 @@ function getPackageVersion(): string {
 }
 
 let _client: PluginClient | null = null
-let _pinoLogger: pino.Logger | null = null
+
+const isProduction = process.env.NODE_ENV === 'production'
+const logLevel =
+  process.env.LOG_LEVEL ||
+  (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info')
 
 // Create Pino logger with production best practices
-function createPinoLogger() {
-  const isProduction = process.env.NODE_ENV === 'production'
+const pinoLogger = pino({
+  level: logLevel,
 
-  return pino({
-    level:
-      process.env.LOG_LEVEL ||
-      (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
+  // Format level as string for better readability
+  formatters: {
+    level: (label) => ({ level: label }),
+  },
 
-    // Format level as string for better readability
-    formatters: {
-      level: (label) => ({ level: label }),
+  // Base context for all logs
+  base: {
+    service: 'opencode-pty',
+    env: process.env.NODE_ENV || 'development',
+    version: getPackageVersion(),
+  },
+
+  // Redaction for any sensitive data (expand as needed)
+  redact: {
+    paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret'],
+    remove: true,
+  },
+
+  // Use ISO timestamps for better parsing
+  timestamp: pino.stdTimeFunctions.isoTime,
+
+  // Hook to send logs to OpenCode when available
+  hooks: {
+    logMethod(args, method) {
+      if (_client && !process.env.CI) {
+        const obj = args[0] || {}
+        const msg = args[1] || ''
+        _client.app.log({ body: { ...obj, message: msg } }).catch(() => {})
+      }
+      method.apply(this, args)
     },
+  },
 
-    // Base context for all logs
-    base: {
-      service: 'opencode-pty',
-      env: process.env.NODE_ENV || 'development',
-      version: getPackageVersion(),
-    },
-
-    // Redaction for any sensitive data (expand as needed)
-    redact: {
-      paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret'],
-      remove: true,
-    },
-
-    // Use ISO timestamps for better parsing
-    timestamp: pino.stdTimeFunctions.isoTime,
-
-    // Use transports for pretty printing
-    transport: {
-      targets: [
-        {
-          target: isProduction ? 'pino/file' : 'pino-pretty',
-          level:
-            process.env.LOG_LEVEL ||
-            (process.env.CI ? 'debug' : process.env.NODE_ENV === 'test' ? 'warn' : 'info'),
-          options: {
-            ...(isProduction
-              ? {
-                  destination: 1, // stdout
-                  mkdir: true,
-                  sync: true,
-                }
-              : {
-                  colorize: true,
-                  translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
-                  ignore: 'pid,hostname',
-                  singleLine: true,
-                  sync: true,
-                }),
-          },
+  // Use transports for pretty printing
+  transport: {
+    targets: [
+      {
+        target: isProduction ? 'pino/file' : 'pino-pretty',
+        level: logLevel,
+        options: {
+          ...(isProduction
+            ? {
+                destination: 1, // stdout
+                mkdir: true,
+                sync: true,
+              }
+            : {
+                colorize: true,
+                translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
+                ignore: 'pid,hostname',
+                singleLine: true,
+                sync: true,
+              }),
         },
-      ],
-    },
-  })
-}
+      },
+    ],
+  },
+})
 
 export function initLogger(client: PluginClient): void {
   _client = client
-  // Also create Pino logger as fallback
-  _pinoLogger = createPinoLogger()
 }
 
-export function createLogger(module: string): Logger {
-  const service = `pty.${module}`
-
-  // Initialize Pino logger if not done yet
-  if (!_pinoLogger) {
-    _pinoLogger = createPinoLogger()
-  }
-
-  const log = (level: LogLevel, message: string, extra?: Record<string, unknown>): void => {
-    const logData = extra ? { ...extra, service } : { service }
-
-    if (_client && !process.env.CI) {
-      // Use OpenCode plugin logging when available (except in CI where we want direct Pino output)
-      _client.app
-        .log({
-          body: { service, level, message, ...extra },
-        })
-        .catch(() => {})
-    } else {
-      // Use Pino logger as fallback (always in CI for test visibility)
-      _pinoLogger![level](logData, message)
-    }
-  }
-
-  return {
-    debug: (message, extra) => log('debug', message, extra),
-    info: (message, extra) => log('info', message, extra),
-    warn: (message, extra) => log('warn', message, extra),
-    error: (message, extra) => log('error', message, extra),
-  }
-}
-
-// Convenience function for creating child loggers (recommended pattern)
-export function getLogger(context: Record<string, unknown> = {}): Logger {
-  // Initialize Pino logger if not done yet
-  if (!_pinoLogger) {
-    _pinoLogger = createPinoLogger()
-  }
-
-  // Create child logger with context
-  const childLogger = _pinoLogger!.child(context)
-
-  return {
-    debug: (message, extra) => childLogger.debug(extra || {}, message),
-    info: (message, extra) => childLogger.info(extra || {}, message),
-    warn: (message, extra) => childLogger.warn(extra || {}, message),
-    error: (message, extra) => childLogger.error(extra || {}, message),
-  }
-}
+export default pinoLogger

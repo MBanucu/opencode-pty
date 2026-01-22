@@ -20,7 +20,7 @@ export class PerformanceMonitor {
     this.measures.push({
       name,
       duration,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })
 
     // Keep only last N measures
@@ -47,7 +47,7 @@ export class PerformanceMonitor {
       metrics.memory = {
         used: mem.usedJSHeapSize,
         total: mem.totalJSHeapSize,
-        limit: mem.jsHeapSizeLimit
+        limit: mem.jsHeapSizeLimit,
       }
     }
 

@@ -20,26 +20,26 @@ const fakeClient = {
 } as any
 
 async function runBrowserTest() {
-  log.info('Starting E2E test for PTY output visibility')
+  console.log('🚀 Starting E2E test for PTY output visibility')
 
   // Initialize the PTY manager and logger
   initLogger(fakeClient)
   initManager(fakeClient)
 
   // Start the web server
-  log.info('Starting web server')
+  console.log('📡 Starting web server...')
   const url = startWebServer({ port: 8867 })
-  log.info('Web server started', { url })
+  console.log(`✅ Web server started at ${url}`)
 
   // Spawn an exited test session
-  log.info('Spawning exited PTY session')
+  console.log('🔧 Spawning exited PTY session...')
   const exitedSession = manager.spawn({
     command: 'echo',
     args: ['Hello from exited session!'],
     description: 'Exited session test',
     parentSessionId: 'test',
   })
-  log.info('Exited session spawned', { sessionId: exitedSession.id })
+  console.log(`✅ Exited session spawned: ${exitedSession.id}`)
 
   // Wait for output and exit
   log.info('Waiting for exited session to complete')

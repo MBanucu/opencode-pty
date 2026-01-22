@@ -49,9 +49,9 @@ function findAvailablePort(startPort: number = 8867): number {
 }
 
 // Allow port to be specified via command line argument for parallel test workers
-const portArg = process.argv.find(arg => arg.startsWith('--port='))
+const portArg = process.argv.find((arg) => arg.startsWith('--port='))
 const specifiedPort = portArg ? parseInt(portArg.split('=')[1] || '0', 10) : null
-let port = (specifiedPort && specifiedPort > 0) ? specifiedPort : findAvailablePort()
+let port = specifiedPort && specifiedPort > 0 ? specifiedPort : findAvailablePort()
 
 // For parallel workers, ensure unique ports
 if (process.env.TEST_WORKER_INDEX) {

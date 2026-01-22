@@ -203,7 +203,7 @@ describe('Web Server', () => {
       })
 
       // Wait a bit for output to be captured
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/output`)
       expect(response.status).toBe(200)

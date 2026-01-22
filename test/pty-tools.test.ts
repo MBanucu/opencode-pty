@@ -5,7 +5,6 @@ import { ptyList } from '../src/plugin/pty/tools/list.ts'
 import { RingBuffer } from '../src/plugin/pty/buffer.ts'
 import { manager } from '../src/plugin/pty/manager.ts'
 
-
 describe('PTY Tools', () => {
   describe('ptySpawn', () => {
     beforeEach(() => {
@@ -186,7 +185,9 @@ describe('PTY Tools', () => {
         ask: mock(async () => {}),
       }
 
-      await expect(ptyRead.execute(args, ctx)).rejects.toThrow('Potentially dangerous regex pattern rejected')
+      await expect(ptyRead.execute(args, ctx)).rejects.toThrow(
+        'Potentially dangerous regex pattern rejected'
+      )
     })
   })
 

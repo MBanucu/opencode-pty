@@ -49,7 +49,10 @@ export function App() {
         const data = JSON.parse(event.data)
         logger.debug({ type: data.type, sessionId: data.sessionId }, 'WebSocket message received')
         if (data.type === 'session_list') {
-          logger.info({ sessionCount: data.sessions?.length, activeSessionId: activeSession?.id }, 'Processing session_list message')
+          logger.info(
+            { sessionCount: data.sessions?.length, activeSessionId: activeSession?.id },
+            'Processing session_list message'
+          )
           setSessions(data.sessions || [])
           // Auto-select first running session if none selected (skip in tests that need empty state)
           const shouldSkipAutoselect = localStorage.getItem('skip-autoselect') === 'true'
@@ -61,48 +64,83 @@ export function App() {
             setActiveSession(sessionToSelect)
             // Subscribe to the auto-selected session for live updates
             const readyState = wsRef.current?.readyState
-            logger.info({ sessionId: sessionToSelect.id, readyState, OPEN: WebSocket.OPEN, CONNECTING: WebSocket.CONNECTING }, 'Checking WebSocket state for subscription')
+            logger.info(
+              {
+                sessionId: sessionToSelect.id,
+                readyState,
+                OPEN: WebSocket.OPEN,
+                CONNECTING: WebSocket.CONNECTING,
+              },
+              'Checking WebSocket state for subscription'
+            )
 
             if (readyState === WebSocket.OPEN && wsRef.current) {
               logger.info({ sessionId: sessionToSelect.id }, 'Subscribing to auto-selected session')
-              wsRef.current.send(JSON.stringify({ type: 'subscribe', sessionId: sessionToSelect.id }))
+              wsRef.current.send(
+                JSON.stringify({ type: 'subscribe', sessionId: sessionToSelect.id })
+              )
               logger.info({ sessionId: sessionToSelect.id }, 'Subscription message sent')
             } else {
-              logger.warn({ sessionId: sessionToSelect.id, readyState }, 'WebSocket not ready for subscription, will retry')
+              logger.warn(
+                { sessionId: sessionToSelect.id, readyState },
+                'WebSocket not ready for subscription, will retry'
+              )
               setTimeout(() => {
                 const retryReadyState = wsRef.current?.readyState
-                logger.info({ sessionId: sessionToSelect.id, retryReadyState }, 'Retry check for WebSocket subscription')
+                logger.info(
+                  { sessionId: sessionToSelect.id, retryReadyState },
+                  'Retry check for WebSocket subscription'
+                )
                 if (retryReadyState === WebSocket.OPEN && wsRef.current) {
-                  logger.info({ sessionId: sessionToSelect.id }, 'Subscribing to auto-selected session (retry)')
-                  wsRef.current.send(JSON.stringify({ type: 'subscribe', sessionId: sessionToSelect.id }))
-                  logger.info({ sessionId: sessionToSelect.id }, 'Subscription message sent (retry)')
+                  logger.info(
+                    { sessionId: sessionToSelect.id },
+                    'Subscribing to auto-selected session (retry)'
+                  )
+                  wsRef.current.send(
+                    JSON.stringify({ type: 'subscribe', sessionId: sessionToSelect.id })
+                  )
+                  logger.info(
+                    { sessionId: sessionToSelect.id },
+                    'Subscription message sent (retry)'
+                  )
                 } else {
-                  logger.error({ sessionId: sessionToSelect.id, retryReadyState }, 'WebSocket still not ready after retry')
+                  logger.error(
+                    { sessionId: sessionToSelect.id, retryReadyState },
+                    'WebSocket still not ready after retry'
+                  )
                 }
               }, 500) // Increased delay
             }
             // Load historical output for the auto-selected session
-            fetch(`${location.protocol}//${location.host}/api/sessions/${sessionToSelect.id}/output`)
-              .then(response => response.ok ? response.json() : [])
-              .then(outputData => setOutput(outputData.lines || []))
+            fetch(
+              `${location.protocol}//${location.host}/api/sessions/${sessionToSelect.id}/output`
+            )
+              .then((response) => (response.ok ? response.json() : []))
+              .then((outputData) => setOutput(outputData.lines || []))
               .catch(() => setOutput([]))
           }
         } else if (data.type === 'data') {
           const isForActiveSession = activeSessionRef.current?.id === data.sessionId
-          logger.debug({
-            sessionId: data.sessionId,
-            activeSessionId: activeSessionRef.current?.id,
-            isForActiveSession,
-            dataLength: data.data?.length,
-            wsMessageCountBefore: wsMessageCountRef.current
-          }, 'WebSocket DATA message received')
+          logger.debug(
+            {
+              sessionId: data.sessionId,
+              activeSessionId: activeSessionRef.current?.id,
+              isForActiveSession,
+              dataLength: data.data?.length,
+              wsMessageCountBefore: wsMessageCountRef.current,
+            },
+            'WebSocket DATA message received'
+          )
 
           if (isForActiveSession) {
             logger.debug('Processing data for active session')
             setOutput((prev) => [...prev, ...data.data])
             wsMessageCountRef.current++
             setWsMessageCount(wsMessageCountRef.current)
-            logger.debug({ wsMessageCountAfter: wsMessageCountRef.current }, 'WS message counter incremented')
+            logger.debug(
+              { wsMessageCountAfter: wsMessageCountRef.current },
+              'WS message counter incremented'
+            )
           } else {
             logger.debug('Ignoring data message for inactive session')
           }
@@ -249,12 +287,9 @@ export function App() {
     [handleSendInput]
   )
 
-
-
   return (
     <div className="container">
       <div className="sidebar">
-
         <div className="sidebar-header">
           <h1>PTY Sessions</h1>
         </div>
@@ -307,48 +342,48 @@ export function App() {
                   </div>
                 ))
               )}
-
-             </div>
-             <div className="input-container">
-               <input
-                 type="text"
-                 className="input-field"
-                 placeholder={
-                   activeSession.status === 'running' ? 'Type input...' : 'Session not running'
-                 }
-                 value={inputValue}
-                 onChange={(e) => setInputValue(e.target.value)}
-                 onKeyDown={handleKeyDown}
-                 disabled={activeSession.status !== 'running'}
-               />
-               <button
-                 className="send-btn"
-                 onClick={handleSendInput}
-                 disabled={activeSession.status !== 'running' || !inputValue.trim()}
-               >
-                 Send
-               </button>
-             </div>
-
-              {/* Debug info for testing - hidden in production */}
-              <div
-                style={{
-                  display: 'block', // Always visible for debugging
-                  fontSize: '10px',
-                  color: '#666',
-                  marginTop: '10px',
-                  borderTop: '1px solid #ccc',
-                  paddingTop: '5px',
-                }}
-                data-testid="debug-info"
+            </div>
+            <div className="input-container">
+              <input
+                type="text"
+                className="input-field"
+                placeholder={
+                  activeSession.status === 'running' ? 'Type input...' : 'Session not running'
+                }
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={activeSession.status !== 'running'}
+              />
+              <button
+                className="send-btn"
+                onClick={handleSendInput}
+                disabled={activeSession.status !== 'running' || !inputValue.trim()}
               >
-                Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages: {wsMessageCount}
-               </div>
-             </>
-           ) : (
-             <div className="empty-state">Select a session from the sidebar to view its output</div>
-           )}
-         </div>
-     </div>
-   )
+                Send
+              </button>
+            </div>
+
+            {/* Debug info for testing - hidden in production */}
+            <div
+              style={{
+                display: 'block', // Always visible for debugging
+                fontSize: '10px',
+                color: '#666',
+                marginTop: '10px',
+                borderTop: '1px solid #ccc',
+                paddingTop: '5px',
+              }}
+              data-testid="debug-info"
+            >
+              Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}
+              {wsMessageCount}
+            </div>
+          </>
+        ) : (
+          <div className="empty-state">Select a session from the sidebar to view its output</div>
+        )}
+      </div>
+    </div>
+  )
 }

@@ -3,11 +3,7 @@ import { manager, onOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import { createLogger } from '../plugin/logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
 import { join, resolve } from 'path'
-import {
-  DEFAULT_SERVER_PORT,
-  DEFAULT_READ_LIMIT,
-  ASSET_CONTENT_TYPES
-} from './constants.ts'
+import { DEFAULT_SERVER_PORT, DEFAULT_READ_LIMIT, ASSET_CONTENT_TYPES } from './constants.ts'
 
 const log = createLogger('web-server')
 
@@ -23,7 +19,8 @@ function getSecurityHeaders(): Record<string, string> {
     'X-Frame-Options': 'DENY',
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
+    'Content-Security-Policy':
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
   }
 }
 
@@ -33,8 +30,8 @@ function secureJsonResponse(data: any, status = 200): Response {
     status,
     headers: {
       'Content-Type': 'application/json',
-      ...getSecurityHeaders()
-    }
+      ...getSecurityHeaders(),
+    },
   })
 }
 
@@ -189,12 +186,11 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         if (success) return // Upgrade succeeded, no response needed
         return new Response('WebSocket upgrade failed', {
           status: 400,
-          headers: getSecurityHeaders()
+          headers: getSecurityHeaders(),
         })
       }
 
       if (url.pathname === '/') {
-
         log.info('Serving root', { nodeEnv: process.env.NODE_ENV })
         // In test mode, serve the built HTML with assets
         if (process.env.NODE_ENV === 'test') {
@@ -211,7 +207,6 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       // Serve static assets from dist/web
       if (url.pathname.startsWith('/assets/')) {
-
         log.info('Serving asset', { pathname: url.pathname, nodeEnv: process.env.NODE_ENV })
         const distDir = resolve(process.cwd(), 'dist/web')
         const assetPath = url.pathname.slice(1) // remove leading /
@@ -228,47 +223,49 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         } else {
           log.debug('Asset not found', { filePath })
         }
-       }
+      }
 
-       // Health check endpoint
-       if (url.pathname === '/health' && req.method === 'GET') {
-         const sessions = manager.list()
-         const activeSessions = sessions.filter(s => s.status === 'running').length
-         const totalSessions = sessions.length
-         const wsConnections = wsClients.size
+      // Health check endpoint
+      if (url.pathname === '/health' && req.method === 'GET') {
+        const sessions = manager.list()
+        const activeSessions = sessions.filter((s) => s.status === 'running').length
+        const totalSessions = sessions.length
+        const wsConnections = wsClients.size
 
-         // Calculate response time (rough approximation)
-         const startTime = Date.now()
+        // Calculate response time (rough approximation)
+        const startTime = Date.now()
 
-         const healthResponse = {
-           status: 'healthy',
-           timestamp: new Date().toISOString(),
-           uptime: process.uptime(),
-           sessions: {
-             total: totalSessions,
-             active: activeSessions,
-           },
-           websocket: {
-             connections: wsConnections,
-           },
-           memory: process.memoryUsage ? {
-             rss: process.memoryUsage().rss,
-             heapUsed: process.memoryUsage().heapUsed,
-             heapTotal: process.memoryUsage().heapTotal,
-           } : undefined,
-         }
+        const healthResponse = {
+          status: 'healthy',
+          timestamp: new Date().toISOString(),
+          uptime: process.uptime(),
+          sessions: {
+            total: totalSessions,
+            active: activeSessions,
+          },
+          websocket: {
+            connections: wsConnections,
+          },
+          memory: process.memoryUsage
+            ? {
+                rss: process.memoryUsage().rss,
+                heapUsed: process.memoryUsage().heapUsed,
+                heapTotal: process.memoryUsage().heapTotal,
+              }
+            : undefined,
+        }
 
-         // Add response time
-         const responseTime = Date.now() - startTime
-         ;(healthResponse as any).responseTime = responseTime
+        // Add response time
+        const responseTime = Date.now() - startTime
+        ;(healthResponse as any).responseTime = responseTime
 
-         return secureJsonResponse(healthResponse)
-       }
+        return secureJsonResponse(healthResponse)
+      }
 
-       if (url.pathname === '/api/sessions' && req.method === 'GET') {
+      if (url.pathname === '/api/sessions' && req.method === 'GET') {
         const sessions = manager.list()
         return secureJsonResponse(sessions)
-       }
+      }
 
       if (url.pathname === '/api/sessions' && req.method === 'POST') {
         const body = (await req.json()) as {
@@ -285,11 +282,11 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
           workdir: body.workdir,
           parentSessionId: 'web-api',
         })
-         // Broadcast updated session list to all clients
-         for (const [ws] of wsClients) {
-           sendSessionList(ws)
-         }
-         return secureJsonResponse(session)
+        // Broadcast updated session list to all clients
+        for (const [ws] of wsClients) {
+          sendSessionList(ws)
+        }
+        return secureJsonResponse(session)
       }
 
       if (url.pathname === '/api/sessions/clear' && req.method === 'POST') {

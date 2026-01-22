@@ -16,7 +16,7 @@ function validateRegex(pattern: string): boolean {
       /.*\(\.\*\?\)\{2,\}.*/, // overlapping non-greedy quantifiers
       /.*\(.*\|.*\)\{3,\}.*/, // complex alternation with repetition
     ]
-    return !dangerousPatterns.some(dangerous => dangerous.test(pattern))
+    return !dangerousPatterns.some((dangerous) => dangerous.test(pattern))
   } catch {
     return false
   }
@@ -61,7 +61,9 @@ export const ptyRead = tool({
     if (args.pattern) {
       // Validate regex pattern for security
       if (!validateRegex(args.pattern)) {
-        throw new Error(`Potentially dangerous regex pattern rejected: '${args.pattern}'. Please use a safer pattern.`)
+        throw new Error(
+          `Potentially dangerous regex pattern rejected: '${args.pattern}'. Please use a safer pattern.`
+        )
       }
 
       let regex: RegExp

@@ -3,7 +3,12 @@ import { createLogger } from '../logger.ts'
 import { RingBuffer } from './buffer.ts'
 import type { PTYSession, PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from './types.ts'
 import type { OpencodeClient } from '@opencode-ai/sdk'
-import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS, NOTIFICATION_LINE_TRUNCATE, NOTIFICATION_TITLE_TRUNCATE } from '../constants.ts'
+import {
+  DEFAULT_TERMINAL_COLS,
+  DEFAULT_TERMINAL_ROWS,
+  NOTIFICATION_LINE_TRUNCATE,
+  NOTIFICATION_TITLE_TRUNCATE,
+} from '../constants.ts'
 
 let onSessionUpdate: (() => void) | undefined
 
@@ -247,7 +252,10 @@ class PTYManager {
         const bufferLines = session.buffer.read(i, 1)
         const line = bufferLines[0]
         if (line !== undefined && line.trim() !== '') {
-          lastLine = line.length > NOTIFICATION_LINE_TRUNCATE ? line.slice(0, NOTIFICATION_LINE_TRUNCATE) + '...' : line
+          lastLine =
+            line.length > NOTIFICATION_LINE_TRUNCATE
+              ? line.slice(0, NOTIFICATION_LINE_TRUNCATE) + '...'
+              : line
           break
         }
       }
@@ -255,7 +263,9 @@ class PTYManager {
 
     const displayTitle = session.description ?? session.title
     const truncatedTitle =
-      displayTitle.length > NOTIFICATION_TITLE_TRUNCATE ? displayTitle.slice(0, NOTIFICATION_TITLE_TRUNCATE) + '...' : displayTitle
+      displayTitle.length > NOTIFICATION_TITLE_TRUNCATE
+        ? displayTitle.slice(0, NOTIFICATION_TITLE_TRUNCATE) + '...'
+        : displayTitle
 
     const lines = [
       '<pty_exited>',

@@ -2,7 +2,7 @@
 export {
   DEFAULT_READ_LIMIT,
   MAX_LINE_LENGTH,
-  DEFAULT_MAX_BUFFER_LINES
+  DEFAULT_MAX_BUFFER_LINES,
 } from '../shared/constants.ts'
 
 // PTY terminal and UI constants

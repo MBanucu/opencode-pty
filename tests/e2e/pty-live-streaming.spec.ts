@@ -4,7 +4,9 @@ import { createTestLogger } from '../test-logger.ts'
 const log = createTestLogger('e2e-live-streaming')
 
 test.describe('PTY Live Streaming', () => {
-  test('should load historical buffered output when connecting to running PTY session', async ({ page }) => {
+  test('should load historical buffered output when connecting to running PTY session', async ({
+    page,
+  }) => {
     // Navigate to the web UI (test server should be running)
     await page.goto('/')
 
@@ -84,7 +86,9 @@ test.describe('PTY Live Streaming', () => {
     const firstLine = await initialOutputLines.first().textContent()
     expect(firstLine).toContain('Welcome to live streaming test')
 
-    log.info('✅ Historical data loading test passed - buffered output from before UI connection is displayed')
+    log.info(
+      '✅ Historical data loading test passed - buffered output from before UI connection is displayed'
+    )
   })
 
   test('should preserve and display complete historical output buffer', async ({ page }) => {
@@ -164,7 +168,9 @@ test.describe('PTY Live Streaming', () => {
     // Verify live updates are also working
     expect(allText).toMatch(/LIVE: \d{2}/)
 
-    log.info('✅ Historical buffer preservation test passed - pre-connection data is loaded correctly')
+    log.info(
+      '✅ Historical buffer preservation test passed - pre-connection data is loaded correctly'
+    )
   })
 
   test('should receive live WebSocket updates from running PTY session', async ({ page }) => {
@@ -248,14 +254,14 @@ test.describe('PTY Live Streaming', () => {
     const debugElement = page.locator('[data-testid="debug-info"]')
     while (attempts < maxAttempts && currentWsMessages < initialWsMessages + 5) {
       await page.waitForTimeout(100)
-      const currentDebugText = await debugElement.textContent() || ''
+      const currentDebugText = (await debugElement.textContent()) || ''
       const currentWsMatch = currentDebugText.match(/WS messages: (\d+)/)
       currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0
       attempts++
     }
 
     // Check final state
-    const finalDebugText = await debugElement.textContent() || ''
+    const finalDebugText = (await debugElement.textContent()) || ''
     const finalWsMatch = finalDebugText.match(/WS messages: (\d+)/)
     const finalWsMessages = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
 

@@ -6,7 +6,9 @@ import { defineConfig, devices } from '@playwright/test'
 
 // Use worker-index based ports for parallel test execution
 function getWorkerPort(): number {
-  const workerIndex = process.env.TEST_WORKER_INDEX ? parseInt(process.env.TEST_WORKER_INDEX, 10) : 0
+  const workerIndex = process.env.TEST_WORKER_INDEX
+    ? parseInt(process.env.TEST_WORKER_INDEX, 10)
+    : 0
   return 8867 + workerIndex // Base port 8867, increment for each worker
 }
 

@@ -1,6 +1,9 @@
 import { DEFAULT_MAX_BUFFER_LINES } from '../constants.ts'
 
-const DEFAULT_MAX_LINES = parseInt(process.env.PTY_MAX_BUFFER_LINES || DEFAULT_MAX_BUFFER_LINES.toString(), 10)
+const DEFAULT_MAX_LINES = parseInt(
+  process.env.PTY_MAX_BUFFER_LINES || DEFAULT_MAX_BUFFER_LINES.toString(),
+  10
+)
 
 export interface SearchMatch {
   lineNumber: number

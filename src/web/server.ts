@@ -69,7 +69,7 @@ function broadcastSessionData(sessionId: string, data: string[]): void {
     }
   }
   if (sentCount === 0) {
-    log.warn({ sessionId, clientCount: wsClients.size }, 'No clients subscribed to session')
+    log.debug({ sessionId, clientCount: wsClients.size }, 'No clients subscribed to session')
   }
   log.info({ sentCount }, 'Broadcast complete')
 }

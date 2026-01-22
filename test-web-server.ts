@@ -114,7 +114,15 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 // Create test sessions for manual testing and e2e tests
-if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV === 'test') {
+  // Create an interactive bash session for e2e tests
+  manager.spawn({
+    command: 'bash',
+    args: [], // Interactive bash
+    description: 'Interactive bash session for e2e tests',
+    parentSessionId: 'test-session',
+  })
+} else if (process.env.CI !== 'true') {
   manager.spawn({
     command: 'bash',
     args: [

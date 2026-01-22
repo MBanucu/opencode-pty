@@ -1,0 +1,9 @@
+Returns the URL of the web server for PTY session management.
+
+This tool provides the base URL where you can access the web interface for:
+- Viewing active PTY sessions
+- Monitoring session output in real-time
+- Managing sessions through the web UI
+
+Returns the server URL in the format: http://hostname:port
+If the server is not running, returns an error message.

@@ -1,7 +1,7 @@
 import type { IPty } from 'bun-pty'
 import type { RingBuffer } from './buffer.ts'
 
-export type PTYStatus = 'running' | 'idle' | 'exited' | 'killed'
+export type PTYStatus = 'running' | 'exited' | 'killed'
 
 export interface PTYSession {
   id: string

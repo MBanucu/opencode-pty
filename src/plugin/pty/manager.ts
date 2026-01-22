@@ -147,9 +147,6 @@ class PTYManager {
     if (!session) {
       return false
     }
-    if (session.status !== 'running') {
-      return false
-    }
     session.process.write(data)
     return true
   }

@@ -193,6 +193,30 @@ describe('Web Server', () => {
       expect(result.success).toBe(true)
     })
 
+    it('should return session output', async () => {
+      // Create a session that produces output
+      const session = manager.spawn({
+        command: 'echo',
+        args: ['line1\nline2\nline3'],
+        description: 'Test session with output',
+        parentSessionId: 'test-output',
+      })
+
+      // Wait a bit for output to be captured
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      const response = await fetch(`${serverUrl}/api/sessions/${session.id}/output`)
+      expect(response.status).toBe(200)
+
+      const outputData = await response.json()
+      expect(outputData).toHaveProperty('lines')
+      expect(outputData).toHaveProperty('totalLines')
+      expect(outputData).toHaveProperty('offset')
+      expect(outputData).toHaveProperty('hasMore')
+      expect(Array.isArray(outputData.lines)).toBe(true)
+      expect(outputData.lines.length).toBeGreaterThan(0)
+    })
+
     it('should return 404 for non-existent endpoints', async () => {
       const response = await fetch(`${serverUrl}/api/nonexistent`)
       expect(response.status).toBe(404)

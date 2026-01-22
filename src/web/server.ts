@@ -350,21 +350,16 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
       if (url.pathname.match(/^\/api\/sessions\/[^/]+\/output$/) && req.method === 'GET') {
         const sessionId = url.pathname.split('/')[3]
         if (!sessionId) return new Response('Invalid session ID', { status: 400 })
+
         const result = manager.read(sessionId, 0, 100)
         if (!result) {
           return new Response('Session not found', { status: 404 })
         }
-        const session = manager.get(sessionId)
-        if (!session) {
-          return new Response('Session not found', { status: 404 })
-        }
         return secureJsonResponse({
-          id: session.id,
-          command: session.command,
-          args: session.args,
-          status: session.status,
-          title: session.title,
-          createdAt: session.createdAt,
+          lines: result.lines,
+          totalLines: result.totalLines,
+          offset: result.offset,
+          hasMore: result.hasMore,
         })
       }
 

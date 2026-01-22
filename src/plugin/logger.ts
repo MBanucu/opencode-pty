@@ -75,7 +75,7 @@ const pinoLogger = pino({
               }
             : {
                 colorize: true,
-                translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
+                translateTime: 'SYS:yyyy-mm-dd HH:MM:ss.l o',
                 ignore: 'pid,hostname',
                 singleLine: true,
                 sync: true,

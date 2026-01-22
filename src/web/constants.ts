@@ -1,8 +1,13 @@
-// Shared constants for the web server and related components
+// Web-specific constants for the web server and related components
+import {
+  DEFAULT_READ_LIMIT,
+  MAX_LINE_LENGTH,
+  DEFAULT_MAX_BUFFER_LINES
+} from '../shared/constants.ts'
+
+export { DEFAULT_READ_LIMIT, MAX_LINE_LENGTH, DEFAULT_MAX_BUFFER_LINES }
+
 export const DEFAULT_SERVER_PORT = 8765
-export const DEFAULT_READ_LIMIT = 500
-export const MAX_LINE_LENGTH = 2000
-export const DEFAULT_MAX_BUFFER_LINES = 50000
 
 // WebSocket and session related constants
 export const WEBSOCKET_RECONNECT_DELAY = 100

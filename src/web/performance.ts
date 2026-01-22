@@ -1,4 +1,7 @@
 // Performance monitoring utilities
+import { createLogger } from '../plugin/logger.ts'
+
+const log = createLogger('performance')
 export class PerformanceMonitor {
   private static marks: Map<string, number> = new Map()
   private static measures: Array<{ name: string; duration: number; timestamp: number }> = []
@@ -64,7 +67,7 @@ export function trackWebVitals(): void {
         const entries = list.getEntries()
         const lastEntry = entries[entries.length - 1] as any
         if (lastEntry) {
-          console.log('LCP:', lastEntry.startTime)
+          log.debug('LCP measured', { value: lastEntry.startTime })
         }
       })
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] })
@@ -73,7 +76,7 @@ export function trackWebVitals(): void {
       const fidObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
         entries.forEach((entry: any) => {
-          console.log('FID:', entry.processingStart - entry.startTime)
+          log.debug('FID measured', { value: entry.processingStart - entry.startTime })
         })
       })
       fidObserver.observe({ entryTypes: ['first-input'] })
@@ -87,11 +90,11 @@ export function trackWebVitals(): void {
             clsValue += entry.value
           }
         })
-        console.log('CLS:', clsValue)
+        log.debug('CLS measured', { value: clsValue })
       })
       clsObserver.observe({ entryTypes: ['layout-shift'] })
     } catch (e) {
-      console.warn('Performance tracking not fully supported')
+      log.warn('Performance tracking not fully supported', { error: e })
     }
   }
 }

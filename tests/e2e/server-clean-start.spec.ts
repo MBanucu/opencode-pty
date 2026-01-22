@@ -27,7 +27,7 @@ test.describe('Server Clean Start', () => {
 
     // Clear any existing sessions from previous tests
     const clearResponse = await page.request.delete('/api/sessions')
-    if (clearResponse.ok) {
+    if (clearResponse && clearResponse.status() === 200) {
       await page.waitForTimeout(500) // Wait for cleanup
       await page.reload() // Reload to get fresh state
     }

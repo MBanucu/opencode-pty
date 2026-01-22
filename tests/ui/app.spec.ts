@@ -39,7 +39,7 @@ test.describe('App Component', () => {
     // Clear all sessions first to ensure empty state
     await page.goto('/')
     const clearResponse = await page.request.delete('/api/sessions')
-    if (clearResponse.ok) {
+    if (clearResponse && clearResponse.status() === 200) {
       await page.reload()
     }
 

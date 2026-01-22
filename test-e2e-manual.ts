@@ -4,6 +4,9 @@ import { chromium } from 'playwright-core'
 import { initManager, manager } from './src/plugin/pty/manager.ts'
 import { initLogger } from './src/plugin/logger.ts'
 import { startWebServer, stopWebServer } from './src/web/server.ts'
+import { createLogger } from './src/plugin/logger.ts'
+
+const log = createLogger('e2e-manual')
 
 // Mock OpenCode client for testing
 const fakeClient = {
@@ -17,36 +20,36 @@ const fakeClient = {
 } as any
 
 async function runBrowserTest() {
-  console.log('🚀 Starting E2E test for PTY output visibility...')
+  log.info('Starting E2E test for PTY output visibility')
 
   // Initialize the PTY manager and logger
   initLogger(fakeClient)
   initManager(fakeClient)
 
   // Start the web server
-  console.log('📡 Starting web server...')
+  log.info('Starting web server')
   const url = startWebServer({ port: 8867 })
-  console.log(`✅ Web server started at ${url}`)
+  log.info('Web server started', { url })
 
   // Spawn an exited test session
-  console.log('🔧 Spawning exited PTY session...')
+  log.info('Spawning exited PTY session')
   const exitedSession = manager.spawn({
     command: 'echo',
     args: ['Hello from exited session!'],
     description: 'Exited session test',
     parentSessionId: 'test',
   })
-  console.log(`✅ Exited session spawned: ${exitedSession.id}`)
+  log.info('Exited session spawned', { sessionId: exitedSession.id })
 
   // Wait for output and exit
-  console.log('⏳ Waiting for exited session to complete...')
+  log.info('Waiting for exited session to complete')
   let attempts = 0
   while (attempts < 50) {
     // Wait up to 5 seconds
     const currentSession = manager.get(exitedSession.id)
     const output = manager.read(exitedSession.id)
     if (currentSession?.status === 'exited' && output && output.lines.length > 0) {
-      console.log('✅ Exited session has completed with output')
+      log.info('Exited session has completed with output')
       break
     }
     await new Promise((resolve) => setTimeout(resolve, 100))

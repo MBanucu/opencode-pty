@@ -66,7 +66,7 @@ const url = startWebServer({ port })
 
 // Only log in non-test environments or when explicitly requested
 if (process.env.NODE_ENV !== 'test' || process.env.VERBOSE === 'true') {
-  console.log(`Server started at ${url} (port ${port})`)
+  console.log(`Server started at ${url}`)
 }
 
 // Write port to file for tests to read
@@ -106,8 +106,6 @@ if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {
     description: 'Live streaming test session',
     parentSessionId: 'live-test',
   })
-
-  console.log(`Live streaming session started at ${url}`)
 }
 
 // Keep the server running indefinitely

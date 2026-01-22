@@ -48,7 +48,7 @@ jobs:
         run: bun run build
 
       - name: Run tests
-        run: bun test --single test/ src/plugin/ --exclude 'e2e/**' --exclude 'src/web/**'
+        run: bun test --concurrency=1 test/ src/plugin/ --exclude 'e2e/**' --exclude 'src/web/**'
 
   security:
     runs-on: ubuntu-latest

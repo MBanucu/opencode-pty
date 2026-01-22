@@ -18,8 +18,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Run tests with 1 worker to avoid conflicts */
-  workers: 2, // Increased from 1 for better performance
+  /* Run tests in parallel for better performance */
+  workers: 3, // Increased from 2 for faster test execution
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Global timeout reduced from 30s to 5s for faster test execution */
@@ -47,6 +47,11 @@ export default defineConfig({
     {
       command: `env NODE_ENV=test LOG_LEVEL=warn TEST_WORKER_INDEX=1 bun run test-web-server.ts --port=${8868}`,
       url: 'http://localhost:8868',
+      reuseExistingServer: false,
+    },
+    {
+      command: `env NODE_ENV=test LOG_LEVEL=warn TEST_WORKER_INDEX=2 bun run test-web-server.ts --port=${8869}`,
+      url: 'http://localhost:8869',
       reuseExistingServer: false,
     },
   ],

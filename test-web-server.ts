@@ -25,27 +25,29 @@ const fakeClient = {
 initLogger(fakeClient)
 initManager(fakeClient)
 
-// Find an available port - use the specified port after cleanup
+// Use the specified port after cleanup
 function findAvailablePort(port: number): number {
   // Try to kill any process on this port first
   Bun.spawnSync(['sh', '-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`])
   // Small delay to allow cleanup
-  Bun.sleepSync(100)
-  // Try to create a server to check if port is free
-  const testServer = Bun.serve({
-    port,
-    fetch() {
-      return new Response('test')
-    },
-  })
-  testServer.stop()
+  Bun.sleepSync(200)
   return port
 }
 
-// Allow port to be specified via command line argument for parallel test workers
-const portArg = process.argv.find((arg) => arg.startsWith('--port='))
-const specifiedPort = portArg ? parseInt(portArg.split('=')[1] || '0', 10) : null
-let basePort = specifiedPort && specifiedPort > 0 ? specifiedPort : 8877
+// Parse command line arguments
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
+
+const argv = yargs(hideBin(process.argv))
+  .option('port', {
+    alias: 'p',
+    type: 'number',
+    description: 'Port to run the server on',
+    default: 8877,
+  })
+  .parseSync()
+
+let basePort = argv.port
 
 // For parallel workers, ensure unique start ports
 if (process.env.TEST_WORKER_INDEX) {

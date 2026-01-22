@@ -131,34 +131,34 @@ describe('Web Server', () => {
 
     it('should return individual session', async () => {
       // Create a test session first
-      log.debug('Spawning session', { command: 'echo' })
+      log.debug({ command: 'cat' }, 'Spawning session')
       const session = manager.spawn({
-        command: 'echo',
-        args: ['test output'],
+        command: 'cat',
+        args: [],
         description: 'Test session',
         parentSessionId: 'test',
       })
-      log.debug('Spawned session', { id: session.id, command: session.command })
+      log.debug({ id: session.id, command: session.command }, 'Spawned session')
 
       // Wait for PTY to start
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
-      log.debug('Fetch response', { status: response.status })
+      log.debug({ status: response.status }, 'Fetch response')
       expect(response.status).toBe(200)
 
       const sessionData = await response.json()
-      log.debug('Session data', sessionData)
+      log.debug(sessionData, 'Session data')
       expect(sessionData.id).toBe(session.id)
       expect(sessionData.command).toBe('cat')
-      expect(sessionData.args).toEqual(['test output'])
+      expect(sessionData.args).toEqual([])
     })
 
     it('should return 404 for non-existent session', async () => {
       const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
-      log.debug('Fetching non-existent session', { id: nonexistentId })
+      log.debug({ id: nonexistentId }, 'Fetching non-existent session')
       const response = await fetch(`${serverUrl}/api/sessions/${nonexistentId}`)
-      log.debug('Response status', { status: response.status })
+      log.debug({ status: response.status }, 'Response status')
       expect(response.status).toBe(404)
     })
 

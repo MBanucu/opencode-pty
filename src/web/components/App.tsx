@@ -148,7 +148,7 @@ export function App() {
     }
     wsRef.current = ws
     return () => ws.close()
-  }, [])
+  }, [activeSession])
 
   // Initial session refresh as fallback - called during WebSocket setup
 

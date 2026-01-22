@@ -24,11 +24,6 @@ const logLevel =
 const pinoLogger = pino({
   level: logLevel,
 
-  // Format level as string for better readability
-  formatters: {
-    level: (label) => ({ level: label }),
-  },
-
   // Base context for all logs
   base: {
     service: 'opencode-pty',
@@ -51,7 +46,16 @@ const pinoLogger = pino({
       if (_client && !process.env.CI) {
         const obj = args[0] || {}
         const msg = args[1] || ''
-        _client.app.log({ body: { ...obj, message: msg } }).catch(() => {})
+        _client.app
+          .log({
+            body: {
+              service: 'opencode-pty',
+              level: method.name as 'debug' | 'warn' | 'info' | 'error',
+              message: msg,
+              extra: obj as Record<string, unknown>,
+            },
+          })
+          .catch(() => {})
       }
       method.apply(this, args)
     },
@@ -85,6 +89,14 @@ const pinoLogger = pino({
 
 export function initLogger(client: PluginClient): void {
   _client = client
+}
+
+export function createLogger(service: string): pino.Logger {
+  return pinoLogger.child({ service })
+}
+
+export function getLogger(context: Record<string, unknown> = {}): pino.Logger {
+  return pinoLogger.child(context)
 }
 
 export default pinoLogger

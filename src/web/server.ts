@@ -51,10 +51,10 @@ function unsubscribeFromSession(wsClient: WSClient, sessionId: string): void {
 }
 
 function broadcastSessionData(sessionId: string, data: string[]): void {
-  log.info('broadcastSessionData called', { sessionId, dataLength: data.length })
+  log.info({ sessionId, dataLength: data.length }, 'broadcastSessionData called')
   const message: WSMessage = { type: 'data', sessionId, data }
   const messageStr = JSON.stringify(message)
-  log.info('Broadcasting session data', { clientCount: wsClients.size })
+  log.info({ clientCount: wsClients.size }, 'Broadcasting session data')
 
   let sentCount = 0
   for (const [ws, client] of wsClients) {
@@ -64,11 +64,11 @@ function broadcastSessionData(sessionId: string, data: string[]): void {
         ws.send(messageStr)
         sentCount++
       } catch (err) {
-        log.error('Failed to send to client', { error: String(err) })
+        log.error({ error: String(err) }, 'Failed to send to client')
       }
     }
   }
-  log.info('Broadcast complete', { sentCount })
+  log.info({ sentCount }, 'Broadcast complete')
 }
 
 function sendSessionList(ws: ServerWebSocket<WSClient>): void {
@@ -128,7 +128,7 @@ function handleWebSocketMessage(
         ws.send(JSON.stringify({ type: 'error', error: 'Unknown message type' }))
     }
   } catch (err) {
-    log.error('failed to handle ws message', { error: String(err) })
+    log.debug({ error: String(err) }, 'failed to handle ws message')
     ws.send(JSON.stringify({ type: 'error', error: 'Invalid message format' }))
   }
 }
@@ -157,7 +157,7 @@ const wsHandler = {
 export function startWebServer(config: Partial<ServerConfig> = {}): string {
   const finalConfig = { ...defaultConfig, ...config }
 
-  log.info('Starting web server', { port: finalConfig.port, hostname: finalConfig.hostname })
+  log.info({ port: finalConfig.port, hostname: finalConfig.hostname }, 'Starting web server')
 
   if (server) {
     log.warn('web server already running')
@@ -165,7 +165,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
   }
 
   onOutput((sessionId, data) => {
-    log.info('PTY output received', { sessionId, dataLength: data.length })
+    log.info({ sessionId, dataLength: data.length }, 'PTY output received')
     broadcastSessionData(sessionId, data)
   })
 
@@ -191,7 +191,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
       }
 
       if (url.pathname === '/') {
-        log.info('Serving root', { nodeEnv: process.env.NODE_ENV })
+        log.info({ nodeEnv: process.env.NODE_ENV }, 'Serving root')
         // In test mode, serve the built HTML with assets
         if (process.env.NODE_ENV === 'test') {
           log.debug('Serving from dist/web/index.html')
@@ -207,7 +207,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       // Serve static assets from dist/web
       if (url.pathname.startsWith('/assets/')) {
-        log.info('Serving asset', { pathname: url.pathname, nodeEnv: process.env.NODE_ENV })
+        log.info({ pathname: url.pathname, nodeEnv: process.env.NODE_ENV }, 'Serving asset')
         const distDir = resolve(process.cwd(), 'dist/web')
         const assetPath = url.pathname.slice(1) // remove leading /
         const filePath = join(distDir, assetPath)
@@ -216,12 +216,12 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         if (exists) {
           const ext = url.pathname.split('.').pop() || ''
           const contentType = ASSET_CONTENT_TYPES[`.${ext}`] || 'text/plain'
-          log.debug('Asset served', { filePath, contentType })
+          log.debug({ filePath, contentType }, 'Asset served')
           return new Response(await file.bytes(), {
             headers: { 'Content-Type': contentType, ...getSecurityHeaders() },
           })
         } else {
-          log.debug('Asset not found', { filePath })
+          log.debug({ filePath }, 'Asset not found')
         }
       }
 
@@ -300,30 +300,30 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+$/) && req.method === 'GET') {
         const sessionId = url.pathname.split('/')[3]
-        log.debug('Handling individual session request', { sessionId })
+        log.debug({ sessionId }, 'Handling individual session request')
         if (!sessionId) return new Response('Invalid session ID', { status: 400 })
         const session = manager.get(sessionId)
-        log.debug('Session lookup result', {
+        log.debug({
           sessionId,
           found: !!session,
           command: session?.command,
         })
         if (!session) {
-          log.debug('Returning 404 for session not found', { sessionId })
+          log.debug({ sessionId }, 'Returning 404 for session not found')
           return new Response('Session not found', { status: 404 })
         }
-        log.debug('Returning session data', { sessionId: session.id })
+        log.debug({ sessionId: session.id }, 'Returning session data')
         return Response.json(session)
       }
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+\/input$/) && req.method === 'POST') {
         const sessionId = url.pathname.split('/')[3]
-        log.debug('Handling input request', { sessionId })
+        log.debug({ sessionId }, 'Handling input request')
         if (!sessionId) return new Response('Invalid session ID', { status: 400 })
         const body = (await req.json()) as { data: string }
-        log.debug('Input data', { sessionId, dataLength: body.data.length })
+        log.debug({ sessionId, dataLength: body.data.length }, 'Input data')
         const success = manager.write(sessionId, body.data)
-        log.debug('Write result', { sessionId, success })
+        log.debug({ sessionId, success }, 'Write result')
         if (!success) {
           return new Response('Failed to write to session', { status: 400 })
         }
@@ -332,10 +332,10 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+\/kill$/) && req.method === 'POST') {
         const sessionId = url.pathname.split('/')[3]
-        log.debug('Handling kill request', { sessionId })
+        log.debug({ sessionId }, 'Handling kill request')
         if (!sessionId) return new Response('Invalid session ID', { status: 400 })
         const success = manager.kill(sessionId)
-        log.debug('Kill result', { sessionId, success })
+        log.debug({ sessionId, success }, 'Kill result')
         if (!success) {
           return new Response('Failed to kill session', { status: 400 })
         }
@@ -362,7 +362,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
     },
   })
 
-  log.info('web server started', { url: `http://${finalConfig.hostname}:${finalConfig.port}` })
+  log.info({ url: `http://${finalConfig.hostname}:${finalConfig.port}` }, 'web server started')
   return `http://${finalConfig.hostname}:${finalConfig.port}`
 }
 

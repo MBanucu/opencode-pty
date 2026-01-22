@@ -1,8 +1,8 @@
 import pino from 'pino'
 
-// Determine environment - in Vite, use import.meta.env
-const isDevelopment = import.meta.env.DEV
-const isTest = import.meta.env.MODE === 'test'
+// Determine environment - use process.env for consistency with plugin logger
+const isDevelopment = process.env.NODE_ENV !== 'production'
+const isTest = process.env.NODE_ENV === 'test'
 
 // Determine log level
 const logLevel: pino.Level = process.env.CI
@@ -22,6 +22,24 @@ const pinoLogger = pino({
   serializers: {
     error: pino.stdSerializers.err,
   },
+  // Use transports for pretty printing in non-production
+  transport:
+    !isDevelopment && !isTest
+      ? undefined
+      : {
+          targets: [
+            {
+              target: 'pino-pretty',
+              level: logLevel,
+              options: {
+                colorize: true,
+                translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
+                ignore: 'pid,hostname',
+                singleLine: true,
+              },
+            },
+          ],
+        },
 })
 
 // Default app logger

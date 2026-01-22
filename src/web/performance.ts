@@ -2,6 +2,9 @@
 import pinoLogger from './logger.ts'
 
 const log = pinoLogger.child({ module: 'performance' })
+
+const PERFORMANCE_MEASURE_LIMIT = 100
+
 export class PerformanceMonitor {
   private static marks: Map<string, number> = new Map()
   private static measures: Array<{ name: string; duration: number; timestamp: number }> = []

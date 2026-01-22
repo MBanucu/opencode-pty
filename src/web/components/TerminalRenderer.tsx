@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import pinoLogger from '../logger.ts'
 
 interface TerminalRendererProps {
   output: string[]
@@ -16,6 +17,7 @@ export function TerminalRenderer({
   onInterrupt,
   disabled = false,
 }: TerminalRendererProps) {
+  const logger = pinoLogger.child({ component: 'TerminalRenderer' })
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const lastOutputLengthRef = useRef(0)
@@ -74,11 +76,7 @@ export function TerminalRenderer({
     if (!term || disabled || !onSendInput) return
 
     const onDataHandler = (data: string) => {
-      console.log('onData fired → sent to backend:', JSON.stringify(data))
-      // Temporary local echo for space to test
-      if (data === ' ') {
-        term.write(' ')
-      }
+      logger.debug({ data: JSON.stringify(data) }, 'onData received')
       onSendInput(data) // Send every keystroke chunk
     }
 

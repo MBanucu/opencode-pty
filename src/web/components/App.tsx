@@ -341,6 +341,10 @@ export function App() {
 
   const handleSendInput = useCallback(
     async (data: string) => {
+      logger.debug(
+        { data: JSON.stringify(data), sessionId: activeSession?.id },
+        'Sending input to PTY'
+      )
       if (!data.trim() || !activeSession) {
         return
       }

@@ -6,6 +6,9 @@ out
 dist
 *.tgz
 
+# local development environment
+.opencode/
+
 # code coverage
 coverage
 *.lcov

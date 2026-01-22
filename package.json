@@ -38,7 +38,10 @@
     "test:integration": "playwright test",
     "dev": "vite --host",
     "dev:backend": "bun run test-web-server.ts",
-    "build": "tsc && vite build",
+    "build": "bun run clean && bun run typecheck && vite build",
+    "build:dev": "vite build --mode development",
+    "build:prod": "bun run clean && bun run typecheck && vite build --mode production",
+    "clean": "rm -rf dist playwright-report test-results",
     "preview": "vite preview"
   },
   "devDependencies": {

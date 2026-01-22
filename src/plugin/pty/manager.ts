@@ -143,8 +143,10 @@ class PTYManager {
   }
 
   write(id: string, data: string): boolean {
+    log.debug('Manager.write called', { id, dataLength: data.length })
     const session = this.sessions.get(id)
     if (!session) {
+      log.debug('Manager.write: session not found', { id })
       return false
     }
     try {
@@ -188,7 +190,12 @@ class PTYManager {
   get(id: string): PTYSessionInfo | null {
     log.debug('Manager.get called', { id })
     const session = this.sessions.get(id)
-    log.debug('Session lookup result', { id, found: !!session, command: session?.command })
+    log.debug('Manager.get result', {
+      id,
+      found: !!session,
+      command: session?.command,
+      status: session?.status,
+    })
     return session ? this.toInfo(session) : null
   }
 

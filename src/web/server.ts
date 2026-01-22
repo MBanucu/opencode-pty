@@ -318,9 +318,12 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+\/input$/) && req.method === 'POST') {
         const sessionId = url.pathname.split('/')[3]
+        log.debug('Handling input request', { sessionId })
         if (!sessionId) return new Response('Invalid session ID', { status: 400 })
         const body = (await req.json()) as { data: string }
+        log.debug('Input data', { sessionId, dataLength: body.data.length })
         const success = manager.write(sessionId, body.data)
+        log.debug('Write result', { sessionId, success })
         if (!success) {
           return new Response('Failed to write to session', { status: 400 })
         }
@@ -329,8 +332,10 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+\/kill$/) && req.method === 'POST') {
         const sessionId = url.pathname.split('/')[3]
+        log.debug('Handling kill request', { sessionId })
         if (!sessionId) return new Response('Invalid session ID', { status: 400 })
         const success = manager.kill(sessionId)
+        log.debug('Kill result', { sessionId, success })
         if (!success) {
           return new Response('Failed to kill session', { status: 400 })
         }

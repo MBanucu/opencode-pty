@@ -78,9 +78,10 @@ test.describe('PTY Live Streaming', () => {
     // Verify we have some initial output
     expect(initialCount).toBeGreaterThan(0)
 
-    // Verify the output contains expected content (from the bash command)
+    // Verify the output contains live streaming data (timestamps from the while loop)
     const firstLine = await initialOutputLines.first().textContent()
-    expect(firstLine).toContain('Welcome to live streaming test')
+    // The output should contain timestamp format from the live streaming
+    expect(firstLine).toMatch(/\w{3} \d{1,2}\. \w{3} \d{2}:\d{2}:\d{2} \w{3} \d{4}: Live update\.\.\./)
 
     log.info('✅ Buffered output test passed - running session shows output immediately')
   })

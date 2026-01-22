@@ -105,7 +105,7 @@ export function createLogger(module: string): Logger {
       // Use OpenCode plugin logging when available (except in CI where we want direct Pino output)
       _client.app
         .log({
-          body: { service, level, message, extra },
+          body: { service, level, message, ...extra },
         })
         .catch(() => {})
     } else {

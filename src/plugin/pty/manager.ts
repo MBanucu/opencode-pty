@@ -111,7 +111,7 @@ class PTYManager {
       notifyOutput(id, data)
     })
 
-    ptyProcess.onExit(async ({ exitCode, signal }: { exitCode: number; signal?: number }) => {
+    ptyProcess.onExit(async ({ exitCode, signal }) => {
       log.info('pty exited', { id, exitCode, signal, command: opts.command })
       if (session.status === 'running') {
         session.status = 'exited'
@@ -137,10 +137,6 @@ class PTYManager {
           log.error('failed to send exit notification', { id, error: String(err) })
         }
       }
-    })
-
-    ptyProcess.on('error', (err: any) => {
-      log.error('pty spawn error', { id, error: String(err), command: opts.command })
     })
 
     return this.toInfo(session)

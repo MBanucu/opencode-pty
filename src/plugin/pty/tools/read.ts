@@ -1,9 +1,7 @@
 import { tool } from '@opencode-ai/plugin'
 import { manager } from '../manager.ts'
+import { DEFAULT_READ_LIMIT, MAX_LINE_LENGTH } from '../../constants.ts'
 import DESCRIPTION from './read.txt'
-
-const DEFAULT_LIMIT = 500
-const MAX_LINE_LENGTH = 2000
 
 /**
  * Validates regex pattern to prevent ReDoS attacks and dangerous patterns
@@ -58,7 +56,7 @@ export const ptyRead = tool({
     }
 
     const offset = args.offset ?? 0
-    const limit = args.limit ?? DEFAULT_LIMIT
+    const limit = args.limit ?? DEFAULT_READ_LIMIT
 
     if (args.pattern) {
       // Validate regex pattern for security

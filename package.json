@@ -39,7 +39,7 @@
     "test:coverage": "vitest run --coverage",
     "dev": "vite --host",
     "dev:backend": "bun run test-web-server.ts",
-    "build": "bun run clean && bun run typecheck && vite build",
+    "build": "bun run clean && vite build",
     "build:dev": "vite build --mode development",
     "build:prod": "bun run clean && bun run typecheck && vite build --mode production",
     "clean": "rm -rf dist playwright-report test-results",

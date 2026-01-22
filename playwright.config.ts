@@ -1,21 +1,14 @@
 import { defineConfig, devices } from '@playwright/test'
-import { readFileSync } from 'fs'
 
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
 
-// Read the actual port from the test server
-function getTestServerPort(): number {
-  try {
-    const portData = readFileSync('/tmp/test-server-port.txt', 'utf8').trim()
-    return parseInt(portData, 10)
-  } catch {
-    return 8867 // fallback
-  }
+// Use worker-index based ports for parallel test execution
+function getWorkerPort(): number {
+  const workerIndex = process.env.TEST_WORKER_INDEX ? parseInt(process.env.TEST_WORKER_INDEX, 10) : 0
+  return 8867 + workerIndex // Base port 8867, increment for each worker
 }
-
-const testPort = getTestServerPort()
 
 export default defineConfig({
   testDir: './tests',
@@ -26,30 +19,35 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Run tests with 1 worker to avoid conflicts */
-  workers: 1,
+  workers: 2, // Increased from 1 for better performance
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-options. */
-  use: {
-    /* Base URL to use in actions like `await page.goto('/')'. */
-    baseURL: `http://localhost:${testPort}`,
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
-  },
-
+  /* Global timeout reduced from 30s to 5s for faster test execution */
+  timeout: 5000,
+  expect: { timeout: 2000 },
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Set worker-specific base URL
+        baseURL: `http://localhost:${getWorkerPort()}`,
+      },
     },
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'env NODE_ENV=test LOG_LEVEL=warn bun run test-web-server.ts',
-    url: `http://localhost:${testPort}`,
-    reuseExistingServer: true, // Reuse existing server if running
-  },
+  /* Run worker-specific dev servers */
+  webServer: [
+    {
+      command: `env NODE_ENV=test LOG_LEVEL=warn TEST_WORKER_INDEX=0 bun run test-web-server.ts --port=${8867}`,
+      url: 'http://localhost:8867',
+      reuseExistingServer: false,
+    },
+    {
+      command: `env NODE_ENV=test LOG_LEVEL=warn TEST_WORKER_INDEX=1 bun run test-web-server.ts --port=${8868}`,
+      url: 'http://localhost:8868',
+      reuseExistingServer: false,
+    },
+  ],
 })

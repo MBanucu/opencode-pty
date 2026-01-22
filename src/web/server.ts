@@ -3,6 +3,11 @@ import { manager, onOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import { createLogger } from '../plugin/logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
 import { join, resolve } from 'path'
+import {
+  DEFAULT_SERVER_PORT,
+  DEFAULT_READ_LIMIT,
+  ASSET_CONTENT_TYPES
+} from './constants.ts'
 
 const log = createLogger('web-server')
 
@@ -41,7 +46,7 @@ let server: Server<WSClient> | null = null
 const wsClients: Map<ServerWebSocket<WSClient>, WSClient> = new Map()
 
 const defaultConfig: ServerConfig = {
-  port: 8765,
+  port: DEFAULT_SERVER_PORT,
   hostname: 'localhost',
 }
 
@@ -165,7 +170,7 @@ const wsHandler = {
 export function startWebServer(config: Partial<ServerConfig> = {}): string {
   const finalConfig = { ...defaultConfig, ...config }
 
-  console.log(`Starting server with NODE_ENV=${process.env.NODE_ENV}, CWD=${process.cwd()}`)
+
 
   if (server) {
     log.warn('web server already running')
@@ -199,16 +204,16 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
       }
 
       if (url.pathname === '/') {
-        console.log(`Serving root, NODE_ENV=${process.env.NODE_ENV}`)
+
         log.info('Serving root', { nodeEnv: process.env.NODE_ENV })
         // In test mode, serve the built HTML with assets
         if (process.env.NODE_ENV === 'test') {
-          console.log('Serving from dist/web/index.html')
+          log.debug('Serving from dist/web/index.html')
           return new Response(await Bun.file('./dist/web/index.html').bytes(), {
             headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },
           })
         }
-        console.log('Serving from src/web/index.html')
+        log.debug('Serving from src/web/index.html')
         return new Response(await Bun.file('./src/web/index.html').bytes(), {
           headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },
         })
@@ -216,32 +221,22 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       // Serve static assets from dist/web
       if (url.pathname.startsWith('/assets/')) {
-        console.log(`Serving asset ${url.pathname}, NODE_ENV=${process.env.NODE_ENV}`)
+
         log.info('Serving asset', { pathname: url.pathname, nodeEnv: process.env.NODE_ENV })
         const distDir = resolve(process.cwd(), 'dist/web')
         const assetPath = url.pathname.slice(1) // remove leading /
         const filePath = join(distDir, assetPath)
-        await Bun.write(
-          '/tmp/debug.log',
-          `cwd: ${process.cwd()}, distDir: ${distDir}, assetPath: ${assetPath}, filePath: ${filePath}\n`
-        )
         const file = Bun.file(filePath)
         const exists = await file.exists()
-        await Bun.write('/tmp/debug.log', `exists: ${exists}\n`, { createPath: false })
         if (exists) {
-          const contentType = url.pathname.endsWith('.js')
-            ? 'application/javascript'
-            : url.pathname.endsWith('.css')
-              ? 'text/css'
-              : 'text/plain'
-          console.log(`Asset found ${filePath}`)
-          log.info('Asset found', { filePath, contentType })
+          const ext = url.pathname.split('.').pop() || ''
+          const contentType = ASSET_CONTENT_TYPES[`.${ext}`] || 'text/plain'
+          log.debug('Asset served', { filePath, contentType })
           return new Response(await file.bytes(), {
             headers: { 'Content-Type': contentType, ...getSecurityHeaders() },
           })
         } else {
-          console.log(`Asset not found ${filePath}`)
-          log.error('Asset not found', { filePath })
+          log.debug('Asset not found', { filePath })
         }
        }
 
@@ -351,7 +346,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         const sessionId = url.pathname.split('/')[3]
         if (!sessionId) return new Response('Invalid session ID', { status: 400 })
 
-        const result = manager.read(sessionId, 0, 100)
+        const result = manager.read(sessionId, 0, DEFAULT_READ_LIMIT)
         if (!result) {
           return new Response('Session not found', { status: 404 })
         }

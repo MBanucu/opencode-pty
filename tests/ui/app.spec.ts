@@ -1,49 +1,77 @@
 import { test, expect } from '@playwright/test'
-import { createLogger } from '../../src/plugin/logger.ts'
+import { createTestLogger } from '../test-logger.ts'
 
-const log = createLogger('ui-test')
+const log = createTestLogger('ui-test')
 
 test.describe('App Component', () => {
   test('renders the PTY Sessions title', async ({ page }) => {
-    // Listen to page console for debugging
-    page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+    // Only log console errors and warnings for debugging failures
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' || msg.type() === 'warning') {
+        log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+      }
+    })
 
     await page.goto('/')
     await expect(page.getByText('PTY Sessions')).toBeVisible()
   })
 
   test('shows connected status when WebSocket connects', async ({ page }) => {
-    // Listen to page console for debugging
-    page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+    // Only log console errors and warnings for debugging failures
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' || msg.type() === 'warning') {
+        log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+      }
+    })
 
     await page.goto('/')
     await expect(page.getByText('● Connected')).toBeVisible()
   })
 
   test('shows no active sessions message when empty', async ({ page }) => {
-    // Listen to page console for debugging
-    page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+    // Only log console errors and warnings for debugging failures
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' || msg.type() === 'warning') {
+        log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+      }
+    })
 
+    // Clear all sessions first to ensure empty state
     await page.goto('/')
+    const clearResponse = await page.request.delete('/api/sessions')
+    if (clearResponse.ok) {
+      await page.reload()
+    }
+
+    // Now check that "No active sessions" appears in the sidebar
     await expect(page.getByText('No active sessions')).toBeVisible()
   })
 
   test('shows empty state when no session is selected', async ({ page }) => {
-    // Listen to page console for debugging
-    page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+    // Only log console errors and warnings for debugging failures
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' || msg.type() === 'warning') {
+        log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+      }
+    })
 
     await page.goto('/')
-    await expect(
-      page.getByText('Select a session from the sidebar to view its output')
-    ).toBeVisible()
+    // With existing sessions but no selection, it should show the select message
+    const emptyState = page.locator('.empty-state').first()
+    await expect(emptyState).toBeVisible()
+    await expect(emptyState).toHaveText('Select a session from the sidebar to view its output')
   })
 
   test.describe('WebSocket Message Handling', () => {
     test('increments WS message counter when receiving data for active session', async ({
       page,
     }) => {
-      // Listen to page console for debugging
-      page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+      // Only log console errors and warnings, plus page errors for debugging failures
+      page.on('console', (msg) => {
+        if (msg.type() === 'error' || msg.type() === 'warning') {
+          log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+        }
+      })
       page.on('pageerror', (error) => log.error('PAGE ERROR: ' + error.message))
 
       // Navigate and wait for initial setup
@@ -53,18 +81,32 @@ test.describe('App Component', () => {
       const initialResponse = await page.request.get('/api/sessions')
       const initialSessions = await initialResponse.json()
       if (initialSessions.length === 0) {
-        await page.request.post('/api/sessions', {
+        log.info('Creating test session for WebSocket counter test')
+        const createResponse = await page.request.post('/api/sessions', {
           data: {
             command: 'bash',
             args: [
               '-c',
-              'echo "Starting live streaming test"; while true; do echo "$(date +"%H:%M:%S"): Live update"; sleep 0.1; done',
+              'echo "Welcome to live streaming test"; while true; do echo "$(date +"%H:%M:%S"): Live update"; sleep 0.1; done',
             ],
             description: 'Live streaming test session',
           },
         })
-        await page.waitForTimeout(2000) // Wait longer for session to start
-        await page.reload()
+        log.info(`Session creation response: ${createResponse.status()}`)
+
+        // Wait for session to actually start
+        await page.waitForTimeout(3000)
+
+        // Check session status
+        const sessionsResponse = await page.request.get('/api/sessions')
+        const sessions = await sessionsResponse.json()
+        log.info(`Sessions after creation: ${sessions.length}`)
+        if (sessions.length > 0) {
+          log.info(`Session status: ${sessions[0].status}, PID: ${sessions[0].pid}`)
+        }
+
+        // Don't reload - wait for the session to appear in the UI
+        await page.waitForSelector('.session-item', { timeout: 5000 })
       }
 
       // Wait for session to appear
@@ -80,31 +122,43 @@ test.describe('App Component', () => {
       const statusBadge = await firstSession.locator('.status-badge').textContent()
       log.info(`Session status: ${statusBadge}`)
 
+      log.info('Clicking on first session...')
       await firstSession.click()
+      log.info('Session clicked, waiting for output header...')
 
-      // Wait for session to be active
-      await page.waitForSelector('.output-header .output-title', { timeout: 3000 })
+      // Wait for session to be active and debug element to appear
+      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
+      await page.waitForSelector('[data-testid="debug-info"]', { timeout: 2000 })
+      log.info('Debug element found!')
 
-      // Get initial WS message count
-      const initialDebugText = (await page.locator('.output-container').textContent()) || ''
-      const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
-      const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
+       // Get initial WS message count from debug element
+       const initialDebugElement = page.locator('[data-testid="debug-info"]')
+       await initialDebugElement.waitFor({ state: 'attached', timeout: 1000 })
+       const initialDebugText = await initialDebugElement.textContent() || ''
+       const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
+       const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
+       log.info(`Initial WS message count: ${initialCount}`)
 
       // Wait for some WebSocket messages to arrive (the session should be running)
-      await page.waitForTimeout(3000)
+      await page.waitForTimeout(1000)
 
-      // Check that WS message count increased
-      const finalDebugText = (await page.locator('.output-container').textContent()) || ''
-      const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
-      const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
+       // Check that WS message count increased
+       const finalDebugText = await initialDebugElement.textContent() || ''
+       const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
+       const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
+       log.info(`Final WS message count: ${finalCount}`)
 
       // The test should fail if no messages were received
       expect(finalCount).toBeGreaterThan(initialCount)
     })
 
     test('does not increment WS counter for messages from inactive sessions', async ({ page }) => {
-      // Listen to page console for debugging
-      page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+      // Only log console errors and warnings for debugging failures
+      page.on('console', (msg) => {
+        if (msg.type() === 'error' || msg.type() === 'warning') {
+          log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+        }
+      })
 
       // This test would require multiple sessions and verifying that messages
       // for non-active sessions don't increment the counter
@@ -141,24 +195,30 @@ test.describe('App Component', () => {
       // Wait for it to be active
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // Get initial count
-      const initialDebugText = (await page.locator('.output-container').textContent()) || ''
-      const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
-      const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
+       // Get initial count
+       const debugElement = page.locator('[data-testid="debug-info"]')
+       await debugElement.waitFor({ state: 'attached', timeout: 1000 })
+       const initialDebugText = await debugElement.textContent() || ''
+       const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
+       const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
 
-      // Wait a bit and check count again
-      await page.waitForTimeout(2000)
-      const finalDebugText = (await page.locator('.output-container').textContent()) || ''
-      const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
-      const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
+       // Wait a bit and check count again
+       await page.waitForTimeout(2000)
+       const finalDebugText = await debugElement.textContent() || ''
+       const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
+       const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
 
       // Should have received messages for the active session
       expect(finalCount).toBeGreaterThan(initialCount)
     })
 
     test('resets WS counter when switching sessions', async ({ page }) => {
-      // Listen to page console for debugging
-      page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+      // Only log console errors and warnings for debugging failures
+      page.on('console', (msg) => {
+        if (msg.type() === 'error' || msg.type() === 'warning') {
+          log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+        }
+      })
 
       await page.goto('/')
 
@@ -190,31 +250,37 @@ test.describe('App Component', () => {
       await sessionItems.nth(0).click()
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // Wait for some messages
-      await page.waitForTimeout(2000)
+       // Wait for some messages
+       await page.waitForTimeout(2000)
 
-      const firstSessionDebug = (await page.locator('.output-container').textContent()) || ''
-      const firstSessionWsMatch = firstSessionDebug.match(/WS messages:\s*(\d+)/)
-      const firstSessionCount =
-        firstSessionWsMatch && firstSessionWsMatch[1] ? parseInt(firstSessionWsMatch[1]) : 0
+       const debugElement = page.locator('[data-testid="debug-info"]')
+       await debugElement.waitFor({ state: 'attached', timeout: 2000 })
+       const firstSessionDebug = await debugElement.textContent() || ''
+       const firstSessionWsMatch = firstSessionDebug.match(/WS messages:\s*(\d+)/)
+       const firstSessionCount =
+         firstSessionWsMatch && firstSessionWsMatch[1] ? parseInt(firstSessionWsMatch[1]) : 0
 
-      // Switch to second session
-      await sessionItems.nth(1).click()
-      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
+       // Switch to second session
+       await sessionItems.nth(1).click()
+       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // The counter should reset or be lower for the new session
-      const secondSessionDebug = (await page.locator('.output-container').textContent()) || ''
-      const secondSessionWsMatch = secondSessionDebug.match(/WS messages:\s*(\d+)/)
-      const secondSessionCount =
-        secondSessionWsMatch && secondSessionWsMatch[1] ? parseInt(secondSessionWsMatch[1]) : 0
+       // The counter should reset or be lower for the new session
+       const secondSessionDebug = await debugElement.textContent() || ''
+       const secondSessionWsMatch = secondSessionDebug.match(/WS messages:\s*(\d+)/)
+       const secondSessionCount =
+         secondSessionWsMatch && secondSessionWsMatch[1] ? parseInt(secondSessionWsMatch[1]) : 0
 
       // Counter should be lower for the new session (or reset to 0)
       expect(secondSessionCount).toBeLessThanOrEqual(firstSessionCount)
     })
 
     test('maintains WS counter state during page refresh', async ({ page }) => {
-      // Listen to page console for debugging
-      page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+      // Only log console errors and warnings for debugging failures
+      page.on('console', (msg) => {
+        if (msg.type() === 'error' || msg.type() === 'warning') {
+          log.error(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
+        }
+      })
 
       await page.goto('/')
 
@@ -235,12 +301,14 @@ test.describe('App Component', () => {
       await page.locator('.session-item').first().click()
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // Wait for messages
-      await page.waitForTimeout(2000)
+       // Wait for messages
+       await page.waitForTimeout(2000)
 
-      const debugText = (await page.locator('.output-container').textContent()) || ''
-      const wsMatch = debugText.match(/WS messages:\s*(\d+)/)
-      const count = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
+       const debugElement = page.locator('[data-testid="debug-info"]')
+       await debugElement.waitFor({ state: 'attached', timeout: 2000 })
+       const debugText = await debugElement.textContent() || ''
+       const wsMatch = debugText.match(/WS messages:\s*(\d+)/)
+       const count = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
 
       // Should have received some messages
       expect(count).toBeGreaterThan(0)

@@ -5,9 +5,8 @@ import { startWebServer } from './src/web/server.ts'
 const logLevels = { debug: 0, info: 1, warn: 2, error: 3 }
 const currentLevel = logLevels[process.env.LOG_LEVEL as keyof typeof logLevels] ?? logLevels.info
 
-// For debugging
+// Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {
-  console.log('NODE_ENV not set, setting to test')
   process.env.NODE_ENV = 'test'
 }
 
@@ -49,16 +48,26 @@ function findAvailablePort(startPort: number = 8867): number {
   throw new Error('No available port found')
 }
 
-const port = findAvailablePort()
-console.log(`Using port ${port} for tests, NODE_ENV=${process.env.NODE_ENV}, CWD=${process.cwd()}`)
+// Allow port to be specified via command line argument for parallel test workers
+const portArg = process.argv.find(arg => arg.startsWith('--port='))
+const specifiedPort = portArg ? parseInt(portArg.split('=')[1] || '0', 10) : null
+let port = (specifiedPort && specifiedPort > 0) ? specifiedPort : findAvailablePort()
+
+// For parallel workers, ensure unique ports
+if (process.env.TEST_WORKER_INDEX) {
+  const workerIndex = parseInt(process.env.TEST_WORKER_INDEX, 10)
+  port = 8867 + workerIndex
+}
 
 // Clear any existing sessions from previous runs
 manager.clearAllSessions()
-if (process.env.NODE_ENV !== 'test') console.log('Cleared any existing sessions')
 
 const url = startWebServer({ port })
-if (process.env.NODE_ENV !== 'test') console.log(`Web server started at ${url}`)
-if (process.env.NODE_ENV !== 'test') console.log(`Server PID: ${process.pid}`)
+
+// Only log in non-test environments or when explicitly requested
+if (process.env.NODE_ENV !== 'test' || process.env.VERBOSE === 'true') {
+  console.log(`Server started at ${url} (port ${port})`)
+}
 
 // Write port to file for tests to read
 if (process.env.NODE_ENV === 'test') {
@@ -88,8 +97,7 @@ if (process.env.NODE_ENV === 'test') {
 
 // Create test sessions for manual testing and e2e tests
 if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {
-  console.log('\nStarting a running test session for live streaming...')
-  const session = manager.spawn({
+  manager.spawn({
     command: 'bash',
     args: [
       '-c',
@@ -99,14 +107,7 @@ if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {
     parentSessionId: 'live-test',
   })
 
-  console.log(`Session ID: ${session.id}`)
-  console.log(`Session title: ${session.title}`)
-
-  console.log(`Visit ${url} to see the session`)
-  console.log('Server is running in background...')
-  console.log('💡 Click on the session to see live output streaming!')
-} else if (process.env.NODE_ENV !== 'test') {
-  console.log(`Server running in test mode at ${url} (no sessions created)`)
+  console.log(`Live streaming session started at ${url}`)
 }
 
 // Keep the server running indefinitely

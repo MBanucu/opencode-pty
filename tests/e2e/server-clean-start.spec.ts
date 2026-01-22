@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { createLogger } from '../../src/plugin/logger.ts'
+import { createTestLogger } from '../test-logger.ts'
 
-const log = createLogger('e2e-clean-start')
+const log = createTestLogger('e2e-server-clean')
 
 test.describe('Server Clean Start', () => {
   test('should start with empty session list via API', async ({ request }) => {
@@ -22,23 +22,21 @@ test.describe('Server Clean Start', () => {
   })
 
   test('should start with empty session list via browser', async ({ page }) => {
-    // Clear any existing sessions first
-    await page.request.post('/api/sessions/clear')
-
-    // Navigate to the web UI (test server should be running)
+    // Navigate to the web UI
     await page.goto('/')
 
-    // Wait for the page to load
-    await page.waitForLoadState('networkidle')
+    // Clear any existing sessions from previous tests
+    const clearResponse = await page.request.delete('/api/sessions')
+    if (clearResponse.ok) {
+      await page.waitForTimeout(500) // Wait for cleanup
+      await page.reload() // Reload to get fresh state
+    }
 
     // Check that there are no sessions in the sidebar
     const sessionItems = page.locator('.session-item')
-    await expect(sessionItems).toHaveCount(0, { timeout: 5000 })
+    await expect(sessionItems).toHaveCount(0, { timeout: 2000 })
 
-    // Check that the empty state message is shown
-    const emptyState = page.locator('.empty-state').first()
-    await expect(emptyState).toBeVisible()
-
-    log.info('Server started cleanly with no sessions in browser')
+    // Check that the "No active sessions" message appears in the sidebar
+    await expect(page.getByText('No active sessions')).toBeVisible()
   })
 })

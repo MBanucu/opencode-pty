@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { createLogger } from '../../src/plugin/logger.ts'
+import { createTestLogger } from '../test-logger.ts'
 
-const log = createLogger('e2e-live-streaming')
+const log = createTestLogger('e2e-live-streaming')
 
 test.describe('PTY Live Streaming', () => {
   test('should load historical buffered output when connecting to running PTY session', async ({ page }) => {
@@ -71,8 +71,10 @@ test.describe('PTY Live Streaming', () => {
     const initialCount = await initialOutputLines.count()
     log.info(`Initial output lines: ${initialCount}`)
 
-    // Check debug info
-    const debugText = await page.locator('text=/Debug:/').textContent()
+    // Check debug info using data-testid
+    const debugElement = page.locator('[data-testid="debug-info"]')
+    await debugElement.waitFor({ timeout: 10000 })
+    const debugText = await debugElement.textContent()
     log.info(`Debug info: ${debugText}`)
 
     // Verify we have some initial output
@@ -243,18 +245,17 @@ test.describe('PTY Live Streaming', () => {
     let attempts = 0
     const maxAttempts = 50 // 5 seconds at 100ms intervals
     let currentWsMessages = initialWsMessages
+    const debugElement = page.locator('[data-testid="debug-info"]')
     while (attempts < maxAttempts && currentWsMessages < initialWsMessages + 5) {
       await page.waitForTimeout(100)
-      const currentDebugInfo = await page.locator('.output-container').textContent()
-      const currentDebugText = (currentDebugInfo || '') as string
+      const currentDebugText = await debugElement.textContent() || ''
       const currentWsMatch = currentDebugText.match(/WS messages: (\d+)/)
       currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0
       attempts++
     }
 
     // Check final state
-    const finalDebugInfo = await page.locator('.output-container').textContent()
-    const finalDebugText = (finalDebugInfo || '') as string
+    const finalDebugText = await debugElement.textContent() || ''
     const finalWsMatch = finalDebugText.match(/WS messages: (\d+)/)
     const finalWsMessages = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
 
@@ -267,12 +268,22 @@ test.describe('PTY Live Streaming', () => {
     // Validate that live streaming is working by checking output increased
 
     // Check that the new lines contain the expected timestamp format if output increased
-    if (finalCount > initialCount) {
-      const lastTimestampLine = await outputLines.nth(finalCount - 2).textContent()
-      expect(lastTimestampLine).toMatch(
-        /.*Live update\.\.\./
-      )
+    // Check that new live update lines were added during WebSocket streaming
+    const finalOutputLines = await outputLines.count()
+    log.info(`Final output lines: ${finalOutputLines}, initial was: ${initialCount}`)
+
+    // Look for lines that contain "Live update..." pattern
+    let liveUpdateFound = false
+    for (let i = Math.max(0, finalOutputLines - 10); i < finalOutputLines; i++) {
+      const lineText = await outputLines.nth(i).textContent()
+      if (lineText && lineText.includes('Live update...')) {
+        liveUpdateFound = true
+        log.info(`Found live update line ${i}: "${lineText}"`)
+        break
+      }
     }
+
+    expect(liveUpdateFound).toBe(true)
 
     log.info(`✅ Live streaming test passed - received ${finalCount - initialCount} live updates`)
   })

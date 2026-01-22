@@ -300,15 +300,19 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
       if (url.pathname.match(/^\/api\/sessions\/[^/]+$/) && req.method === 'GET') {
         const sessionId = url.pathname.split('/')[3]
-        console.log('Handling individual session request for:', sessionId)
+        log.debug('Handling individual session request', { sessionId })
         if (!sessionId) return new Response('Invalid session ID', { status: 400 })
         const session = manager.get(sessionId)
-        console.log('Session found:', !!session, session?.command)
+        log.debug('Session lookup result', {
+          sessionId,
+          found: !!session,
+          command: session?.command,
+        })
         if (!session) {
-          console.log('Returning 404 for session not found')
+          log.debug('Returning 404 for session not found', { sessionId })
           return new Response('Session not found', { status: 404 })
         }
-        console.log('Returning session data for:', session.id)
+        log.debug('Returning session data', { sessionId: session.id })
         return Response.json(session)
       }
 

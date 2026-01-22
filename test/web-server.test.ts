@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server.ts'
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
-import { initLogger } from '../src/plugin/logger.ts'
+import { initLogger, createLogger } from '../src/plugin/logger.ts'
 
 describe('Web Server', () => {
   const fakeClient = {
@@ -11,6 +11,8 @@ describe('Web Server', () => {
       },
     },
   } as any
+
+  const log = createLogger('test')
 
   beforeEach(() => {
     initLogger(fakeClient)
@@ -128,21 +130,21 @@ describe('Web Server', () => {
 
     it('should return individual session', async () => {
       // Create a test session first
-      console.log('Spawning session with command: bash')
+      log.debug('Spawning session', { command: 'bash' })
       const session = manager.spawn({
         command: 'bash',
         args: ['-c', 'sleep 0.1'],
         description: 'Test session',
         parentSessionId: 'test',
       })
-      console.log('Spawned session:', session.id, 'command:', session.command)
+      log.debug('Spawned session', { id: session.id, command: session.command })
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
-      console.log('Fetch response status:', response.status)
+      log.debug('Fetch response', { status: response.status })
       expect(response.status).toBe(200)
 
       const sessionData = await response.json()
-      console.log('Session data:', JSON.stringify(sessionData))
+      log.debug('Session data', sessionData)
       expect(sessionData.id).toBe(session.id)
       expect(sessionData.command).toBe('bash')
       expect(sessionData.args).toEqual(['-c', 'sleep 0.1'])
@@ -150,9 +152,9 @@ describe('Web Server', () => {
 
     it('should return 404 for non-existent session', async () => {
       const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
-      console.log('Fetching non-existent session:', nonexistentId)
+      log.debug('Fetching non-existent session', { id: nonexistentId })
       const response = await fetch(`${serverUrl}/api/sessions/${nonexistentId}`)
-      console.log('Response status:', response.status)
+      log.debug('Response status', { status: response.status })
       expect(response.status).toBe(404)
     })
 

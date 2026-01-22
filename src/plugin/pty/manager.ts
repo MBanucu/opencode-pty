@@ -76,8 +76,7 @@ class PTYManager {
     const title =
       opts.title ?? (`${opts.command} ${args.join(' ')}`.trim() || `Terminal ${id.slice(-4)}`)
 
-    console.log('Spawning PTY with command:', opts.command, 'args:', args, 'id:', id)
-    log.info('spawning pty', { id, command: opts.command, args, workdir })
+    log.debug('Spawning PTY', { id, command: opts.command, args, workdir })
 
     const ptyProcess: IPty = spawn(opts.command, args, {
       name: 'xterm-256color',
@@ -185,9 +184,9 @@ class PTYManager {
   }
 
   get(id: string): PTYSessionInfo | null {
-    console.log('Manager.get called for id:', id)
+    log.debug('Manager.get called', { id })
     const session = this.sessions.get(id)
-    console.log('Session in map:', !!session, session?.command)
+    log.debug('Session lookup result', { id, found: !!session, command: session?.command })
     return session ? this.toInfo(session) : null
   }
 

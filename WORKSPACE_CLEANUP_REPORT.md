@@ -139,7 +139,7 @@ tests/
 
 ### ✅ Phase 1: Critical Fixes (COMPLETED)
 1. ✅ Fix TypeScript errors in manager.ts
-2. ⏳ Remove committed test artifacts (pending)
+2. ✅ Remove committed test artifacts (COMPLETED)
 3. ⏳ Update core dependencies (OpenCode packages)
 
 ### ✅ Phase 2: Test Infrastructure (COMPLETED)
@@ -176,7 +176,7 @@ tests/
 - ✅ All TypeScript errors resolved
 - ✅ 97% test pass rate (56/58 tests pass, 2 minor e2e issues)
 - ✅ CI pipeline uses Bun runtime
-- ⏳ No committed build artifacts
+- ✅ No committed build artifacts
 - ⏳ Updated dependencies without breaking changes
 
 ## Next Steps

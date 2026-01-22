@@ -1,6 +1,7 @@
 import type { Server, ServerWebSocket } from 'bun'
 import { manager, onOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import { createLogger } from '../plugin/logger.ts'
+import { getLogger } from '../plugin/logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
 import { join, resolve } from 'path'
 import {
@@ -10,24 +11,21 @@ import {
 } from './constants.ts'
 
 const log = createLogger('web-server')
+const serverLogger = getLogger({ component: 'web-server' })
+
+const defaultConfig: ServerConfig = {
+  port: DEFAULT_SERVER_PORT,
+  hostname: 'localhost',
+}
 
 // Security headers for all responses
 function getSecurityHeaders(): Record<string, string> {
-  const isProduction = process.env.NODE_ENV === 'production'
-
   return {
-    // Content Security Policy - strict in production
-    'Content-Security-Policy': isProduction
-      ? "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data:; font-src 'self'"
-      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: http: https:; img-src 'self' data:; font-src 'self'",
-    // Security headers
-    'X-Frame-Options': 'DENY',
     'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
-    // HTTPS enforcement (when behind reverse proxy)
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
   }
 }
 
@@ -44,12 +42,6 @@ function secureJsonResponse(data: any, status = 200): Response {
 
 let server: Server<WSClient> | null = null
 const wsClients: Map<ServerWebSocket<WSClient>, WSClient> = new Map()
-
-const defaultConfig: ServerConfig = {
-  port: DEFAULT_SERVER_PORT,
-  hostname: 'localhost',
-}
-
 function subscribeToSession(wsClient: WSClient, sessionId: string): boolean {
   const session = manager.get(sessionId)
   if (!session) {
@@ -170,10 +162,10 @@ const wsHandler = {
 export function startWebServer(config: Partial<ServerConfig> = {}): string {
   const finalConfig = { ...defaultConfig, ...config }
 
-
+  serverLogger.info('Starting web server', { port: finalConfig.port, hostname: finalConfig.hostname })
 
   if (server) {
-    log.warn('web server already running')
+    serverLogger.warn('web server already running')
     return `http://${server.hostname}:${server.port}`
   }
 

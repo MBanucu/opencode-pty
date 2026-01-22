@@ -13,7 +13,7 @@ interface Logger {
 let _client: PluginClient | null = null
 let _pinoLogger: pino.Logger | null = null
 
-// Create Pino logger with pretty printing in development
+// Create Pino logger with production best practices
 function createPinoLogger() {
   const isProduction = process.env.NODE_ENV === 'production'
 
@@ -29,7 +29,17 @@ function createPinoLogger() {
     base: {
       service: 'opencode-pty',
       env: process.env.NODE_ENV || 'development',
+      version: '1.0.0', // TODO: Read from package.json
     },
+
+    // Redaction for any sensitive data (expand as needed)
+    redact: {
+      paths: ['password', 'token', 'secret', '*.password', '*.token', '*.secret'],
+      remove: true,
+    },
+
+    // Use ISO timestamps for better parsing
+    timestamp: pino.stdTimeFunctions.isoTime,
 
     // Pretty printing only in development (not production)
     ...(isProduction
@@ -39,7 +49,7 @@ function createPinoLogger() {
             target: 'pino-pretty',
             options: {
               colorize: true,
-              translateTime: 'SYS:standard',
+              translateTime: 'yyyy-mm-dd HH:MM:ss.l o',
               ignore: 'pid,hostname',
               singleLine: true,
             },
@@ -83,5 +93,23 @@ export function createLogger(module: string): Logger {
     info: (message, extra) => log('info', message, extra),
     warn: (message, extra) => log('warn', message, extra),
     error: (message, extra) => log('error', message, extra),
+  }
+}
+
+// Convenience function for creating child loggers (recommended pattern)
+export function getLogger(context: Record<string, unknown> = {}): Logger {
+  // Initialize Pino logger if not done yet
+  if (!_pinoLogger) {
+    _pinoLogger = createPinoLogger()
+  }
+
+  // Create child logger with context
+  const childLogger = _pinoLogger!.child(context)
+
+  return {
+    debug: (message, extra) => childLogger.debug(extra || {}, message),
+    info: (message, extra) => childLogger.info(extra || {}, message),
+    warn: (message, extra) => childLogger.warn(extra || {}, message),
+    error: (message, extra) => childLogger.error(extra || {}, message),
   }
 }

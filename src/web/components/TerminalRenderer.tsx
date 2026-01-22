@@ -19,7 +19,6 @@ export function TerminalRenderer({
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const lastOutputLengthRef = useRef(0)
-  const inputBufferRef = useRef('')
 
   useEffect(() => {
     if (!terminalRef.current) return
@@ -29,7 +28,9 @@ export function TerminalRenderer({
       theme: { background: '#1e1e1e', foreground: '#d4d4d4' },
       fontFamily: 'monospace',
       fontSize: 14,
-      scrollback: 1000,
+      scrollback: 5000,
+      convertEol: true,
+      allowTransparency: true,
     })
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
@@ -39,16 +40,13 @@ export function TerminalRenderer({
 
     xtermRef.current = term
 
-    // Write initial output
+    // Write historical output once on mount
     if (output.length > 0) {
-      term.write(output.join('\n') + '\n')
+      term.write(output.join(''))
       lastOutputLengthRef.current = output.length
     }
 
-    const handleResize = () => {
-      fitAddon.fit()
-    }
-
+    const handleResize = () => fitAddon.fit()
     window.addEventListener('resize', handleResize)
 
     return () => {
@@ -57,59 +55,44 @@ export function TerminalRenderer({
     }
   }, [])
 
-  // Handle output updates
+  // Append new output chunks from WebSocket / API
   useEffect(() => {
     const term = xtermRef.current
     if (!term) return
 
     const newLines = output.slice(lastOutputLengthRef.current)
     if (newLines.length > 0) {
-      term.write(newLines.join('\n') + '\n')
+      term.write(newLines.join(''))
       lastOutputLengthRef.current = output.length
+      term.scrollToBottom()
     }
   }, [output])
 
-  // Handle input
+  // Handle user input → forward raw to backend
   useEffect(() => {
     const term = xtermRef.current
-    if (!term || disabled) return
+    if (!term || disabled || !onSendInput) return
 
-    const handleData = (data: string) => {
-      if (data === '\r' || data === '\n') {
-        // Send the buffered line
-        const line = inputBufferRef.current.trim()
-        if (line && onSendInput) {
-          onSendInput(line + '\n')
-        }
-        inputBufferRef.current = ''
-      } else if (data === '\x7f' || data === '\b') {
-        // Backspace
-        if (inputBufferRef.current.length > 0) {
-          inputBufferRef.current = inputBufferRef.current.slice(0, -1)
-          term.write('\b \b') // Erase character
-        }
-      } else {
-        // Regular character
-        inputBufferRef.current += data
-        term.write(data) // Echo
-      }
+    const onDataHandler = (data: string) => {
+      onSendInput(data) // Send every keystroke chunk
     }
 
-    const handleKey = ({ key, domEvent }: { key: string; domEvent: KeyboardEvent }) => {
-      if (domEvent.ctrlKey && (key === 'c' || key === 'C')) {
-        // Ctrl+C interrupt
-        term.writeln('^C')
+    const onKeyHandler = ({ domEvent }: { key: string; domEvent: KeyboardEvent }) => {
+      if (domEvent.ctrlKey && domEvent.key.toLowerCase() === 'c') {
+        // Let ^C go through to backend, but also call interrupt
         if (onInterrupt) onInterrupt()
-        domEvent.preventDefault()
       }
     }
 
-    term.onData(handleData)
-    term.onKey(handleKey)
+    const dataDisposable = term.onData(onDataHandler)
+    const keyDisposable = term.onKey(onKeyHandler)
+
+    // Focus the terminal so user can type immediately
+    term.focus()
 
     return () => {
-      // Remove listeners by disposing or setting to null
-      // xterm doesn't have removeListener, so we rely on effect cleanup
+      dataDisposable.dispose()
+      keyDisposable.dispose()
     }
   }, [onSendInput, onInterrupt, disabled])
 

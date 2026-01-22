@@ -1,7 +1,13 @@
 import { spawn, type IPty } from "bun-pty";
-import type { OpencodeClient } from "@opencode-ai/sdk";
+import { createLogger } from "../logger.ts";
 import { RingBuffer } from "./buffer.ts";
 import type { PTYSession, PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from "./types.ts";
+
+let onSessionUpdate: (() => void) | undefined;
+
+export function setOnSessionUpdate(callback: () => void) {
+  onSessionUpdate = callback;
+}
 import { createLogger } from "../logger.ts";
 
 const log = createLogger("manager");
@@ -103,6 +109,7 @@ class PTYManager {
       if (session.status === "running") {
         session.status = "exited";
         session.exitCode = exitCode;
+        if (onSessionUpdate) onSessionUpdate();
       }
 
       if (session.notifyOnExit && client) {

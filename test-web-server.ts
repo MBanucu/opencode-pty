@@ -9,7 +9,7 @@ const fakeClient = {
   app: {
     log: async (opts: any) => {
       const { level = 'info', message, extra } = opts.body || opts;
-      const levelNum = logLevels[process.env.LOG_LEVEL as keyof typeof logLevels] ?? logLevels.info;
+      const levelNum = logLevels[level as keyof typeof logLevels] ?? logLevels.info;
       if (levelNum >= currentLevel) {
         const extraStr = extra ? ` ${JSON.stringify(extra)}` : '';
         console.log(`[${level}] ${message}${extraStr}`);

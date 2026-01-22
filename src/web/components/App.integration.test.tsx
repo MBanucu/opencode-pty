@@ -31,8 +31,10 @@ it('renders complete UI without errors', async () => {
   expect(screen.getByText('Select a session from the sidebar to view its output')).toBeInTheDocument()
 })
 
-it.skip('has proper accessibility attributes', () => {
-  render(<App />)
+it('has proper accessibility attributes', async () => {
+  await act(async () => {
+    render(<App />)
+  })
 
   // Check that heading has proper role
   const heading = screen.getByRole('heading', { name: 'PTY Sessions' })
@@ -47,8 +49,10 @@ it.skip('has proper accessibility attributes', () => {
   expect(screen.getByText('No active sessions')).toBeTruthy()
 })
 
-it.skip('maintains component structure integrity', () => {
-  render(<App />)
+it('maintains component structure integrity', async () => {
+  await act(async () => {
+    render(<App />)
+  })
 
   // Verify the main layout structure
   const container = screen.getByText('PTY Sessions').closest('.container')

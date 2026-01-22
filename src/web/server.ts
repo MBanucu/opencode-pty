@@ -1,5 +1,5 @@
 import type { Server, ServerWebSocket } from "bun";
-import { manager, onOutput } from "../plugin/pty/manager.ts";
+import { manager, onOutput, setOnSessionUpdate } from "../plugin/pty/manager.ts";
 import { createLogger } from "../plugin/logger.ts";
 import type { WSMessage, WSClient, ServerConfig } from "./types.ts";
 
@@ -62,6 +62,13 @@ function sendSessionList(ws: ServerWebSocket<WSClient>): void {
   const message: WSMessage = { type: "session_list", sessions: sessionData };
   ws.send(JSON.stringify(message));
 }
+
+// Set callback for session updates
+setOnSessionUpdate(() => {
+  for (const [ws] of wsClients) {
+    sendSessionList(ws);
+  }
+});
 
 function handleWebSocketMessage(ws: ServerWebSocket<WSClient>, wsClient: WSClient, data: string): void {
   try {
@@ -185,6 +192,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
         const session = manager.spawn({
           command: body.command,
           args: body.args || [],
+          title: body.description,
           description: body.description,
           workdir: body.workdir,
           parentSessionId: "web-api",

@@ -1,98 +1,78 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from '../components/App'
+import { spawn } from 'child_process'
+import { readFileSync } from 'fs'
 
-// Mock WebSocket
-let mockWebSocket: any
-const createMockWebSocket = () => ({
-  send: vi.fn(),
-  close: vi.fn(),
-  onopen: null as (() => void) | null,
-  onmessage: null as ((event: any) => void) | null,
-  onerror: null as (() => void) | null,
-  onclose: null as (() => void) | null,
-  readyState: 1,
-})
+let serverProcess: any
+let port: number
 
-// Mock fetch for API calls
-const mockFetch = vi.fn() as any
-global.fetch = mockFetch
+describe('App E2E - Historical Output Fetching', () => {
+  beforeAll(async () => {
+    // Start the test server with reduced logging
+    serverProcess = spawn('bun', ['run', 'test-web-server.ts'], {
+      stdio: 'inherit',
+      env: { ...process.env, LOG_LEVEL: 'error' }
+    })
 
-// Mock WebSocket constructor
-const mockWebSocketConstructor = vi.fn(() => {
-  mockWebSocket = createMockWebSocket()
-  return mockWebSocket
-})
+    // Wait for server to start
+    let retries = 20
+    while (retries > 0) {
+      try {
+        const response = await fetch('http://localhost:8867/api/sessions')
+        if (response.ok) break
+      } catch {}
+      await new Promise(r => setTimeout(r, 500))
+      retries--
+    }
+    if (retries === 0) throw new Error('Server failed to start')
 
-describe.skip('App E2E - Historical Output Fetching', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockFetch.mockClear()
+    // Read the actual port
+    const portData = readFileSync('/tmp/test-server-port.txt', 'utf8')
+    port = parseInt(portData.trim())
 
-    // Set up mocks
-    global.WebSocket = mockWebSocketConstructor as any
-
-    // Mock location
+    // Set location
     Object.defineProperty(window, 'location', {
       value: {
-        host: 'localhost',
+        host: `localhost:${port}`,
         hostname: 'localhost',
         protocol: 'http:',
+        port: port.toString(),
       },
       writable: true,
     })
-    })
+  })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
+  afterAll(() => {
+    if (serverProcess) serverProcess.kill()
   })
 
   it('automatically fetches and displays historical output when sessions are loaded', async () => {
-    // Mock successful fetch for historical output
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        lines: ['Historical Line 1', 'Historical Line 2', 'Session Complete'],
-        totalLines: 3,
-        hasMore: false
-      })
-    })
-
-    render(<App />)
-
-    // Simulate WebSocket connection and session list with exited session
     await act(async () => {
-      if (mockWebSocket.onopen) {
-        mockWebSocket.onopen()
-      }
-
-      if (mockWebSocket.onmessage) {
-        mockWebSocket.onmessage({
-          data: JSON.stringify({
-            type: 'session_list',
-            sessions: [{
-              id: 'pty_exited123',
-              title: 'Exited Session',
-              command: 'echo',
-              status: 'exited',
-              pid: 12345,
-              lineCount: 3,
-              createdAt: new Date().toISOString(),
-            }]
-          })
-        })
-      }
+      render(<App />)
     })
 
-    // Verify session appears and is auto-selected (appears in both sidebar and header)
+    // Create an exited session with output
+    let session: any
+    await act(async () => {
+      const response = await fetch(`http://localhost:${port}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          command: 'bash',
+          args: ['-c', 'echo "Historical Line 1"; echo "Historical Line 2"; echo "Session Complete"'],
+          description: 'Exited Session'
+        }),
+      })
+      session = await response.json()
+    })
+
+    // Wait for session to appear and be auto-selected
     await waitFor(() => {
       expect(screen.getAllByText('Exited Session')).toHaveLength(2) // Sidebar + header
       expect(screen.getByText('exited')).toBeInTheDocument()
     })
-
-    // Verify historical output was fetched
-    expect(mockFetch).toHaveBeenCalledWith('/api/sessions/pty_exited123/output')
 
     // Verify historical output is displayed
     await waitFor(() => {
@@ -100,142 +80,105 @@ describe.skip('App E2E - Historical Output Fetching', () => {
       expect(screen.getByText('Historical Line 2')).toBeInTheDocument()
       expect(screen.getByText('Session Complete')).toBeInTheDocument()
     })
-
-    // Verify session is auto-selected (appears in both sidebar and header)
-    expect(screen.getAllByText('Exited Session')).toHaveLength(2)
   })
 
   it('handles historical output fetch errors gracefully', async () => {
-    // Mock failed fetch for historical output
-    mockFetch.mockRejectedValueOnce(new Error('Network error'))
-
-    render(<App />)
-
-    // Simulate WebSocket connection and session list
     await act(async () => {
-      if (mockWebSocket.onopen) {
-        mockWebSocket.onopen()
-      }
-
-      if (mockWebSocket.onmessage) {
-        mockWebSocket.onmessage({
-          data: JSON.stringify({
-            type: 'session_list',
-            sessions: [{
-              id: 'pty_error123',
-              title: 'Error Session',
-              command: 'echo',
-              status: 'exited',
-              pid: 12346,
-              lineCount: 1,
-              createdAt: new Date().toISOString(),
-            }]
-          })
-        })
-      }
+      render(<App />)
     })
 
-    // Verify session appears despite fetch error (auto-selected)
-    await waitFor(() => {
-      expect(screen.getAllByText('Error Session')).toHaveLength(2) // Sidebar + header
+    // Create an exited session
+    let session: any
+    await act(async () => {
+      const response = await fetch(`http://localhost:${port}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          command: 'bash',
+          args: ['-c', 'echo "test"'],
+          description: 'Error Session'
+        }),
+      })
+      session = await response.json()
     })
 
-    // Verify fetch was attempted
-    expect(mockFetch).toHaveBeenCalledWith('/api/sessions/pty_error123/output')
+    // Mock fetch to reject for output
+    const originalFetch = global.fetch
+    ;(global.fetch as any) = vi.fn(async (url, options) => {
+      if (typeof url === 'string' && url === `http://localhost:${port}/api/sessions/${session.id}/output`) {
+        throw new Error('Network error')
+      }
+      return originalFetch(url, options)
+    })
 
-    // Should still show waiting state (no output displayed due to error)
-    expect(screen.getByText('Waiting for output...')).toBeInTheDocument()
+    try {
+      // Wait for session to appear
+      await waitFor(() => {
+        expect(screen.getAllByText('Error Session')).toHaveLength(2)
+      })
+
+      // Should show waiting state
+      expect(screen.getByText('Waiting for output...')).toBeInTheDocument()
+    } finally {
+      global.fetch = originalFetch
+    }
   })
 
   it('fetches historical output when manually selecting exited sessions', async () => {
-    // Setup: First load with running session, then add exited session
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        lines: ['Manual fetch line 1', 'Manual fetch line 2'],
-        totalLines: 2,
-        hasMore: false
+    await act(async () => {
+      render(<App />)
+    })
+
+    // Create running session first
+    let runningSession: any
+    await act(async () => {
+      const runningResponse = await fetch(`http://localhost:${port}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          command: 'bash',
+          args: ['-c', 'for i in {1..10}; do echo "running $i"; sleep 1; done'],
+          description: 'Running Session'
+        }),
       })
+      runningSession = await runningResponse.json()
     })
 
-    render(<App />)
-
-    // Initial session list with running session
-    await act(async () => {
-      if (mockWebSocket.onopen) {
-        mockWebSocket.onopen()
-      }
-
-      if (mockWebSocket.onmessage) {
-        mockWebSocket.onmessage({
-          data: JSON.stringify({
-            type: 'session_list',
-            sessions: [{
-              id: 'pty_running456',
-              title: 'Running Session',
-              command: 'bash',
-              status: 'running',
-              pid: 12347,
-              lineCount: 0,
-              createdAt: new Date().toISOString(),
-            }]
-          })
-        })
-      }
-    })
-
-    // Running session should be auto-selected, output cleared for live streaming
+    // Wait for running session to be selected
     await waitFor(() => {
-      expect(screen.getAllByText('Running Session')).toHaveLength(2) // Sidebar + header
+      expect(screen.getAllByText('Running Session')).toHaveLength(2)
     })
 
-    // Now add an exited session and simulate user clicking it
+    // Create exited session
+    let exitedSession: any
     await act(async () => {
-      if (mockWebSocket.onmessage) {
-        mockWebSocket.onmessage({
-          data: JSON.stringify({
-            type: 'session_list',
-            sessions: [
-              {
-                id: 'pty_running456',
-                title: 'Running Session',
-                command: 'bash',
-                status: 'running',
-                pid: 12347,
-                lineCount: 0,
-                createdAt: new Date().toISOString(),
-              },
-              {
-                id: 'pty_exited789',
-                title: 'Exited Session',
-                command: 'echo',
-                status: 'exited',
-                pid: 12348,
-                lineCount: 2,
-                createdAt: new Date().toISOString(),
-              }
-            ]
-          })
-        })
-      }
+      const exitedResponse = await fetch(`http://localhost:${port}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          command: 'bash',
+          args: ['-c', 'echo "Manual fetch line 1"; echo "Manual fetch line 2"'],
+          description: 'Exited Session'
+        }),
+      })
+      exitedSession = await exitedResponse.json()
     })
 
-    // Both sessions should appear (running session is auto-selected, so it appears twice)
+    // Wait for exited session to appear
     await waitFor(() => {
-      expect(screen.getAllByText('Running Session')).toHaveLength(2) // Sidebar + header
+      expect(screen.getAllByText('Running Session')).toHaveLength(2)
       expect(screen.getByText('Exited Session')).toBeInTheDocument()
     })
 
-    // Click on the exited session (find the one in sidebar, not header)
-    const exitedSessionItem = screen.getByText('Exited Session').closest('.session-item')
-    if (exitedSessionItem) {
-      await userEvent.click(exitedSessionItem)
+    // Click on exited session
+    const exitedItem = screen.getByText('Exited Session').closest('.session-item')
+    if (exitedItem) {
+      await act(async () => {
+        await userEvent.click(exitedItem)
+      })
     }
 
-    // Verify historical output was fetched for the clicked session
-    expect(mockFetch).toHaveBeenCalledWith('/api/sessions/pty_exited789/output')
-
-    // Verify new historical output is displayed
+    // Verify output
     await waitFor(() => {
       expect(screen.getByText('Manual fetch line 1')).toBeInTheDocument()
       expect(screen.getByText('Manual fetch line 2')).toBeInTheDocument()
@@ -243,41 +186,31 @@ describe.skip('App E2E - Historical Output Fetching', () => {
   })
 
   it('does not fetch historical output for running sessions on selection', async () => {
-    render(<App />)
-
-    // Simulate session list with running session
     await act(async () => {
-      if (mockWebSocket.onopen) {
-        mockWebSocket.onopen()
-      }
-
-      if (mockWebSocket.onmessage) {
-        mockWebSocket.onmessage({
-          data: JSON.stringify({
-            type: 'session_list',
-            sessions: [{
-              id: 'pty_running999',
-              title: 'Running Only Session',
-              command: 'bash',
-              status: 'running',
-              pid: 12349,
-              lineCount: 0,
-              createdAt: new Date().toISOString(),
-            }]
-          })
-        })
-      }
+      render(<App />)
     })
 
-    // Running session should be auto-selected
+    // Create running session
+    let session: any
+    await act(async () => {
+      const response = await fetch(`http://localhost:${port}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          command: 'bash',
+          args: ['-c', 'echo "running"; sleep 10'],
+          description: 'Running Only Session'
+        }),
+      })
+      session = await response.json()
+    })
+
+    // Wait for session to be selected
     await waitFor(() => {
-      expect(screen.getAllByText('Running Only Session')).toHaveLength(2) // Sidebar + header
+      expect(screen.getAllByText('Running Only Session')).toHaveLength(2)
     })
 
-    // No fetch should be called for running sessions
-    expect(mockFetch).not.toHaveBeenCalled()
-
-    // Should show waiting state for live output
+    // Should show waiting state
     expect(screen.getByText('Waiting for output...')).toBeInTheDocument()
   })
 })

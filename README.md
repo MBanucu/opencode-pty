@@ -86,6 +86,46 @@ This will:
 - **Session Management**: Kill sessions directly from the UI
 - **Connection Status**: Visual indicator of WebSocket connection status
 
+### REST API
+
+The web server provides a REST API for session management:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/sessions` | List all PTY sessions |
+| `POST` | `/api/sessions` | Create a new PTY session |
+| `GET` | `/api/sessions/:id` | Get session details |
+| `GET` | `/api/sessions/:id/output` | Get session output buffer |
+| `DELETE` | `/api/sessions/:id` | Kill and cleanup a session |
+| `GET` | `/health` | Server health check with metrics |
+
+#### Session Creation
+
+```bash
+curl -X POST http://localhost:8766/api/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "bash",
+    "args": ["-c", "echo hello && sleep 10"],
+    "description": "Test session"
+  }'
+```
+
+#### WebSocket Streaming
+
+Connect to `/ws` for real-time updates:
+
+```javascript
+const ws = new WebSocket('ws://localhost:8766/ws')
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data)
+  if (data.type === 'data') {
+    console.log('New output:', data.data)
+  }
+}
+```
+
 ### Development
 
 For development with hot reloading:

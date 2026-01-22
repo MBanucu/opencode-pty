@@ -3,10 +3,13 @@ import ReactDOM from 'react-dom/client'
 import { App } from './components/App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { trackWebVitals, PerformanceMonitor } from './performance.ts'
+import { createLogger } from '../plugin/logger.ts'
 import './index.css'
 
+const log = createLogger('web-ui')
+
 if (import.meta.env.DEV) {
-  console.log('[Browser] Starting React application...')
+  log.debug('Starting React application')
 }
 
 // Initialize performance monitoring

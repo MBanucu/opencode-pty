@@ -1,50 +1,50 @@
-const DEFAULT_MAX_LINES = parseInt(process.env.PTY_MAX_BUFFER_LINES || "50000", 10);
+const DEFAULT_MAX_LINES = parseInt(process.env.PTY_MAX_BUFFER_LINES || '50000', 10)
 
 export interface SearchMatch {
-  lineNumber: number;
-  text: string;
+  lineNumber: number
+  text: string
 }
 
 export class RingBuffer {
-  private lines: string[] = [];
-  private maxLines: number;
+  private lines: string[] = []
+  private maxLines: number
 
   constructor(maxLines: number = DEFAULT_MAX_LINES) {
-    this.maxLines = maxLines;
+    this.maxLines = maxLines
   }
 
   append(data: string): void {
-    const newLines = data.split("\n");
+    const newLines = data.split('\n')
     for (const line of newLines) {
-      this.lines.push(line);
+      this.lines.push(line)
       if (this.lines.length > this.maxLines) {
-        this.lines.shift();
+        this.lines.shift()
       }
     }
   }
 
   read(offset: number = 0, limit?: number): string[] {
-    const start = Math.max(0, offset);
-    const end = limit !== undefined ? start + limit : this.lines.length;
-    return this.lines.slice(start, end);
+    const start = Math.max(0, offset)
+    const end = limit !== undefined ? start + limit : this.lines.length
+    return this.lines.slice(start, end)
   }
 
   search(pattern: RegExp): SearchMatch[] {
-    const matches: SearchMatch[] = [];
+    const matches: SearchMatch[] = []
     for (let i = 0; i < this.lines.length; i++) {
-      const line = this.lines[i];
+      const line = this.lines[i]
       if (line !== undefined && pattern.test(line)) {
-        matches.push({ lineNumber: i + 1, text: line });
+        matches.push({ lineNumber: i + 1, text: line })
       }
     }
-    return matches;
+    return matches
   }
 
   get length(): number {
-    return this.lines.length;
+    return this.lines.length
   }
 
   clear(): void {
-    this.lines = [];
+    this.lines = []
   }
 }

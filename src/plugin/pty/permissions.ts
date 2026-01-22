@@ -1,116 +1,115 @@
-import type { PluginClient } from "../types.ts";
-import { Wildcard } from "./wildcard.ts";
-import { createLogger } from "../logger.ts";
+import type { PluginClient } from '../types.ts'
+import { Wildcard } from './wildcard.ts'
+import { createLogger } from '../logger.ts'
 
-const log = createLogger("permissions");
+const log = createLogger('permissions')
 
-type PermissionAction = "allow" | "ask" | "deny";
-type BashPermissions = PermissionAction | Record<string, PermissionAction>;
+type PermissionAction = 'allow' | 'ask' | 'deny'
+type BashPermissions = PermissionAction | Record<string, PermissionAction>
 
 interface PermissionConfig {
-  bash?: BashPermissions;
-  external_directory?: PermissionAction;
+  bash?: BashPermissions
+  external_directory?: PermissionAction
 }
 
-let _client: PluginClient | null = null;
-let _directory: string | null = null;
+let _client: PluginClient | null = null
+let _directory: string | null = null
 
 export function initPermissions(client: PluginClient, directory: string): void {
-  _client = client;
-  _directory = directory;
+  _client = client
+  _directory = directory
 }
 
 async function getPermissionConfig(): Promise<PermissionConfig> {
   if (!_client) {
-    return {};
+    return {}
   }
   try {
-    const response = await _client.config.get();
+    const response = await _client.config.get()
     if (response.error || !response.data) {
-      return {};
+      return {}
     }
-    return (response.data as { permission?: PermissionConfig }).permission ?? {};
+    return (response.data as { permission?: PermissionConfig }).permission ?? {}
   } catch (e) {
-    log.warn("failed to get config", { error: String(e) });
-    return {};
+    log.warn('failed to get config', { error: String(e) })
+    return {}
   }
 }
 
-async function showToast(message: string, variant: "info" | "success" | "error" = "info"): Promise<void> {
-  if (!_client) return;
-  try {
-    await _client.tui.showToast({ body: { message, variant } });
-  } catch {
-  }
-}
-
-export async function checkCommandPermission(
-  command: string,
-  args: string[]
+async function showToast(
+  message: string,
+  variant: 'info' | 'success' | 'error' = 'info'
 ): Promise<void> {
-  const config = await getPermissionConfig();
-  const bashPerms = config.bash;
+  if (!_client) return
+  try {
+    await _client.tui.showToast({ body: { message, variant } })
+  } catch {}
+}
+
+export async function checkCommandPermission(command: string, args: string[]): Promise<void> {
+  const config = await getPermissionConfig()
+  const bashPerms = config.bash
 
   if (!bashPerms) {
-    return;
+    return
   }
 
-  if (typeof bashPerms === "string") {
-    if (bashPerms === "deny") {
-      throw new Error(
-        `PTY spawn denied: All bash commands are disabled by user configuration.`
-      );
+  if (typeof bashPerms === 'string') {
+    if (bashPerms === 'deny') {
+      throw new Error(`PTY spawn denied: All bash commands are disabled by user configuration.`)
     }
-    if (bashPerms === "ask") {
-      await showToast(`PTY: Command "${command}" requires permission (treated as denied)`, "error");
+    if (bashPerms === 'ask') {
+      await showToast(`PTY: Command "${command}" requires permission (treated as denied)`, 'error')
       throw new Error(
         `PTY spawn denied: Command "${command}" requires user permission which is not supported by this plugin. ` +
-        `Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
-      );
+          `Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
+      )
     }
-    return;
+    return
   }
 
-  const action = Wildcard.allStructured({ head: command, tail: args }, bashPerms);
+  const action = Wildcard.allStructured({ head: command, tail: args }, bashPerms)
 
-  if (action === "deny") {
+  if (action === 'deny') {
     throw new Error(
-      `PTY spawn denied: Command "${command} ${args.join(" ")}" is explicitly denied by user configuration.`
-    );
+      `PTY spawn denied: Command "${command} ${args.join(' ')}" is explicitly denied by user configuration.`
+    )
   }
 
-  if (action === "ask") {
-    await showToast(`PTY: Command "${command}" requires permission (treated as denied)`, "error");
+  if (action === 'ask') {
+    await showToast(`PTY: Command "${command}" requires permission (treated as denied)`, 'error')
     throw new Error(
-      `PTY spawn denied: Command "${command} ${args.join(" ")}" requires user permission which is not supported by this plugin. ` +
-      `Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
-    );
+      `PTY spawn denied: Command "${command} ${args.join(' ')}" requires user permission which is not supported by this plugin. ` +
+        `Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
+    )
   }
 }
 
 export async function checkWorkdirPermission(workdir: string): Promise<void> {
   if (!_directory) {
-    return;
+    return
   }
 
-  const normalizedWorkdir = workdir.replace(/\/$/, "");
-  const normalizedProject = _directory.replace(/\/$/, "");
+  const normalizedWorkdir = workdir.replace(/\/$/, '')
+  const normalizedProject = _directory.replace(/\/$/, '')
 
   if (normalizedWorkdir.startsWith(normalizedProject)) {
-    return;
+    return
   }
 
-  const config = await getPermissionConfig();
-  const extDirPerm = config.external_directory;
+  const config = await getPermissionConfig()
+  const extDirPerm = config.external_directory
 
-  if (extDirPerm === "deny") {
+  if (extDirPerm === 'deny') {
     throw new Error(
       `PTY spawn denied: Working directory "${workdir}" is outside project directory "${_directory}". ` +
-      `External directory access is denied by user configuration.`
-    );
+        `External directory access is denied by user configuration.`
+    )
   }
 
-  if (extDirPerm === "ask") {
-    log.info("external_directory permission is 'ask', treating as allow for PTY plugin", { workdir });
+  if (extDirPerm === 'ask') {
+    log.info("external_directory permission is 'ask', treating as allow for PTY plugin", {
+      workdir,
+    })
   }
 }

@@ -52,13 +52,13 @@ opencode
 
 ## Tools Provided
 
-| Tool | Description |
-|------|-------------|
+| Tool        | Description                                                                 |
+| ----------- | --------------------------------------------------------------------------- |
 | `pty_spawn` | Create a new PTY session (command, args, workdir, env, title, notifyOnExit) |
-| `pty_write` | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C) |
-| `pty_read` | Read output buffer with pagination and optional regex filtering |
-| `pty_list` | List all PTY sessions with status, PID, line count |
-| `pty_kill` | Terminate a PTY, optionally cleanup the buffer |
+| `pty_write` | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C)         |
+| `pty_read`  | Read output buffer with pagination and optional regex filtering             |
+| `pty_list`  | List all PTY sessions with status, PID, line count                          |
+| `pty_kill`  | Terminate a PTY, optionally cleanup the buffer                              |
 
 ## Web UI
 
@@ -73,6 +73,7 @@ bun run test-web-server.ts
 ```
 
 This will:
+
 - Start the web server on `http://localhost:8766`
 - Create a test PTY session to demonstrate functionality
 - Open the React web interface in your browser
@@ -163,8 +164,8 @@ This eliminates the need for polling—perfect for long-running processes like b
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
+| Variable               | Default | Description                                        |
+| ---------------------- | ------- | -------------------------------------------------- |
 | `PTY_MAX_BUFFER_LINES` | `50000` | Maximum lines to keep in output buffer per session |
 
 ### Permissions
@@ -188,7 +189,6 @@ This plugin respects OpenCode's [permission settings](https://opencode.ai/docs/p
 > **Limitations compared to built-in bash tool:**
 >
 > - **"ask" permissions are treated as "deny"**: Since plugins cannot trigger OpenCode's permission prompt UI, commands matching an "ask" pattern will be denied. A toast notification will inform you when this happens. Configure explicit "allow" or "deny" for commands you want to use with PTY.
->
 > - **"external_directory" with "ask" is treated as "allow"**: When the working directory is outside the project and `permission.external_directory` is set to "ask", this plugin allows it (with a log message). Set to "deny" explicitly if you want to block external directories.
 
 #### Example: Allow specific commands for PTY
@@ -227,6 +227,7 @@ spawn → running → [exited | killed]
 ```
 
 Sessions remain in the list after exit so the agent can:
+
 - Read final output
 - Check exit code
 - Compare logs between runs

@@ -1,104 +1,109 @@
-import { initManager, manager } from "./src/plugin/pty/manager.ts";
-import { initLogger } from "./src/plugin/logger.ts";
-import { startWebServer } from "./src/web/server.ts";
+import { initManager, manager } from './src/plugin/pty/manager.ts'
+import { initLogger } from './src/plugin/logger.ts'
+import { startWebServer } from './src/web/server.ts'
 
-const logLevels = { debug: 0, info: 1, warn: 2, error: 3 };
-const currentLevel = logLevels[process.env.LOG_LEVEL as keyof typeof logLevels] ?? logLevels.info;
+const logLevels = { debug: 0, info: 1, warn: 2, error: 3 }
+const currentLevel = logLevels[process.env.LOG_LEVEL as keyof typeof logLevels] ?? logLevels.info
 
 const fakeClient = {
   app: {
     log: async (opts: any) => {
-      const { level = 'info', message, extra } = opts.body || opts;
-      const levelNum = logLevels[level as keyof typeof logLevels] ?? logLevels.info;
+      const { level = 'info', message, extra } = opts.body || opts
+      const levelNum = logLevels[level as keyof typeof logLevels] ?? logLevels.info
       if (levelNum >= currentLevel) {
-        const extraStr = extra ? ` ${JSON.stringify(extra)}` : '';
-        console.log(`[${level}] ${message}${extraStr}`);
+        const extraStr = extra ? ` ${JSON.stringify(extra)}` : ''
+        console.log(`[${level}] ${message}${extraStr}`)
       }
     },
   },
-} as any;
-initLogger(fakeClient);
-initManager(fakeClient);
+} as any
+initLogger(fakeClient)
+initManager(fakeClient)
 
 // Find an available port
 function findAvailablePort(startPort: number = 8867): number {
   for (let port = startPort; port < startPort + 100; port++) {
     try {
       // Try to kill any process on this port
-      Bun.spawnSync(["sh", "-c", `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`]);
+      Bun.spawnSync(['sh', '-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`])
       // Try to create a server to check if port is free
       const testServer = Bun.serve({
         port,
-        fetch() { return new Response('test'); }
-      });
-      testServer.stop();
-      return port;
+        fetch() {
+          return new Response('test')
+        },
+      })
+      testServer.stop()
+      return port
     } catch (error) {
       // Port in use, try next
-      continue;
+      continue
     }
   }
-  throw new Error('No available port found');
+  throw new Error('No available port found')
 }
 
-const port = findAvailablePort();
-console.log(`Using port ${port} for tests`);
+const port = findAvailablePort()
+console.log(`Using port ${port} for tests`)
 
 // Clear any existing sessions from previous runs
-manager.clearAllSessions();
-if (process.env.NODE_ENV !== 'test') console.log("Cleared any existing sessions");
+manager.clearAllSessions()
+if (process.env.NODE_ENV !== 'test') console.log('Cleared any existing sessions')
 
-const url = startWebServer({ port });
-if (process.env.NODE_ENV !== 'test') console.log(`Web server started at ${url}`);
-if (process.env.NODE_ENV !== 'test') console.log(`Server PID: ${process.pid}`);
+const url = startWebServer({ port })
+if (process.env.NODE_ENV !== 'test') console.log(`Web server started at ${url}`)
+if (process.env.NODE_ENV !== 'test') console.log(`Server PID: ${process.pid}`)
 
 // Write port to file for tests to read
 if (process.env.NODE_ENV === 'test') {
-  await Bun.write('/tmp/test-server-port.txt', port.toString());
+  await Bun.write('/tmp/test-server-port.txt', port.toString())
 }
 
 // Health check for test mode
 if (process.env.NODE_ENV === 'test') {
-  let retries = 20; // 10 seconds
+  let retries = 20 // 10 seconds
   while (retries > 0) {
     try {
-      const response = await fetch(`http://localhost:${port}/api/sessions`);
+      const response = await fetch(`http://localhost:${port}/api/sessions`)
       if (response.ok) {
-        break;
+        break
       }
     } catch (error) {
       // Server not ready yet
     }
-    await new Promise(resolve => setTimeout(resolve, 500));
-    retries--;
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    retries--
   }
   if (retries === 0) {
-    console.error('Server failed to start properly after 10 seconds');
-    process.exit(1);
+    console.error('Server failed to start properly after 10 seconds')
+    process.exit(1)
   }
 }
 
 // Create test sessions for manual testing and e2e tests
 if (process.env.CI !== 'true' && process.env.NODE_ENV !== 'test') {
-  console.log("\nStarting a running test session for live streaming...");
+  console.log('\nStarting a running test session for live streaming...')
   const session = manager.spawn({
-    command: "bash",
-    args: ["-c", "echo 'Welcome to live streaming test'; echo 'Type commands and see real-time output'; for i in {1..100}; do echo \"$(date): Live update $i...\"; sleep 1; done"],
-    description: "Live streaming test session",
-    parentSessionId: "live-test",
-  });
+    command: 'bash',
+    args: [
+      '-c',
+      "echo 'Welcome to live streaming test'; echo 'Type commands and see real-time output'; for i in {1..100}; do echo \"$(date): Live update $i...\"; sleep 1; done",
+    ],
+    description: 'Live streaming test session',
+    parentSessionId: 'live-test',
+  })
 
-  console.log(`Session ID: ${session.id}`);
-  console.log(`Session title: ${session.title}`);
+  console.log(`Session ID: ${session.id}`)
+  console.log(`Session title: ${session.title}`)
 
-  console.log(`Visit ${url} to see the session`);
-  console.log("Server is running in background...");
-  console.log("💡 Click on the session to see live output streaming!");
+  console.log(`Visit ${url} to see the session`)
+  console.log('Server is running in background...')
+  console.log('💡 Click on the session to see live output streaming!')
 } else if (process.env.NODE_ENV !== 'test') {
-  console.log(`Server running in test mode at ${url} (no sessions created)`);
+  console.log(`Server running in test mode at ${url} (no sessions created)`)
 }
 
 // Keep the server running indefinitely
 setInterval(() => {
   // Keep-alive check - server will continue running
-}, 1000);
+}, 1000)

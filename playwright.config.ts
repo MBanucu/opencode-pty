@@ -1,5 +1,5 @@
-import { defineConfig, devices } from '@playwright/test';
-import { readFileSync } from 'fs';
+import { defineConfig, devices } from '@playwright/test'
+import { readFileSync } from 'fs'
 
 /**
  * @see https://playwright.dev/docs/test-configuration
@@ -8,14 +8,14 @@ import { readFileSync } from 'fs';
 // Read the actual port from the test server
 function getTestServerPort(): number {
   try {
-    const portData = readFileSync('/tmp/test-server-port.txt', 'utf8').trim();
-    return parseInt(portData, 10);
+    const portData = readFileSync('/tmp/test-server-port.txt', 'utf8').trim()
+    return parseInt(portData, 10)
   } catch {
-    return 8867; // fallback
+    return 8867 // fallback
   }
 }
 
-const testPort = getTestServerPort();
+const testPort = getTestServerPort()
 
 export default defineConfig({
   testDir: './tests',
@@ -52,4 +52,4 @@ export default defineConfig({
     url: `http://localhost:${testPort}`,
     reuseExistingServer: true, // Reuse existing server if running
   },
-});
+})

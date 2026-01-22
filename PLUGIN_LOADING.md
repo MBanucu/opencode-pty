@@ -77,17 +77,18 @@ Note: No `plugin` field needed for local plugins.
 
 ## Key Differences
 
-| Aspect | NPM Plugins | Local Plugins |
-|--------|-------------|---------------|
-| Config | `"plugin": ["name"]` | None required |
-| Location | Auto-downloaded | `.opencode/plugins/` |
-| Dependencies | Auto-managed | Manual via package.json |
-| Updates | Via npm versions | Manual file updates |
-| Development | Publish to npm first | Direct file editing |
+| Aspect       | NPM Plugins          | Local Plugins           |
+| ------------ | -------------------- | ----------------------- |
+| Config       | `"plugin": ["name"]` | None required           |
+| Location     | Auto-downloaded      | `.opencode/plugins/`    |
+| Dependencies | Auto-managed         | Manual via package.json |
+| Updates      | Via npm versions     | Manual file updates     |
+| Development  | Publish to npm first | Direct file editing     |
 
 ## Why This Approach
 
 The PTY plugin uses local loading because:
+
 - Enables rapid development iteration
 - Avoids npm publishing during development
 - Allows for custom modifications

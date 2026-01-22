@@ -1,10 +1,12 @@
 // Performance monitoring utilities
 import { createLogger } from '../plugin/logger.ts'
+import { PERFORMANCE_MEASURE_LIMIT } from '../shared/constants.ts'
 
 const log = createLogger('performance')
 export class PerformanceMonitor {
   private static marks: Map<string, number> = new Map()
   private static measures: Array<{ name: string; duration: number; timestamp: number }> = []
+  private static readonly MAX_MEASURES = PERFORMANCE_MEASURE_LIMIT
 
   static startMark(name: string): void {
     this.marks.set(name, performance.now())
@@ -21,9 +23,9 @@ export class PerformanceMonitor {
       timestamp: Date.now()
     })
 
-    // Keep only last 100 measures
-    if (this.measures.length > 100) {
-      this.measures = this.measures.slice(-100)
+    // Keep only last N measures
+    if (this.measures.length > this.MAX_MEASURES) {
+      this.measures = this.measures.slice(-this.MAX_MEASURES)
     }
 
     this.marks.delete(name)

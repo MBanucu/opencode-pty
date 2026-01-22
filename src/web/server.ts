@@ -1,7 +1,6 @@
 import type { Server, ServerWebSocket } from 'bun'
 import { manager, onOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import { createLogger } from '../plugin/logger.ts'
-import { getLogger } from '../plugin/logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
 import { join, resolve } from 'path'
 import {
@@ -11,7 +10,6 @@ import {
 } from './constants.ts'
 
 const log = createLogger('web-server')
-const serverLogger = getLogger({ component: 'web-server' })
 
 const defaultConfig: ServerConfig = {
   port: DEFAULT_SERVER_PORT,
@@ -162,10 +160,10 @@ const wsHandler = {
 export function startWebServer(config: Partial<ServerConfig> = {}): string {
   const finalConfig = { ...defaultConfig, ...config }
 
-  serverLogger.info('Starting web server', { port: finalConfig.port, hostname: finalConfig.hostname })
+  log.info('Starting web server', { port: finalConfig.port, hostname: finalConfig.hostname })
 
   if (server) {
-    serverLogger.warn('web server already running')
+    log.warn('web server already running')
     return `http://${server.hostname}:${server.port}`
   }
 

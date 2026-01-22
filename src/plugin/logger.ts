@@ -1,4 +1,6 @@
 import pino from 'pino'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import type { PluginClient } from './types.ts'
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -8,6 +10,16 @@ interface Logger {
   info(message: string, extra?: Record<string, unknown>): void
   warn(message: string, extra?: Record<string, unknown>): void
   error(message: string, extra?: Record<string, unknown>): void
+}
+
+// Get package version from package.json
+function getPackageVersion(): string {
+  try {
+    const packageJson = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'))
+    return packageJson.version || '1.0.0'
+  } catch {
+    return '1.0.0'
+  }
 }
 
 let _client: PluginClient | null = null
@@ -29,7 +41,7 @@ function createPinoLogger() {
     base: {
       service: 'opencode-pty',
       env: process.env.NODE_ENV || 'development',
-      version: '1.0.0', // TODO: Read from package.json
+      version: getPackageVersion(),
     },
 
     // Redaction for any sensitive data (expand as needed)

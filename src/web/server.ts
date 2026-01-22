@@ -209,12 +209,33 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
           console.log(`Asset not found ${filePath}`)
           log.error('Asset not found', { filePath })
         }
-      }
+       }
 
-      if (url.pathname === '/api/sessions' && req.method === 'GET') {
-        const sessions = manager.list()
-        return Response.json(sessions)
-      }
+       // Health check endpoint
+       if (url.pathname === '/health' && req.method === 'GET') {
+         const sessions = manager.list()
+         const activeSessions = sessions.filter(s => s.status === 'running').length
+         const totalSessions = sessions.length
+         const wsConnections = wsClients.size
+
+         return Response.json({
+           status: 'healthy',
+           timestamp: new Date().toISOString(),
+           sessions: {
+             total: totalSessions,
+             active: activeSessions,
+           },
+           websocket: {
+             connections: wsConnections,
+           },
+           uptime: process.uptime(),
+         })
+       }
+
+       if (url.pathname === '/api/sessions' && req.method === 'GET') {
+         const sessions = manager.list()
+         return Response.json(sessions)
+       }
 
       if (url.pathname === '/api/sessions' && req.method === 'POST') {
         const body = (await req.json()) as {

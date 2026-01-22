@@ -5,6 +5,25 @@ import DESCRIPTION from './read.txt'
 const DEFAULT_LIMIT = 500
 const MAX_LINE_LENGTH = 2000
 
+/**
+ * Validates regex pattern to prevent ReDoS attacks and dangerous patterns
+ */
+function validateRegex(pattern: string): boolean {
+  try {
+    new RegExp(pattern)
+    // Check for potentially dangerous patterns that can cause exponential backtracking
+    // This is a basic check - more sophisticated validation could be added
+    const dangerousPatterns = [
+      /\(\?\:.*\)\*.*\(\?\:.*\)\*/, // nested optional groups with repetition
+      /.*\(\.\*\?\)\{2,\}.*/, // overlapping non-greedy quantifiers
+      /.*\(.*\|.*\)\{3,\}.*/, // complex alternation with repetition
+    ]
+    return !dangerousPatterns.some(dangerous => dangerous.test(pattern))
+  } catch {
+    return false
+  }
+}
+
 export const ptyRead = tool({
   description: DESCRIPTION,
   args: {
@@ -42,6 +61,11 @@ export const ptyRead = tool({
     const limit = args.limit ?? DEFAULT_LIMIT
 
     if (args.pattern) {
+      // Validate regex pattern for security
+      if (!validateRegex(args.pattern)) {
+        throw new Error(`Potentially dangerous regex pattern rejected: '${args.pattern}'. Please use a safer pattern.`)
+      }
+
       let regex: RegExp
       try {
         regex = new RegExp(args.pattern, args.ignoreCase ? 'i' : '')

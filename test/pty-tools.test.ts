@@ -186,7 +186,7 @@ describe('PTY Tools', () => {
         ask: mock(async () => {}),
       }
 
-      await expect(ptyRead.execute(args, ctx)).rejects.toThrow('Invalid regex pattern')
+      await expect(ptyRead.execute(args, ctx)).rejects.toThrow('Potentially dangerous regex pattern rejected')
     })
   })
 

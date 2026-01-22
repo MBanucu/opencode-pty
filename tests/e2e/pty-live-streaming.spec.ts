@@ -3,14 +3,6 @@ import { createLogger } from '../../src/plugin/logger.ts'
 
 const log = createLogger('e2e-live-streaming')
 
-test.use({
-  browserName: 'chromium',
-  launchOptions: {
-    executablePath: '/run/current-system/sw/bin/google-chrome-stable',
-    headless: false,
-  },
-})
-
 test.describe('PTY Live Streaming', () => {
   test('should display buffered output from running PTY session immediately', async ({ page }) => {
     // Navigate to the web UI (test server should be running)

@@ -4,7 +4,9 @@ import { App } from './components/App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import './index.css'
 
-console.log('[Browser] Starting React application...')
+if (import.meta.env.DEV) {
+  console.log('[Browser] Starting React application...')
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

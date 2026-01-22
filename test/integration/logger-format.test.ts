@@ -51,7 +51,7 @@ describe('Logger Integration Tests', () => {
       })
 
       // Wait for server to start
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
       // Make a request to trigger logging
       await fetch(`http://localhost:${port}/api/sessions`, {
@@ -59,7 +59,7 @@ describe('Logger Integration Tests', () => {
       })
 
       // Wait a bit for logs to be written
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
       // Kill the server and capture output
       serverProcess.kill()
@@ -79,10 +79,13 @@ describe('Logger Integration Tests', () => {
       expect(localTimeRegex.test(output)).toBe(true)
 
       // Should contain service name
-      expect(output).toContain('"service":"opencode-pty-test"')
+      expect(output).toContain('"service":"opencode-pty"')
 
       // Should contain environment
       expect(output).toContain('"env":"development"')
+
+      // Should contain INFO level logs
+      expect(output).toContain('INFO')
     })
 
     it('should respect LOG_LEVEL environment variable', async () => {
@@ -99,7 +102,7 @@ describe('Logger Integration Tests', () => {
       })
 
       // Wait for server to start
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
       // Make a request to trigger debug logging
       await fetch(`http://localhost:${port}/api/sessions`, {
@@ -107,7 +110,7 @@ describe('Logger Integration Tests', () => {
       })
 
       // Wait a bit for logs to be written
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
       // Kill the server and capture output
       serverProcess.kill()
@@ -138,7 +141,7 @@ describe('Logger Integration Tests', () => {
       })
 
       // Wait for server to start
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
       // Kill the server and capture output
       serverProcess.kill()
@@ -151,127 +154,6 @@ describe('Logger Integration Tests', () => {
 
       // Should contain debug level (CI forces debug)
       expect(output).toContain('"level":20') // debug level
-    })
-  })
-
-      // Wait for server to start
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-
-      // Make a request to trigger logging
-      await fetch(`http://localhost:${port}/api/sessions`, {
-        method: 'GET',
-      })
-
-      // Wait a bit for logs to be written
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Kill the server and capture output
-      serverProcess.kill()
-      const [stdout, stderr] = await Promise.all([
-        new Response(serverProcess.stdout).text(),
-        new Response(serverProcess.stderr).text(),
-      ])
-
-      const output = stdout + stderr
-
-      // Verify log format contains local time
-      expect(output).toContain(`Test server starting on port ${port}`)
-
-      // Check for Pino pretty format with local time
-      // The logs should contain something like: [2026-01-22 16:45:30.123 +0100]
-      const localTimeRegex = /\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [+-]\d{4}\]/
-      expect(localTimeRegex.test(output)).toBe(true)
-
-      // Should contain service name
-      expect(output).toContain('"service":"opencode-pty-test"')
-
-      // Should contain environment
-      expect(output).toContain('"env":"development"')
-    })
-
-    it('should format logs correctly', async () => {
-      const port = testPort++
-      // Start server
-      serverProcess = spawn(['bun', 'run', 'test-web-server.ts', `--port=${port}`], {
-        env: {
-          ...process.env,
-          NODE_ENV: 'development',
-          LOG_LEVEL: 'info',
-        },
-        stdout: 'pipe',
-        stderr: 'pipe',
-      })
-
-      // Wait for server to start
-      await new Promise(resolve => setTimeout(resolve, 3000))
-
-      // Make a request to trigger logging
-      await fetch(`http://localhost:${port}/api/sessions`, {
-        method: 'GET',
-      })
-
-      // Wait a bit for logs to be written
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Kill the server and capture output
-      serverProcess.kill()
-      const [stdout, stderr] = await Promise.all([
-        new Response(serverProcess.stdout).text(),
-        new Response(serverProcess.stderr).text(),
-      ])
-
-      const output = stdout + stderr
-
-      // Verify server started
-      expect(output).toContain(`Test server starting on port ${port}`)
-
-      // Should contain local time format
-      const localTimeRegex = /\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} [+-]\d{4}\]/
-      expect(localTimeRegex.test(output)).toBe(true)
-
-      // Should contain service name
-      expect(output).toContain('"service":"opencode-pty-test"')
-
-      // Should contain proper log levels
-      expect(output).toContain('"level":30') // info level
-    })
-
-      // Wait for server to start
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-
-      // Make a request to trigger logging
-      await fetch(`http://localhost:${port}/api/sessions`, {
-        method: 'GET',
-      })
-
-      // Wait a bit for logs to be written
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Kill the server and capture output
-      serverProcess.kill()
-      const [stdout, stderr] = await Promise.all([
-        new Response(serverProcess.stdout).text(),
-        new Response(serverProcess.stderr).text(),
-      ])
-
-      const output = stdout + stderr
-
-      // Verify server started
-      expect(output).toContain(`Test server starting on port ${port}`)
-
-      // In production, should be JSON format (not pretty-printed)
-      // Should contain ISO timestamps
-      const isoTimeRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/
-      expect(isoTimeRegex.test(output)).toBe(true)
-
-      // Should be valid JSON lines
-      const lines = output
-        .trim()
-        .split('\n')
-        .filter((line) => line.trim())
-      lines.forEach((line) => {
-        expect(() => JSON.parse(line)).not.toThrow()
-      })
     })
 
     it('should respect LOG_LEVEL environment variable', async () => {

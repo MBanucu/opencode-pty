@@ -47,11 +47,13 @@ test.describe('App Component', () => {
     })
 
     // Clear all sessions first to ensure empty state
+    const clearResponse = await page.request.post('/api/sessions/clear')
+    expect(clearResponse.status()).toBe(200)
+
     await page.goto('/')
-    const clearResponse = await page.request.delete('/api/sessions')
-    if (clearResponse && clearResponse.status() === 200) {
-      await page.reload()
-    }
+
+    // Wait for WebSocket to connect
+    await expect(page.getByText('● Connected')).toBeVisible()
 
     // Now check that "No active sessions" appears in the sidebar
     await expect(page.getByText('No active sessions')).toBeVisible()
@@ -63,8 +65,31 @@ test.describe('App Component', () => {
       log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
     })
 
+    // Clear any existing sessions
+    const clearResponse = await page.request.post('/api/sessions/clear')
+    expect(clearResponse.status()).toBe(200)
+
     await page.goto('/')
-    // With existing sessions but no selection, it should show the select message
+
+    // Set skip autoselect to prevent automatic selection
+    await page.evaluate(() => {
+      localStorage.setItem('skip-autoselect', 'true')
+    })
+
+    // Create a session
+    const createResponse = await page.request.post('/api/sessions', {
+      data: {
+        command: 'echo',
+        args: ['test'],
+        description: 'Test session',
+      },
+    })
+    expect(createResponse.status()).toBe(200)
+
+    // Reload to get the session list
+    await page.reload()
+
+    // Now there should be a session in the sidebar but none selected
     const emptyState = page.locator('.empty-state').first()
     await expect(emptyState).toBeVisible()
     await expect(emptyState).toHaveText('Select a session from the sidebar to view its output')

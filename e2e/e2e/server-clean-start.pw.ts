@@ -6,10 +6,10 @@ const log = createTestLogger('e2e-server-clean')
 test.describe('Server Clean Start', () => {
   test('should start with empty session list via API', async ({ request }) => {
     // Clear any existing sessions first
-    await request.post('http://localhost:8867/api/sessions/clear')
+    await request.post('/api/sessions/clear')
 
     // Test the API directly to check sessions
-    const response = await request.get('http://localhost:8867/api/sessions')
+    const response = await request.get('/api/sessions')
 
     expect(response.ok()).toBe(true)
     const sessions = await response.json()

@@ -4,7 +4,7 @@ import { ptyRead } from '../src/plugin/pty/tools/read.ts'
 import { ptyList } from '../src/plugin/pty/tools/list.ts'
 import { RingBuffer } from '../src/plugin/pty/buffer.ts'
 import { manager } from '../src/plugin/pty/manager.ts'
-import { checkCommandPermission, checkWorkdirPermission } from '../src/plugin/pty/permissions.ts'
+
 
 describe('PTY Tools', () => {
   describe('ptySpawn', () => {

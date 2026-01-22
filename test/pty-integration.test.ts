@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer } from '../src/web/server.ts'
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
 import { initLogger } from '../src/plugin/logger.ts'
@@ -6,7 +6,7 @@ import { initLogger } from '../src/plugin/logger.ts'
 describe('PTY Manager Integration', () => {
   const fakeClient = {
     app: {
-      log: async (opts: any) => {
+      log: async (_opts: any) => {
         // Mock logger
       },
     },
@@ -114,12 +114,6 @@ describe('PTY Manager Integration', () => {
       ws2.close()
 
       // Each should only receive messages for their subscribed session
-      const dataMessages1 = messages1.filter(
-        (msg) => msg.type === 'data' && msg.sessionId === session1.id
-      )
-      const dataMessages2 = messages2.filter(
-        (msg) => msg.type === 'data' && msg.sessionId === session2.id
-      )
 
       // ws1 should not have session2 messages and vice versa
       const session2MessagesInWs1 = messages1.filter(

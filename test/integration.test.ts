@@ -6,7 +6,7 @@ import { initLogger } from '../src/plugin/logger.ts'
 describe('Web Server Integration', () => {
   const fakeClient = {
     app: {
-      log: async (opts: any) => {
+      log: async (_opts: any) => {
         // Mock logger
       },
     },
@@ -155,7 +155,7 @@ describe('Web Server Integration', () => {
       startWebServer({ port: 8784 })
 
       // Create session and WebSocket
-      const session = manager.spawn({
+      manager.spawn({
         command: 'echo',
         args: ['cleanup test'],
         description: 'Cleanup test',

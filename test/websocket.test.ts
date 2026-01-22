@@ -6,7 +6,7 @@ import { initLogger } from '../src/plugin/logger.ts'
 describe('WebSocket Functionality', () => {
   const fakeClient = {
     app: {
-      log: async (opts: any) => {
+      log: async (_opts: any) => {
         // Mock logger
       },
     },
@@ -74,11 +74,10 @@ describe('WebSocket Functionality', () => {
 
   describe('WebSocket Message Handling', () => {
     let ws: WebSocket
-    let serverUrl: string
 
     beforeEach(async () => {
       manager.cleanupAll() // Clean up any leftover sessions
-      serverUrl = startWebServer({ port: 8774 })
+      startWebServer({ port: 8774 })
       ws = new WebSocket('ws://localhost:8774')
 
       await new Promise((resolve, reject) => {

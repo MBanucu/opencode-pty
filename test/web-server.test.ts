@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server.ts'
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
 import { initLogger } from '../src/plugin/logger.ts'
@@ -6,7 +6,7 @@ import { initLogger } from '../src/plugin/logger.ts'
 describe('Web Server', () => {
   const fakeClient = {
     app: {
-      log: async (opts: any) => {
+      log: async (_opts: any) => {
         // Mock logger - do nothing
       },
     },

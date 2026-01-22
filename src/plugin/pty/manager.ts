@@ -2,13 +2,13 @@ import { spawn, type IPty } from "bun-pty";
 import { createLogger } from "../logger.ts";
 import { RingBuffer } from "./buffer.ts";
 import type { PTYSession, PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from "./types.ts";
+import type { OpencodeClient } from "@opencode-ai/sdk";
 
 let onSessionUpdate: (() => void) | undefined;
 
 export function setOnSessionUpdate(callback: () => void) {
   onSessionUpdate = callback;
 }
-import { createLogger } from "../logger.ts";
 
 const log = createLogger("manager");
 

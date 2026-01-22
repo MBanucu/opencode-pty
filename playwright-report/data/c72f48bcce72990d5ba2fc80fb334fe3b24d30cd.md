@@ -1,0 +1,86 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "PTY Sessions" [level=1] [ref=e6]
+      - generic [ref=e7]: ● Connected
+      - generic [ref=e9] [cursor=pointer]:
+        - generic [ref=e10]: Live streaming test session
+        - generic [ref=e11]:
+          - generic [ref=e12]: bash
+          - generic [ref=e13]: running
+        - generic [ref=e14]:
+          - generic [ref=e15]: "PID: 805950"
+          - generic [ref=e16]: 118 lines
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]: Live streaming test session
+        - button "Kill Session" [ref=e20] [cursor=pointer]
+      - generic [ref=e21]:
+        - generic [ref=e22]: Welcome to live streaming test
+        - generic [ref=e23]: Type commands and see real-time output
+        - generic [ref=e24]: "Do 22. Jan 02:31:33 CET 2026: Live update..."
+        - generic [ref=e25]: "Do 22. Jan 02:31:34 CET 2026: Live update..."
+        - generic [ref=e26]: "Do 22. Jan 02:31:34 CET 2026: Live update..."
+        - generic [ref=e27]: "Do 22. Jan 02:31:34 CET 2026: Live update..."
+        - generic [ref=e28]: "Do 22. Jan 02:31:34 CET 2026: Live update..."
+        - generic [ref=e29]: "Do 22. Jan 02:31:34 CET 2026: Live update..."
+        - generic [ref=e30]: "Do 22. Jan 02:31:34 CET 2026: Live update..."
+        - generic [ref=e31]: "Do 22. Jan 02:31:34 CET 2026: Live update..."
+        - generic [ref=e32]: "Do 22. Jan 02:31:34 CET 2026: Live update..."
+        - generic [ref=e33]: "Do 22. Jan 02:31:35 CET 2026: Live update..."
+        - generic [ref=e34]: "Do 22. Jan 02:31:35 CET 2026: Live update..."
+        - generic [ref=e35]: "Do 22. Jan 02:31:35 CET 2026: Live update..."
+        - generic [ref=e36]: "Do 22. Jan 02:31:35 CET 2026: Live update..."
+        - generic [ref=e37]: "Do 22. Jan 02:31:35 CET 2026: Live update..."
+        - generic [ref=e38]: "Do 22. Jan 02:31:35 CET 2026: Live update..."
+        - generic [ref=e39]: "Do 22. Jan 02:31:35 CET 2026: Live update..."
+        - generic [ref=e40]: "Do 22. Jan 02:31:35 CET 2026: Live update..."
+        - generic [ref=e41]: "Do 22. Jan 02:31:36 CET 2026: Live update..."
+        - generic [ref=e42]: "Do 22. Jan 02:31:36 CET 2026: Live update..."
+        - generic [ref=e43]: "Do 22. Jan 02:31:36 CET 2026: Live update..."
+        - generic [ref=e44]: "Do 22. Jan 02:31:36 CET 2026: Live update..."
+        - generic [ref=e45]: "Do 22. Jan 02:31:36 CET 2026: Live update..."
+        - generic [ref=e46]: "Do 22. Jan 02:31:36 CET 2026: Live update..."
+        - generic [ref=e47]: "Do 22. Jan 02:31:36 CET 2026: Live update..."
+        - generic [ref=e48]: "Do 22. Jan 02:31:36 CET 2026: Live update..."
+        - generic [ref=e49]: "Do 22. Jan 02:31:37 CET 2026: Live update..."
+        - generic [ref=e50]: "Do 22. Jan 02:31:37 CET 2026: Live update..."
+        - generic [ref=e51]: "Do 22. Jan 02:31:37 CET 2026: Live update..."
+        - generic [ref=e52]: "Do 22. Jan 02:31:37 CET 2026: Live update..."
+        - generic [ref=e53]: "Do 22. Jan 02:31:37 CET 2026: Live update..."
+        - generic [ref=e54]: "Do 22. Jan 02:31:37 CET 2026: Live update..."
+        - generic [ref=e55]: "Do 22. Jan 02:31:37 CET 2026: Live update..."
+        - generic [ref=e56]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e57]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e58]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e59]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e60]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e61]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e62]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e63]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e64]: "Do 22. Jan 02:31:38 CET 2026: Live update..."
+        - generic [ref=e65]: "Do 22. Jan 02:31:39 CET 2026: Live update..."
+        - generic [ref=e66]: "Do 22. Jan 02:31:39 CET 2026: Live update..."
+        - generic [ref=e67]: "Do 22. Jan 02:31:39 CET 2026: Live update..."
+        - generic [ref=e68]: "Do 22. Jan 02:31:39 CET 2026: Live update..."
+        - generic [ref=e69]: "Do 22. Jan 02:31:39 CET 2026: Live update..."
+        - generic [ref=e70]: "Do 22. Jan 02:31:39 CET 2026: Live update..."
+        - generic [ref=e71]: "Do 22. Jan 02:31:39 CET 2026: Live update..."
+        - generic [ref=e72]: "Do 22. Jan 02:31:41 CET 2026: Live update..."
+        - generic [ref=e73]: "Do 22. Jan 02:31:41 CET 2026: Live update..."
+        - generic [ref=e74]: "Do 22. Jan 02:31:41 CET 2026: Live update..."
+        - generic [ref=e75]: "Do 22. Jan 02:31:41 CET 2026: Live update..."
+        - generic [ref=e76]: "Do 22. Jan 02:31:42 CET 2026: Live update..."
+        - generic [ref=e77]: "Do 22. Jan 02:31:42 CET 2026: Live update..."
+        - generic [ref=e78]: "Do 22. Jan 02:31:42 CET 2026: Live update..."
+        - generic [ref=e79]: "Debug: 114 lines, active: pty_3627cdf7, WS messages: 10"
+      - generic [ref=e80]:
+        - textbox "Type input..." [ref=e81]
+        - button "Send" [disabled] [ref=e82] [cursor=pointer]
+  - generic [ref=e83]: "LOADED 100 lines: pty_3627cdf7"
+  - generic [ref=e84]: "CLICKED: pty_3627cdf7 (running)"
+  - generic [ref=e85]: "CLICKED: pty_3627cdf7 (running)"
+```

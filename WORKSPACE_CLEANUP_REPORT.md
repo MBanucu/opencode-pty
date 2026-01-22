@@ -140,7 +140,7 @@ tests/
 ### ✅ Phase 1: Critical Fixes (COMPLETED)
 1. ✅ Fix TypeScript errors in manager.ts
 2. ✅ Remove committed test artifacts (COMPLETED)
-3. ⏳ Update core dependencies (OpenCode packages)
+3. ✅ Update core dependencies (OpenCode packages)
 
 ### ✅ Phase 2: Test Infrastructure (COMPLETED)
 1. ✅ Choose and implement unified test framework (Playwright)
@@ -177,7 +177,7 @@ tests/
 - ✅ 97% test pass rate (56/58 tests pass, 2 minor e2e issues)
 - ✅ CI pipeline uses Bun runtime
 - ✅ No committed build artifacts
-- ⏳ Updated dependencies without breaking changes
+- ✅ Core dependencies updated to latest versions
 
 ## Next Steps
 1. ✅ **Immediate**: Fix TypeScript errors to enable builds (COMPLETED)

@@ -74,6 +74,11 @@ export function TerminalRenderer({
     if (!term || disabled || !onSendInput) return
 
     const onDataHandler = (data: string) => {
+      console.log('onData fired → sent to backend:', JSON.stringify(data))
+      // Temporary local echo for space to test
+      if (data === ' ') {
+        term.write(' ')
+      }
       onSendInput(data) // Send every keystroke chunk
     }
 

@@ -106,6 +106,73 @@ export function App() {
   }, [])
 
   const handleSendInput = useCallback(async () => {
+    if (!inputValue.trim() || !activeSession) {
+      logger.info('[Browser] Send input skipped - no input or no active session')
+      return
+    }
+
+    logger.info(
+      '[Browser] Sending input:',
+      inputValue.length,
+      'characters to session:',
+      activeSession.id
+    )
+
+    try {
+      const baseUrl = `${location.protocol}//${location.host}`
+      const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}/input`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: inputValue + '\n' }),
+      })
+
+      logger.info('[Browser] Input send response:', response.status, response.statusText)
+
+      if (response.ok) {
+        logger.info('[Browser] Input sent successfully, clearing input field')
+        setInputValue('')
+      } else {
+        const errorText = await response.text().catch(() => 'Unable to read error response')
+        logger.error(
+          '[Browser] Failed to send input - Status:',
+          response.status,
+          response.statusText,
+          'Error:',
+          errorText
+        )
+      }
+    } catch (error) {
+      logger.error('[Browser] Network error sending input:', error)
+    }
+  }, [inputValue, activeSession])
+
+  const handleKillSession = useCallback(async () => {
+    if (!activeSession) {
+      logger.info('[Browser] Kill session skipped - no active session')
+      return
+    }
+
+    logger.info('[Browser] Attempting to kill session:', activeSession.id, activeSession.title)
+
+    if (!confirm(`Are you sure you want to kill session "${activeSession.title}"?`)) {
+      logger.info('[Browser] User cancelled session kill')
+      return
+    }
+
+    try {
+      const baseUrl = `${location.protocol}//${location.host}`
+      logger.info('[Browser] Sending kill request to server')
+      const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}/kill`, {
+        method: 'POST',
+      })
+
+      logger.info('[Browser] Kill response:', response.status, response.statusText)
+
+      if (response.ok) {
+        logger.info('[Browser] Session killed successfully, clearing UI state')
+        setActiveSession(null)
+        setOutput([])
+      } else {
         const errorText = await response.text().catch(() => 'Unable to read error response')
         logger.error(
           '[Browser] Failed to kill session - Status:',

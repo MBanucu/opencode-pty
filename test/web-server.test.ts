@@ -61,7 +61,7 @@ describe('Web Server', () => {
       expect(response.headers.get('content-type')).toContain('text/html')
 
       const html = await response.text()
-      expect(html).toContain('<!DOCTYPE html>')
+      expect(html).toContain('<!doctype html>')
       expect(html).toContain('PTY Sessions Monitor')
     })
 

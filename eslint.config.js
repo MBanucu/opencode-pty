@@ -15,8 +15,8 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
         ecmaFeatures: {
-          jsx: true
-        }
+          jsx: true,
+        },
       },
       globals: {
         console: 'readonly',
@@ -33,14 +33,14 @@ export default [
         URL: 'readonly',
         Response: 'readonly',
         Bun: 'readonly',
-        AbortController: 'readonly'
-      }
+        AbortController: 'readonly',
+      },
     },
     plugins: {
       '@typescript-eslint': tseslint,
       react: reactPlugin,
       'react-hooks': reactHooksPlugin,
-      prettier: prettierPlugin
+      prettier: prettierPlugin,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
@@ -52,13 +52,13 @@ export default [
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn'
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
     settings: {
       react: {
-        version: 'detect'
-      }
-    }
+        version: 'detect',
+      },
+    },
   },
   {
     files: ['src/web/**/*.{ts,tsx}'],
@@ -72,9 +72,9 @@ export default [
         location: 'readonly',
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
-        confirm: 'readonly'
-      }
-    }
+        confirm: 'readonly',
+      },
+    },
   },
   {
     ignores: [
@@ -84,7 +84,7 @@ export default [
       'test-results/',
       '*.config.js',
       '*.config.ts',
-      'bun.lock'
-    ]
-  }
+      'bun.lock',
+    ],
+  },
 ]

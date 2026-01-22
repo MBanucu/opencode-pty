@@ -203,7 +203,9 @@ test.describe('PTY Live Streaming', () => {
     // Check that the new lines contain the expected timestamp format if output increased
     if (finalCount > initialCount) {
       const lastTimestampLine = await outputLines.nth(finalCount - 2).textContent()
-      expect(lastTimestampLine).toMatch(/\w{3} \d+\. \w{3} \d+:\d+:\d+ \w{3} \d+: Live update\.\.\./)
+      expect(lastTimestampLine).toMatch(
+        /\w{3} \d+\. \w{3} \d+:\d+:\d+ \w{3} \d+: Live update\.\.\./
+      )
     }
 
     log.info(`✅ Live streaming test passed - received ${finalCount - initialCount} live updates`)

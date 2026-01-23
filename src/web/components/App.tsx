@@ -11,6 +11,7 @@ export function App() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [output, setOutput] = useState<string[]>([])
+  const [rawOutput, setRawOutput] = useState<string>('')
 
   const [connected, setConnected] = useState(false)
   const [wsMessageCount, setWsMessageCount] = useState(0)
@@ -21,16 +22,23 @@ export function App() {
       setOutput((prev) => [...prev, ...lines])
       setWsMessageCount((prev) => prev + 1)
     }, []),
+    onRawData: useCallback((rawData: string) => {
+      setRawOutput((prev) => prev + rawData)
+    }, []),
     onSessionList: useCallback((newSessions: Session[], autoSelected: Session | null) => {
       setSessions(newSessions)
       if (autoSelected) {
         setActiveSession(autoSelected)
         fetch(`${location.protocol}//${location.host}/api/sessions/${autoSelected.id}/buffer/raw`)
           .then((response) => (response.ok ? response.json() : { raw: '' }))
-          .then((data) =>
+          .then((data) => {
             setOutput(data.raw ? data.raw.split('\n').filter((line: string) => line !== '') : [])
-          )
-          .catch(() => setOutput([]))
+            setRawOutput(data.raw || '')
+          })
+          .catch(() => {
+            setOutput([])
+            setRawOutput('')
+          })
       }
     }, []),
   })

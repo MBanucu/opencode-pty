@@ -16,8 +16,15 @@ const log = logger.child({ service: 'pty.manager' })
 type OutputCallback = (sessionId: string, data: string[]) => void
 const outputCallbacks: OutputCallback[] = []
 
+type RawOutputCallback = (sessionId: string, rawData: string) => void
+const rawOutputCallbacks: RawOutputCallback[] = []
+
 export function onOutput(callback: OutputCallback): void {
   outputCallbacks.push(callback)
+}
+
+export function onRawOutput(callback: RawOutputCallback): void {
+  rawOutputCallbacks.push(callback)
 }
 
 function notifyOutput(sessionId: string, data: string): void {
@@ -27,6 +34,16 @@ function notifyOutput(sessionId: string, data: string): void {
       callback(sessionId, lines)
     } catch (err) {
       log.error({ sessionId, error: String(err) }, 'output callback failed')
+    }
+  }
+}
+
+function notifyRawOutput(sessionId: string, rawData: string): void {
+  for (const callback of rawOutputCallbacks) {
+    try {
+      callback(sessionId, rawData)
+    } catch (err) {
+      log.error({ sessionId, error: String(err) }, 'raw output callback failed')
     }
   }
 }
@@ -49,6 +66,7 @@ class PTYManager {
       opts,
       (id, data) => {
         notifyOutput(id, data)
+        notifyRawOutput(id, data)
       },
       async (id, exitCode) => {
         if (onSessionUpdate) onSessionUpdate()

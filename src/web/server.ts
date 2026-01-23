@@ -1,5 +1,5 @@
 import type { Server, ServerWebSocket } from 'bun'
-import { manager, onOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
+import { manager, onOutput, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import logger from './logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
 import { handleRoot, handleStaticAssets } from './handlers/static.ts'
@@ -63,6 +63,27 @@ function broadcastSessionData(sessionId: string, data: string[]): void {
       }
     }
   }
+
+  log.debug({ sessionId, sentCount, messageSize: messageStr.length }, 'broadcast data message')
+}
+
+function broadcastRawSessionData(sessionId: string, rawData: string): void {
+  const message: WSMessage = { type: 'raw_data', sessionId, rawData }
+  const messageStr = JSON.stringify(message)
+
+  let sentCount = 0
+  for (const [ws, client] of wsClients) {
+    if (client.subscribedSessions.has(sessionId)) {
+      try {
+        ws.send(messageStr)
+        sentCount++
+      } catch (err) {
+        log.error({ error: String(err) }, 'Failed to send raw data to client')
+      }
+    }
+  }
+
+  log.debug({ sessionId, sentCount, messageSize: messageStr.length }, 'broadcast raw_data message')
 }
 
 function sendSessionList(ws: ServerWebSocket<WSClient>): void {
@@ -228,6 +249,10 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
   onOutput((sessionId, data) => {
     broadcastSessionData(sessionId, data)
+  })
+
+  onRawOutput((sessionId, rawData) => {
+    broadcastRawSessionData(sessionId, rawData)
   })
 
   server = Bun.serve({

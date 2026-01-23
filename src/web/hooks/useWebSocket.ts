@@ -7,11 +7,17 @@ const logger = pinoLogger.child({ module: 'useWebSocket' })
 
 interface UseWebSocketOptions {
   activeSession: Session | null
-  onData: (lines: string[]) => void
+  onData?: (lines: string[]) => void
+  onRawData?: (rawData: string) => void
   onSessionList: (sessions: Session[], autoSelected: Session | null) => void
 }
 
-export function useWebSocket({ activeSession, onData, onSessionList }: UseWebSocketOptions) {
+export function useWebSocket({
+  activeSession,
+  onData,
+  onRawData,
+  onSessionList,
+}: UseWebSocketOptions) {
   const [connected, setConnected] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
@@ -77,7 +83,12 @@ export function useWebSocket({ activeSession, onData, onSessionList }: UseWebSoc
         } else if (data.type === 'data') {
           const isForActiveSession = data.sessionId === activeSessionRef.current?.id
           if (isForActiveSession) {
-            onData(data.data)
+            onData?.(data.data)
+          }
+        } else if (data.type === 'raw_data') {
+          const isForActiveSession = data.sessionId === activeSessionRef.current?.id
+          if (isForActiveSession) {
+            onRawData?.(data.rawData)
           }
         }
       } catch (error) {

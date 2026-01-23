@@ -1,9 +1,10 @@
 import type { ServerWebSocket } from 'bun'
 
 export interface WSMessage {
-  type: 'subscribe' | 'unsubscribe' | 'data' | 'session_list' | 'error'
+  type: 'subscribe' | 'unsubscribe' | 'data' | 'raw_data' | 'session_list' | 'error'
   sessionId?: string
   data?: string[]
+  rawData?: string
   error?: string
   sessions?: SessionData[]
 }

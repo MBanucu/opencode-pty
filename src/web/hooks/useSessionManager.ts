@@ -8,7 +8,7 @@ interface UseSessionManagerOptions {
   activeSession: Session | null
   setActiveSession: (session: Session | null) => void
   subscribeWithRetry: (sessionId: string) => void
-  onOutputUpdate: (output: string[]) => void
+  onOutputUpdate: (output: string[], rawOutput: string) => void
 }
 
 export function useSessionManager({
@@ -26,7 +26,7 @@ export function useSessionManager({
           return
         }
         setActiveSession(session)
-        onOutputUpdate([])
+        onOutputUpdate([], '')
         // Subscribe to this session for live updates
         subscribeWithRetry(session.id)
 
@@ -37,21 +37,24 @@ export function useSessionManager({
           if (response.ok) {
             const outputData = await response.json()
             onOutputUpdate(
-              outputData.raw ? outputData.raw.split('\n').filter((line: string) => line !== '') : []
+              outputData.raw
+                ? outputData.raw.split('\n').filter((line: string) => line !== '')
+                : [],
+              outputData.raw || ''
             )
           } else {
             const errorText = await response.text().catch(() => 'Unable to read error response')
             logger.error({ status: response.status, error: errorText }, 'Fetch failed')
-            onOutputUpdate([])
+            onOutputUpdate([], '')
           }
         } catch (fetchError) {
           logger.error({ error: fetchError }, 'Network error fetching output')
-          onOutputUpdate([])
+          onOutputUpdate([], '')
         }
       } catch (error) {
         logger.error({ error }, 'Unexpected error in handleSessionClick')
         // Ensure UI remains stable
-        onOutputUpdate([])
+        onOutputUpdate([], '')
       }
     },
     [subscribeWithRetry, onOutputUpdate]
@@ -110,7 +113,7 @@ export function useSessionManager({
 
       if (response.ok) {
         setActiveSession(null)
-        onOutputUpdate([])
+        onOutputUpdate([], '')
       } else {
         const errorText = await response.text().catch(() => 'Unable to read error response')
         logger.error(

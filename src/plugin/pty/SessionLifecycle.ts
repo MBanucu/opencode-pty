@@ -6,8 +6,10 @@ import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS } from '../constants.ts'
 
 const log = logger.child({ service: 'pty.lifecycle' })
 
+const ID_BYTES = 4
+
 function generateId(): string {
-  const hex = Array.from(crypto.getRandomValues(new Uint8Array(4)))
+  const hex = Array.from(crypto.getRandomValues(new Uint8Array(ID_BYTES)))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
   return `pty_${hex}`
@@ -98,21 +100,15 @@ export class SessionLifecycleManager {
     return true
   }
 
-  clearAllSessions(): void {
-    // Kill all running processes
-    for (const session of this.sessions.values()) {
-      if (session.status === 'running') {
-        try {
-          session.process.kill()
-        } catch (err) {
-          log.warn({ id: session.id, error: String(err) }, 'failed to kill process during clear')
-        }
-      }
+  private clearAllSessionsInternal(): void {
+    for (const id of [...this.sessions.keys()]) {
+      this.kill(id, true)
     }
+  }
 
-    // Clear all sessions
-    this.sessions.clear()
-    log.info('cleared all sessions')
+  clearAllSessions(): void {
+    log.info('clearing all sessions')
+    this.clearAllSessionsInternal()
   }
 
   cleanupBySession(parentSessionId: string): void {
@@ -126,9 +122,7 @@ export class SessionLifecycleManager {
 
   cleanupAll(): void {
     log.info('cleaning up all ptys')
-    for (const id of this.sessions.keys()) {
-      this.kill(id, true)
-    }
+    this.clearAllSessionsInternal()
   }
 
   getSession(id: string): PTYSession | null {
@@ -139,7 +133,7 @@ export class SessionLifecycleManager {
     return Array.from(this.sessions.values())
   }
 
-  private toInfo(session: PTYSession): PTYSessionInfo {
+  toInfo(session: PTYSession): PTYSessionInfo {
     return {
       id: session.id,
       title: session.title,

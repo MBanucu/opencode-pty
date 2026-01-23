@@ -22,6 +22,16 @@ function validateRegex(pattern: string): boolean {
   }
 }
 
+/**
+ * Formats a single line with line number and truncation
+ */
+const formatLine = (line: string, lineNum: number): string => {
+  const lineNumStr = lineNum.toString().padStart(5, '0')
+  const truncatedLine =
+    line.length > MAX_LINE_LENGTH ? line.slice(0, MAX_LINE_LENGTH) + '...' : line
+  return `${lineNumStr}| ${truncatedLine}`
+}
+
 export const ptyRead = tool({
   description: DESCRIPTION,
   args: {
@@ -88,14 +98,7 @@ export const ptyRead = tool({
         ].join('\n')
       }
 
-      const formattedLines = result.matches.map((match) => {
-        const lineNum = match.lineNumber.toString().padStart(5, '0')
-        const truncatedLine =
-          match.text.length > MAX_LINE_LENGTH
-            ? match.text.slice(0, MAX_LINE_LENGTH) + '...'
-            : match.text
-        return `${lineNum}| ${truncatedLine}`
-      })
+      const formattedLines = result.matches.map((match) => formatLine(match.text, match.lineNumber))
 
       const output = [
         `<pty_output id="${args.id}" status="${session.status}" pattern="${args.pattern}">`,
@@ -131,12 +134,9 @@ export const ptyRead = tool({
       ].join('\n')
     }
 
-    const formattedLines = result.lines.map((line, index) => {
-      const lineNum = (result.offset + index + 1).toString().padStart(5, '0')
-      const truncatedLine =
-        line.length > MAX_LINE_LENGTH ? line.slice(0, MAX_LINE_LENGTH) + '...' : line
-      return `${lineNum}| ${truncatedLine}`
-    })
+    const formattedLines = result.lines.map((line, index) =>
+      formatLine(line, result.offset + index + 1)
+    )
 
     const output = [`<pty_output id="${args.id}" status="${session.status}">`, ...formattedLines]
 

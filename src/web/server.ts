@@ -136,6 +136,40 @@ const wsHandler = {
   },
 }
 
+async function handleRequest(req: Request, server: Server<WSClient>): Promise<Response> {
+  const url = new URL(req.url)
+
+  // Handle WebSocket upgrade
+  if (req.headers.get('upgrade') === 'websocket') {
+    log.info('WebSocket upgrade request')
+    const success = server.upgrade(req, {
+      data: { socket: null as any, subscribedSessions: new Set() },
+    })
+    if (success) {
+      log.info('WebSocket upgrade success')
+      return new Response(null, { status: 101 }) // Upgrade succeeded
+    }
+    log.warn('WebSocket upgrade failed')
+    return new Response('WebSocket upgrade failed', { status: 400 })
+  }
+
+  if (url.pathname === '/') {
+    return handleRoot()
+  }
+
+  const staticResponse = await handleStaticAssets(url)
+  if (staticResponse) return staticResponse
+
+  if (url.pathname === '/health' && req.method === 'GET') {
+    return handleHealth(wsClients.size)
+  }
+
+  const apiResponse = await handleAPISessions(url, req, wsClients)
+  if (apiResponse) return apiResponse
+
+  return new Response('Not found', { status: 404 })
+}
+
 export function startWebServer(config: Partial<ServerConfig> = {}): string {
   const finalConfig = { ...defaultConfig, ...config }
 
@@ -157,39 +191,7 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
     websocket: wsHandler,
 
-    async fetch(req, server) {
-      const url = new URL(req.url)
-
-      // Handle WebSocket upgrade
-      if (req.headers.get('upgrade') === 'websocket') {
-        log.info('WebSocket upgrade request')
-        const success = server.upgrade(req, {
-          data: { socket: null as any, subscribedSessions: new Set() },
-        })
-        if (success) {
-          log.info('WebSocket upgrade success')
-          return new Response(null, { status: 101 }) // Upgrade succeeded
-        }
-        log.warn('WebSocket upgrade failed')
-        return new Response('WebSocket upgrade failed', { status: 400 })
-      }
-
-      if (url.pathname === '/') {
-        return handleRoot()
-      }
-
-      const staticResponse = await handleStaticAssets(url)
-      if (staticResponse) return staticResponse
-
-      if (url.pathname === '/health' && req.method === 'GET') {
-        return handleHealth(wsClients.size)
-      }
-
-      const apiResponse = await handleAPISessions(url, req, wsClients)
-      if (apiResponse) return apiResponse
-
-      return new Response('Not found', { status: 404 })
-    },
+    fetch: handleRequest,
   })
 
   log.info({ url: `http://${finalConfig.hostname}:${finalConfig.port}` }, 'web server started')

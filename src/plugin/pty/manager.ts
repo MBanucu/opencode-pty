@@ -85,37 +85,13 @@ class PTYManager {
   }
 
   list(): PTYSessionInfo[] {
-    return this.lifecycleManager.listSessions().map((s) => ({
-      id: s.id,
-      title: s.title,
-      description: s.description,
-      command: s.command,
-      args: s.args,
-      workdir: s.workdir,
-      status: s.status,
-      exitCode: s.exitCode,
-      pid: s.pid,
-      createdAt: s.createdAt,
-      lineCount: s.buffer.length,
-    }))
+    return this.lifecycleManager.listSessions().map((s) => this.lifecycleManager.toInfo(s))
   }
 
   get(id: string): PTYSessionInfo | null {
     const session = this.lifecycleManager.getSession(id)
     if (!session) return null
-    return {
-      id: session.id,
-      title: session.title,
-      description: session.description,
-      command: session.command,
-      args: session.args,
-      workdir: session.workdir,
-      status: session.status,
-      exitCode: session.exitCode,
-      pid: session.pid,
-      createdAt: session.createdAt,
-      lineCount: session.buffer.length,
-    }
+    return this.lifecycleManager.toInfo(session)
   }
 
   kill(id: string, cleanup: boolean = false): boolean {

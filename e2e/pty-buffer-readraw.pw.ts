@@ -201,4 +201,61 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       console.log('ℹ️  Plain text:', JSON.stringify(plainData.plain))
     }
   )
+
+  extendedTest(
+    'should extract plain text content using SerializeAddon',
+    async ({ page, server }) => {
+      // Create a session with a simple echo command
+      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'echo',
+          args: ['Hello World'],
+          description: 'Simple echo test for SerializeAddon extraction',
+        },
+      })
+      expect(createResponse.status()).toBe(200)
+      await createResponse.json()
+
+      // Navigate to the page and select the session so terminal renders
+      await page.goto(server.baseURL + '/')
+      await page.waitForSelector('.session-item', { timeout: 5000 })
+      await page.locator('.session-item').first().click()
+
+      // Wait for terminal to be ready and session to complete
+      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
+      await page.waitForTimeout(3000)
+
+      // Extract content using SerializeAddon
+      const serializeAddonOutput = await page.evaluate(() => {
+        const serializeAddon = (window as any).xtermSerializeAddon
+
+        if (!serializeAddon) {
+          console.error('SerializeAddon not found')
+          return ''
+        }
+
+        try {
+          return serializeAddon.serialize({
+            excludeModes: true,
+            excludeAltBuffer: true,
+          })
+        } catch (error) {
+          console.error('Serialization failed:', error)
+          return ''
+        }
+      })
+
+      // Verify SerializeAddon extracted some content
+      expect(serializeAddonOutput.length).toBeGreaterThan(0)
+      expect(typeof serializeAddonOutput).toBe('string')
+
+      // Verify SerializeAddon extracted some terminal content
+      // The content may vary depending on terminal state, but it should exist
+      expect(serializeAddonOutput.length).toBeGreaterThan(10)
+
+      console.log('✅ SerializeAddon successfully extracted terminal content')
+      console.log('ℹ️  Extracted content length:', serializeAddonOutput.length)
+      console.log('ℹ️  Content preview:', serializeAddonOutput.substring(0, 100) + '...')
+    }
+  )
 })

@@ -1,10 +1,7 @@
 import { manager } from '../../plugin/pty/manager.ts'
-import logger from '../logger.ts'
 import { DEFAULT_READ_LIMIT } from '../constants.ts'
 import type { ServerWebSocket } from 'bun'
 import type { WSClient } from '../types.ts'
-
-const log = logger.child({ module: 'api-handler' })
 
 // Security headers for all responses
 function getSecurityHeaders(): Record<string, string> {
@@ -123,31 +120,20 @@ export async function handleAPISessions(
   const sessionMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)$/)
   if (sessionMatch) {
     const sessionId = sessionMatch[1]
-    log.debug({ sessionId }, 'Handling individual session request')
     if (!sessionId) return new Response('Invalid session ID', { status: 400 })
     const session = manager.get(sessionId)
-    log.debug({
-      sessionId,
-      found: !!session,
-      command: session?.command,
-    })
     if (!session) {
-      log.debug({ sessionId }, 'Returning 404 for session not found')
       return new Response('Session not found', { status: 404 })
     }
-    log.debug({ sessionId: session.id }, 'Returning session data')
     return Response.json(session)
   }
 
   const inputMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/input$/)
   if (inputMatch && req.method === 'POST') {
     const sessionId = inputMatch[1]
-    log.debug({ sessionId }, 'Handling input request')
     if (!sessionId) return new Response('Invalid session ID', { status: 400 })
     const body = (await req.json()) as { data: string }
-    log.debug({ sessionId, dataLength: body.data.length }, 'Input data')
     const success = manager.write(sessionId, body.data)
-    log.debug({ sessionId, success }, 'Write result')
     if (!success) {
       return new Response('Failed to write to session', { status: 400 })
     }
@@ -157,10 +143,8 @@ export async function handleAPISessions(
   const killMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/kill$/)
   if (killMatch && req.method === 'POST') {
     const sessionId = killMatch[1]
-    log.debug({ sessionId }, 'Handling kill request')
     if (!sessionId) return new Response('Invalid session ID', { status: 400 })
     const success = manager.kill(sessionId)
-    log.debug({ sessionId, success }, 'Kill result')
     if (!success) {
       return new Response('Failed to kill session', { status: 400 })
     }

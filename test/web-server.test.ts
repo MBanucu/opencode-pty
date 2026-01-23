@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server.ts'
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
-import { initLogger, createLogger } from '../src/plugin/logger.ts'
+import { initLogger } from '../src/plugin/logger.ts'
 
 describe('Web Server', () => {
   const fakeClient = {
@@ -11,8 +11,6 @@ describe('Web Server', () => {
       },
     },
   } as any
-
-  const log = createLogger('test')
 
   beforeEach(() => {
     initLogger(fakeClient)
@@ -131,24 +129,20 @@ describe('Web Server', () => {
 
     it('should return individual session', async () => {
       // Create a test session first
-      log.debug({ command: 'cat' }, 'Spawning session')
       const session = manager.spawn({
         command: 'cat',
         args: [],
         description: 'Test session',
         parentSessionId: 'test',
       })
-      log.debug({ id: session.id, command: session.command }, 'Spawned session')
 
       // Wait for PTY to start
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
-      log.debug({ status: response.status }, 'Fetch response')
       expect(response.status).toBe(200)
 
       const sessionData = await response.json()
-      log.debug(sessionData, 'Session data')
       expect(sessionData.id).toBe(session.id)
       expect(sessionData.command).toBe('cat')
       expect(sessionData.args).toEqual([])
@@ -156,9 +150,7 @@ describe('Web Server', () => {
 
     it('should return 404 for non-existent session', async () => {
       const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
-      log.debug({ id: nonexistentId }, 'Fetching non-existent session')
       const response = await fetch(`${serverUrl}/api/sessions/${nonexistentId}`)
-      log.debug({ status: response.status }, 'Response status')
       expect(response.status).toBe(404)
     })
 

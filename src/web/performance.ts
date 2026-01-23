@@ -67,21 +67,13 @@ export function trackWebVitals(): void {
   // Track Largest Contentful Paint (LCP)
   if ('PerformanceObserver' in window) {
     try {
-      const lcpObserver = new PerformanceObserver((list) => {
-        const entries = list.getEntries()
-        const lastEntry = entries[entries.length - 1] as any
-        if (lastEntry) {
-          log.debug({ value: lastEntry.startTime }, 'LCP measured')
-        }
-      })
+      const lcpObserver = new PerformanceObserver((_list) => {})
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] })
 
       // Track First Input Delay (FID)
       const fidObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
-        entries.forEach((entry: any) => {
-          log.debug({ value: entry.processingStart - entry.startTime }, 'FID measured')
-        })
+        entries.forEach((_entry: any) => {})
       })
       fidObserver.observe({ entryTypes: ['first-input'] })
 
@@ -94,7 +86,6 @@ export function trackWebVitals(): void {
             clsValue += entry.value
           }
         })
-        log.debug({ value: clsValue }, 'CLS measured')
       })
       clsObserver.observe({ entryTypes: ['layout-shift'] })
     } catch (e) {

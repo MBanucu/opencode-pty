@@ -3,13 +3,6 @@ import ReactDOM from 'react-dom/client'
 import { App } from './components/App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { trackWebVitals, PerformanceMonitor } from './performance.ts'
-import pinoLogger from './logger.ts'
-
-const log = pinoLogger.child({ module: 'web-ui' })
-
-if (import.meta.env.DEV) {
-  log.debug('Starting React application')
-}
 
 // Initialize performance monitoring
 trackWebVitals()

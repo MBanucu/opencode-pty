@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
 import { createTestLogger } from '../test-logger.ts'
 

@@ -25,7 +25,6 @@ export async function handleRoot(): Promise<Response> {
     process.env.NODE_ENV === 'test'
       ? resolve(PROJECT_ROOT, 'dist/web/index.html')
       : resolve(PROJECT_ROOT, 'src/web/index.html')
-  log.debug({ htmlPath }, 'Serving HTML')
   return new Response(await Bun.file(htmlPath).bytes(), {
     headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },
   })
@@ -45,12 +44,9 @@ export async function handleStaticAssets(url: URL): Promise<Response | null> {
     if (exists) {
       const ext = url.pathname.split('.').pop() || ''
       const contentType = ASSET_CONTENT_TYPES[`.${ext}`] || 'text/plain'
-      log.debug({ filePath, contentType }, 'Asset served')
       return new Response(await file.bytes(), {
         headers: { 'Content-Type': contentType, ...getSecurityHeaders() },
       })
-    } else {
-      log.debug({ filePath }, 'Asset not found')
     }
   }
 
@@ -67,12 +63,9 @@ export async function handleStaticAssets(url: URL): Promise<Response | null> {
     const file = Bun.file(filePath)
     const exists = await file.exists()
     if (exists) {
-      log.debug({ filePath }, 'TypeScript file served')
       return new Response(await file.bytes(), {
         headers: { 'Content-Type': 'application/javascript', ...getSecurityHeaders() },
       })
-    } else {
-      log.debug({ filePath }, 'TypeScript file not found')
     }
   }
 

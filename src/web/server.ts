@@ -37,7 +37,6 @@ function broadcastSessionData(sessionId: string, data: string[]): void {
   let sentCount = 0
   for (const [ws, client] of wsClients) {
     if (client.subscribedSessions.has(sessionId)) {
-      log.debug({ sessionId }, 'Sending to subscribed client')
       try {
         ws.send(messageStr)
         sentCount++
@@ -45,9 +44,6 @@ function broadcastSessionData(sessionId: string, data: string[]): void {
         log.error({ error: String(err) }, 'Failed to send to client')
       }
     }
-  }
-  if (sentCount === 0) {
-    log.debug({ sessionId, clientCount: wsClients.size }, 'No clients subscribed to session')
   }
   log.info({ sentCount }, 'Broadcast complete')
 }
@@ -163,10 +159,6 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
 
     async fetch(req, server) {
       const url = new URL(req.url)
-      log.debug(
-        { url: req.url, method: req.method, upgrade: req.headers.get('upgrade') },
-        'fetch request'
-      )
 
       // Handle WebSocket upgrade
       if (req.headers.get('upgrade') === 'websocket') {

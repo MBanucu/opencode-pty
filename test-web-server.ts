@@ -2,9 +2,6 @@ import { initManager, manager } from './src/plugin/pty/manager.ts'
 import { initLogger } from './src/plugin/logger.ts'
 import { startWebServer } from './src/web/server.ts'
 
-const logLevels = { debug: 0, info: 1, warn: 2, error: 3 }
-const currentLevel = logLevels[process.env.LOG_LEVEL as keyof typeof logLevels] ?? logLevels.info
-
 // Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = 'test'
@@ -12,14 +9,7 @@ if (!process.env.NODE_ENV) {
 
 const fakeClient = {
   app: {
-    log: async (opts: any) => {
-      const { level = 'info', message, extra } = opts.body || opts
-      const levelNum = logLevels[level as keyof typeof logLevels] ?? logLevels.info
-      if (levelNum >= currentLevel) {
-        const extraStr = extra ? ` ${JSON.stringify(extra)}` : ''
-        console.log(`[${level}] ${message}${extraStr}`)
-      }
-    },
+    log: async (_opts: any) => {},
   },
 } as any
 initLogger(fakeClient)
@@ -27,13 +17,11 @@ initManager(fakeClient)
 
 // Cleanup on process termination
 process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, cleaning up PTY sessions...')
   manager.cleanupAll()
   process.exit(0)
 })
 
 process.on('SIGINT', () => {
-  console.log('Received SIGINT, cleaning up PTY sessions...')
   manager.cleanupAll()
   process.exit(0)
 })
@@ -77,14 +65,9 @@ if (process.env.TEST_WORKER_INDEX) {
 
 let port = findAvailablePort(basePort)
 
-console.log(`Test server starting on port ${port}`)
-
-const url = startWebServer({ port })
+startWebServer({ port })
 
 // Only log in non-test environments or when explicitly requested
-if (process.env.NODE_ENV !== 'test' || process.env.VERBOSE === 'true') {
-  console.log(`Server started at ${url}`)
-}
 
 // Write port to file for tests to read
 if (process.env.NODE_ENV === 'test') {

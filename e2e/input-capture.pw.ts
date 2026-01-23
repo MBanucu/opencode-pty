@@ -1,4 +1,3 @@
-import { createLogger } from '../src/plugin/logger.ts'
 import { test as extendedTest, expect } from './fixtures'
 
 extendedTest.describe('PTY Input Capture', () => {
@@ -17,10 +16,8 @@ extendedTest.describe('PTY Input Capture', () => {
       await page.goto(server.baseURL)
 
       // Capture browser console logs after navigation
-      page.on('console', (msg) => console.log('PAGE LOG:', msg.text()))
 
       // Test console logging
-      await page.evaluate(() => console.log('Test console log from browser'))
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create an interactive bash session that stays running
@@ -105,7 +102,6 @@ extendedTest.describe('PTY Input Capture', () => {
 
   extendedTest('should capture "ls" command with Enter key', async ({ page, server }) => {
     await page.goto(server.baseURL)
-    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()))
     await page.waitForSelector('h1:has-text("PTY Sessions")')
 
     // Create a test session
@@ -308,7 +304,6 @@ extendedTest.describe('PTY Input Capture', () => {
       })
 
       await page.goto(server.baseURL)
-      page.on('console', (msg) => console.log('PAGE LOG:', msg.text()))
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Clear any existing sessions for clean test state

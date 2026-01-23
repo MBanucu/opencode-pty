@@ -26,8 +26,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const port = BASE_PORT + workerInfo.workerIndex
       const url = `http://localhost:${port}`
 
-      console.log(`[Worker ${workerInfo.workerIndex}] Starting test server on port ${port}`)
-
       const proc: ChildProcess = spawn('bun', ['run', 'test-web-server.ts', `--port=${port}`], {
         env: {
           ...process.env,
@@ -36,34 +34,22 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         stdio: ['ignore', 'pipe', 'pipe'],
       })
 
-      proc.stdout?.on('data', (data) => {
-        const output = data.toString()
-        console.log(`[W${workerInfo.workerIndex}] ${output}`)
-      })
+      proc.stdout?.on('data', (_data) => {})
 
       proc.stderr?.on('data', (data) => {
         console.error(`[W${workerInfo.workerIndex} ERR] ${data}`)
       })
 
-      proc.on('exit', (code, signal) => {
-        console.log(
-          `[Worker ${workerInfo.workerIndex}] Server process exited with code ${code}, signal ${signal}`
-        )
-      })
+      proc.on('exit', (_code, _signal) => {})
 
       proc.stderr?.on('data', (data) => {
         console.error(`[W${workerInfo.workerIndex} ERR] ${data}`)
       })
 
-      proc.on('exit', (code, signal) => {
-        console.log(
-          `[Worker ${workerInfo.workerIndex}] Server process exited with code ${code}, signal ${signal}`
-        )
-      })
+      proc.on('exit', (_code, _signal) => {})
 
       try {
         await waitForServer(url, 15000) // Wait up to 15 seconds for server
-        console.log(`[Worker ${workerInfo.workerIndex}] Server ready at ${url}`)
         await use({ baseURL: url, port })
       } catch (error) {
         console.error(`[Worker ${workerInfo.workerIndex}] Failed to start server: ${error}`)
@@ -86,7 +72,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
             proc.on('exit', resolve)
           }
         })
-        console.log(`[Worker ${workerInfo.workerIndex}] Server stopped`)
       }
     },
     { scope: 'worker', auto: true },

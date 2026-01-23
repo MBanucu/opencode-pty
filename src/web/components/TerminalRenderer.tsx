@@ -30,8 +30,13 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
 
   override componentDidUpdate() {
     const data = this.getDisplayData()
-    if (data && this.xtermInstance) {
-      this.xtermInstance.write(data)
+    if (this.xtermInstance) {
+      if (data) {
+        this.xtermInstance.write(data)
+      } else {
+        // Clear terminal when no data (session switch)
+        this.xtermInstance.clear()
+      }
     }
   }
 

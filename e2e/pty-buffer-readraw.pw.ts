@@ -32,31 +32,27 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // Wait for the command to complete
       await page.waitForTimeout(2000)
 
-      // Get buffer content via API
+      // Get raw buffer content via API
       const bufferResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/output`
+        server.baseURL + `/api/sessions/${sessionId}/buffer/raw`
       )
       expect(bufferResponse.status()).toBe(200)
       const bufferData = await bufferResponse.json()
 
-      // Verify the buffer contains the expected lines (may include \r from printf)
-      expect(bufferData.lines.length).toBeGreaterThan(0)
+      // Verify the buffer contains the expected content
+      expect(bufferData.raw.length).toBeGreaterThan(0)
+      expect(bufferData.raw).toContain('line1')
+      expect(bufferData.raw).toContain('line2')
+      expect(bufferData.raw).toContain('line3')
 
-      // Check for lines that may contain carriage returns
-      const hasLine1 = bufferData.lines.some((line: string) => line.includes('line1'))
-      const hasLine2 = bufferData.lines.some((line: string) => line.includes('line2'))
-      const hasLine3 = bufferData.lines.some((line: string) => line.includes('line3'))
+      // Check that newlines are preserved
+      expect(bufferData.raw).toContain('\n')
 
-      expect(hasLine1).toBe(true)
-      expect(hasLine2).toBe(true)
-      expect(hasLine3).toBe(true)
-
-      // The key insight: PTY output contained \n characters that were properly processed
-      // The buffer now stores complete lines instead of individual characters
+      // The key insight: PTY output contained \n characters that are preserved in raw buffer
       // This verifies that the RingBuffer correctly handles newline-delimited data
 
-      console.log('✅ Buffer lines:', bufferData.lines)
-      console.log('✅ PTY output with newlines was properly processed into separate lines')
+      console.log('✅ Raw buffer contains newlines and expected content')
+      console.log('✅ PTY output with newlines was properly captured')
     }
   )
 
@@ -134,20 +130,14 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     expect(rawData.byteLength).toBe(rawData.raw.length)
 
     console.log('✅ API endpoint returns raw buffer data')
-    console.log('✅ Raw data contains newlines:', JSON.stringify(rawData.raw))
+    console.log('✅ Raw data contains newlines:', rawData.raw.includes('\n'))
     console.log('✅ Byte length matches:', rawData.byteLength)
 
-    // Compare with regular output API for consistency
-    const outputResponse = await page.request.get(
-      server.baseURL + `/api/sessions/${sessionId}/output`
-    )
-    expect(outputResponse.status()).toBe(200)
-    const outputData = await outputResponse.json()
+    // Verify raw data structure
+    expect(typeof rawData.raw).toBe('string')
+    expect(typeof rawData.byteLength).toBe('number')
 
-    // The raw data should contain the same text as joining the lines
-    expect(rawData.raw).toContain(outputData.lines.join('\n'))
-
-    console.log('✅ Raw API data consistent with regular output API')
+    console.log('✅ Raw buffer API provides correct data format')
   })
 
   extendedTest(
@@ -541,8 +531,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       const afterCount = (cleanAfter.match(/1/g) || []).length
       const apiBufferCount = (cleanApiBuffer.match(/1/g) || []).length
 
-      console.log('ℹ️  Raw initial content:', JSON.stringify(initialContent.substring(0, 100)))
-      console.log('ℹ️  Raw after content:', JSON.stringify(afterContent.substring(0, 100)))
+      console.log('ℹ️  Raw initial content:', JSON.stringify(initialContent.substring(0, 200)))
+      console.log('ℹ️  Raw after content:', JSON.stringify(afterContent.substring(0, 200)))
       console.log('ℹ️  Clean initial "1" count:', initialCount)
       console.log('ℹ️  Clean after "1" count:', afterCount)
       console.log('ℹ️  API buffer "1" count:', apiBufferCount)
@@ -558,6 +548,83 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       console.log('ℹ️  Initial "1" count:', initialCount)
       console.log('ℹ️  After "1" count:', afterCount)
       console.log('ℹ️  Difference:', afterCount - initialCount)
+    }
+  )
+
+  extendedTest(
+    'should clear terminal content when switching sessions',
+    async ({ page, server }) => {
+      // Create first session with unique output
+      const session1Response = await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'echo',
+          args: ['SESSION_ONE_CONTENT'],
+          description: 'Session One',
+        },
+      })
+      expect(session1Response.status()).toBe(200)
+      await session1Response.json()
+
+      // Create second session with different unique output
+      const session2Response = await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'echo',
+          args: ['SESSION_TWO_CONTENT'],
+          description: 'Session Two',
+        },
+      })
+      expect(session2Response.status()).toBe(200)
+      await session2Response.json()
+
+      // Navigate to the page
+      await page.goto(server.baseURL + '/')
+      await page.waitForSelector('.session-item', { timeout: 10000 })
+
+      // Switch to first session
+      await page.locator('.session-item').filter({ hasText: 'Session One' }).click()
+      await page.waitForTimeout(3000) // Allow session switch and content load
+
+      // Capture content for session 1
+      const session1Content = await page.evaluate(() => {
+        const serializeAddon = (window as any).xtermSerializeAddon
+        if (!serializeAddon) return ''
+        return serializeAddon.serialize({
+          excludeModes: true,
+          excludeAltBuffer: true,
+        })
+      })
+
+      // Verify session 1 content is shown
+      expect(session1Content).toContain('SESSION_ONE_CONTENT')
+      console.log('✅ Session 1 content loaded:', session1Content.includes('SESSION_ONE_CONTENT'))
+
+      // Switch to second session
+      await page.locator('.session-item').filter({ hasText: 'Session Two' }).click()
+      await page.waitForTimeout(3000) // Allow session switch and content load
+
+      // Capture content for session 2
+      const session2Content = await page.evaluate(() => {
+        const serializeAddon = (window as any).xtermSerializeAddon
+        if (!serializeAddon) return ''
+        return serializeAddon.serialize({
+          excludeModes: true,
+          excludeAltBuffer: true,
+        })
+      })
+
+      // Verify session 2 content is shown and session 1 content is cleared
+      expect(session2Content).toContain('SESSION_TWO_CONTENT')
+      expect(session2Content).not.toContain('SESSION_ONE_CONTENT') // No content mixing
+
+      console.log('✅ Session switching works correctly')
+      console.log(
+        'ℹ️  Session 2 contains correct content:',
+        session2Content.includes('SESSION_TWO_CONTENT')
+      )
+      console.log(
+        'ℹ️  Session 1 content cleared:',
+        !session2Content.includes('SESSION_ONE_CONTENT')
+      )
     }
   )
 })

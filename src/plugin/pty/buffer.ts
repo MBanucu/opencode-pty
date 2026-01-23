@@ -23,7 +23,12 @@ export class RingBuffer {
   }
 
   read(offset: number = 0, limit?: number): string[] {
+    if (this.buffer === '') return []
     const lines: string[] = this.buffer.split('\n')
+    // Remove empty string at end if buffer doesn't end with newline
+    if (lines[lines.length - 1] === '') {
+      lines.pop()
+    }
     const start = Math.max(0, offset)
     const end = limit !== undefined ? start + limit : lines.length
     return lines.slice(start, end)
@@ -47,7 +52,13 @@ export class RingBuffer {
   }
 
   get length(): number {
-    return this.buffer.split('\n').length
+    if (this.buffer === '') return 0
+    const lines = this.buffer.split('\n')
+    // Remove empty string at end if buffer doesn't end with newline
+    if (lines[lines.length - 1] === '') {
+      lines.pop()
+    }
+    return lines.length
   }
 
   get byteLength(): number {

@@ -251,22 +251,24 @@ describe('PTY Tools', () => {
 
   describe('RingBuffer', () => {
     it('should append and read lines', () => {
-      const buffer = new RingBuffer(5)
+      const buffer = new RingBuffer(100) // Large buffer to avoid truncation
       buffer.append('line1\nline2\nline3')
 
-      expect(buffer.length).toBe(3)
+      expect(buffer.length).toBe(3) // Number of lines after splitting
       expect(buffer.read()).toEqual(['line1', 'line2', 'line3'])
+      expect(buffer.readRaw()).toBe('line1\nline2\nline3') // Raw buffer preserves newlines
     })
 
     it('should handle offset and limit', () => {
-      const buffer = new RingBuffer(5)
+      const buffer = new RingBuffer(100)
       buffer.append('line1\nline2\nline3\nline4')
 
       expect(buffer.read(1, 2)).toEqual(['line2', 'line3'])
+      expect(buffer.readRaw()).toBe('line1\nline2\nline3\nline4')
     })
 
     it('should search with regex', () => {
-      const buffer = new RingBuffer(5)
+      const buffer = new RingBuffer(100)
       buffer.append('hello world\nfoo bar\nhello test')
 
       const matches = buffer.search(/hello/)
@@ -277,21 +279,25 @@ describe('PTY Tools', () => {
     })
 
     it('should clear buffer', () => {
-      const buffer = new RingBuffer(5)
+      const buffer = new RingBuffer(100)
       buffer.append('line1\nline2')
       expect(buffer.length).toBe(2)
 
       buffer.clear()
       expect(buffer.length).toBe(0)
       expect(buffer.read()).toEqual([])
+      expect(buffer.readRaw()).toBe('')
     })
 
-    it('should evict old lines when exceeding max', () => {
-      const buffer = new RingBuffer(3)
+    it('should truncate buffer at byte level when exceeding max', () => {
+      const buffer = new RingBuffer(10) // Small buffer for testing
       buffer.append('line1\nline2\nline3\nline4')
 
-      expect(buffer.length).toBe(3)
-      expect(buffer.read()).toEqual(['line2', 'line3', 'line4'])
+      // Input is 'line1\nline2\nline3\nline4' (23 chars)
+      // With buffer size 10, keeps last 10 chars: 'ine3\nline4'
+      expect(buffer.readRaw()).toBe('ine3\nline4')
+      expect(buffer.read()).toEqual(['ine3', 'line4'])
+      expect(buffer.length).toBe(2)
     })
   })
 })

@@ -81,4 +81,73 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
     console.log('Full extracted content:', fullContent)
   })
+
+  extendedTest('should extract terminal content using SerializeAddon', async ({ page, server }) => {
+    // Clear any existing sessions
+    await page.request.post(server.baseURL + '/api/sessions/clear')
+
+    await page.goto(server.baseURL)
+
+    // Capture console logs from the app
+    page.on('console', (msg) => {
+      console.log('PAGE CONSOLE:', msg.text())
+    })
+
+    await page.waitForSelector('h1:has-text("PTY Sessions")')
+
+    // Create an interactive bash session that stays running
+    await page.request.post(server.baseURL + '/api/sessions', {
+      data: {
+        command: 'bash',
+        args: [], // Interactive bash that stays running
+        description: 'SerializeAddon extraction test',
+      },
+    })
+
+    // Wait for session to appear and select it
+    await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.locator('.session-item:has-text("SerializeAddon extraction test")').click()
+    await page.waitForSelector('.output-container', { timeout: 5000 })
+    await page.waitForSelector('.xterm', { timeout: 5000 })
+
+    // Type a simple command and wait for output
+    await page.locator('.xterm').click()
+    await page.keyboard.type('echo "Hello from SerializeAddon test"')
+    await page.keyboard.press('Enter')
+
+    // Wait for command to execute and output to appear
+    await page.waitForTimeout(1000)
+
+    // Extract content using SerializeAddon
+    const extractedContent = await page.evaluate(() => {
+      // Access the serialize addon exposed for testing
+      const serializeAddon = (window as any).xtermSerializeAddon
+
+      if (!serializeAddon) {
+        console.error('SerializeAddon not found')
+        return ''
+      }
+
+      try {
+        // Serialize with clean text options
+        return serializeAddon.serialize({
+          excludeModes: true, // Exclude mode information for clean text
+          excludeAltBuffer: true, // Focus on main buffer
+        })
+      } catch (error) {
+        console.error('Serialization failed:', error)
+        return ''
+      }
+    })
+
+    // Verify we extracted some content
+    expect(extractedContent).toBeTruthy()
+    expect(extractedContent.length).toBeGreaterThan(0)
+    console.log('Serialized content:', extractedContent)
+
+    // Verify the expected output is present
+    expect(extractedContent).toContain('Hello from SerializeAddon test')
+
+    console.log('SerializeAddon extraction successful!')
+  })
 })

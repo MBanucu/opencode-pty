@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { SerializeAddon } from '@xterm/addon-serialize'
 import '@xterm/xterm/css/xterm.css'
 import pinoLogger from '../logger.ts'
 
@@ -30,17 +31,20 @@ function useTerminalSetup(
       allowTransparency: true,
     })
     const fitAddon = new FitAddon()
+    const serializeAddon = new SerializeAddon()
     term.loadAddon(fitAddon)
+    term.loadAddon(serializeAddon)
 
     term.open(terminalRef.current)
     fitAddon.fit()
 
     xtermRef.current = term
 
-    // Expose terminal for testing purposes
+    // Expose terminal and serialize addon for testing purposes
     // This allows e2e tests to access the terminal instance directly
-    console.log('TerminalRenderer: Exposing terminal instance for testing')
+    console.log('TerminalRenderer: Exposing terminal instance and serialize addon for testing')
     ;(window as any).xtermTerminal = term
+    ;(window as any).xtermSerializeAddon = serializeAddon
 
     // Write historical output once on mount
     if (output.length > 0) {

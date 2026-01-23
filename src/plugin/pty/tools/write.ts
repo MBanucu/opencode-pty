@@ -1,6 +1,7 @@
 import { tool } from '@opencode-ai/plugin'
 import { manager } from '../manager.ts'
 import { checkCommandPermission } from '../permissions.ts'
+import { buildSessionNotFoundError } from '../utils.ts'
 import DESCRIPTION from './write.txt'
 
 const ETX = String.fromCharCode(3)
@@ -61,7 +62,7 @@ export const ptyWrite = tool({
   async execute(args) {
     const session = manager.get(args.id)
     if (!session) {
-      throw new Error(`PTY session '${args.id}' not found. Use pty_list to see active sessions.`)
+      throw buildSessionNotFoundError(args.id)
     }
 
     if (session.status !== 'running') {

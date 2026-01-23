@@ -70,7 +70,6 @@ extendedTest.describe('PTY Live Streaming', () => {
       // Check debug info using data-testid
       const debugElement = page.locator('[data-testid="debug-info"]')
       await debugElement.waitFor({ timeout: 10000 })
-      const debugText = await debugElement.textContent()
 
       // Verify we have some initial output
       expect(initialCount).toBeGreaterThan(0)
@@ -256,12 +255,8 @@ extendedTest.describe('PTY Live Streaming', () => {
       }
 
       // Check final state
-      const finalDebugText = (await debugElement.textContent()) || ''
-      const finalWsMatch = finalDebugText.match(/WS messages: (\d+)/)
-      const finalWsMessages = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
 
       // Check final output count
-      const finalCount = await outputLines.count()
       // Validate that live streaming is working by checking output increased
 
       // Check that the new lines contain the expected timestamp format if output increased

@@ -48,6 +48,14 @@ async function showToast(
   }
 }
 
+async function handleAskPermission(commandLine: string): Promise<never> {
+  await showToast(`PTY: Command "${commandLine}" requires permission (treated as denied)`, 'error')
+  throw new Error(
+    `PTY spawn denied: Command "${commandLine}" requires user permission which is not supported by this plugin. ` +
+      `Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
+  )
+}
+
 export async function checkCommandPermission(command: string, args: string[]): Promise<void> {
   const config = await getPermissionConfig()
   const bashPerms = config.bash
@@ -61,11 +69,7 @@ export async function checkCommandPermission(command: string, args: string[]): P
       throw new Error(`PTY spawn denied: All bash commands are disabled by user configuration.`)
     }
     if (bashPerms === 'ask') {
-      await showToast(`PTY: Command "${command}" requires permission (treated as denied)`, 'error')
-      throw new Error(
-        `PTY spawn denied: Command "${command}" requires user permission which is not supported by this plugin. ` +
-          `Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
-      )
+      await handleAskPermission(command)
     }
     return
   }
@@ -79,11 +83,7 @@ export async function checkCommandPermission(command: string, args: string[]): P
   }
 
   if (action === 'ask') {
-    await showToast(`PTY: Command "${command}" requires permission (treated as denied)`, 'error')
-    throw new Error(
-      `PTY spawn denied: Command "${command} ${args.join(' ')}" requires user permission which is not supported by this plugin. ` +
-        `Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
-    )
+    await handleAskPermission(`${command} ${args.join(' ')}`)
   }
 }
 

@@ -1,5 +1,6 @@
 import { tool } from '@opencode-ai/plugin'
 import { manager } from '../manager.ts'
+import { buildSessionNotFoundError } from '../utils.ts'
 import DESCRIPTION from './kill.txt'
 
 export const ptyKill = tool({
@@ -14,7 +15,7 @@ export const ptyKill = tool({
   async execute(args) {
     const session = manager.get(args.id)
     if (!session) {
-      throw new Error(`PTY session '${args.id}' not found. Use pty_list to see active sessions.`)
+      throw buildSessionNotFoundError(args.id)
     }
 
     const wasRunning = session.status === 'running'

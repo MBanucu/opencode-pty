@@ -18,28 +18,15 @@ function generateId(): string {
 export class SessionLifecycleManager {
   private sessions: Map<string, PTYSession> = new Map()
 
-  spawn(
-    opts: SpawnOptions,
-    onData: (id: string, data: string) => void,
-    onExit: (id: string, exitCode: number | null) => void
-  ): PTYSessionInfo {
+  private createSessionObject(opts: SpawnOptions): PTYSession {
     const id = generateId()
     const args = opts.args ?? []
     const workdir = opts.workdir ?? process.cwd()
-    const env = { ...process.env, ...opts.env } as Record<string, string>
     const title =
       opts.title ?? (`${opts.command} ${args.join(' ')}`.trim() || `Terminal ${id.slice(-4)}`)
 
-    const ptyProcess: IPty = spawn(opts.command, args, {
-      name: 'xterm-256color',
-      cols: DEFAULT_TERMINAL_COLS,
-      rows: DEFAULT_TERMINAL_ROWS,
-      cwd: workdir,
-      env,
-    })
-
     const buffer = new RingBuffer()
-    const session: PTYSession = {
+    return {
       id,
       title,
       description: opts.description,
@@ -48,30 +35,57 @@ export class SessionLifecycleManager {
       workdir,
       env: opts.env,
       status: 'running',
-      pid: ptyProcess.pid,
+      pid: 0, // will be set after spawn
       createdAt: new Date(),
       parentSessionId: opts.parentSessionId,
       notifyOnExit: opts.notifyOnExit ?? false,
       buffer,
-      process: ptyProcess,
+      process: null as any, // will be set
     }
+  }
 
-    this.sessions.set(id, session)
+  private spawnProcess(session: PTYSession): void {
+    const env = { ...process.env, ...session.env } as Record<string, string>
+    const ptyProcess: IPty = spawn(session.command, session.args, {
+      name: 'xterm-256color',
+      cols: DEFAULT_TERMINAL_COLS,
+      rows: DEFAULT_TERMINAL_ROWS,
+      cwd: session.workdir,
+      env,
+    })
+    session.process = ptyProcess
+    session.pid = ptyProcess.pid
+  }
 
-    ptyProcess.onData((data: string) => {
-      buffer.append(data)
-      onData(id, data)
+  private setupEventHandlers(
+    session: PTYSession,
+    onData: (id: string, data: string) => void,
+    onExit: (id: string, exitCode: number | null) => void
+  ): void {
+    session.process.onData((data: string) => {
+      session.buffer.append(data)
+      onData(session.id, data)
     })
 
-    ptyProcess.onExit(({ exitCode, signal }) => {
-      log.info({ id, exitCode, signal, command: opts.command }, 'pty exited')
+    session.process.onExit(({ exitCode, signal }) => {
+      log.info({ id: session.id, exitCode, signal, command: session.command }, 'pty exited')
       if (session.status === 'running') {
         session.status = 'exited'
         session.exitCode = exitCode
       }
-      onExit(id, exitCode)
+      onExit(session.id, exitCode)
     })
+  }
 
+  spawn(
+    opts: SpawnOptions,
+    onData: (id: string, data: string) => void,
+    onExit: (id: string, exitCode: number | null) => void
+  ): PTYSessionInfo {
+    const session = this.createSessionObject(opts)
+    this.spawnProcess(session)
+    this.setupEventHandlers(session, onData, onExit)
+    this.sessions.set(session.id, session)
     return this.toInfo(session)
   }
 

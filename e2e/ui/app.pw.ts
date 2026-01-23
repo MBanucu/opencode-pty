@@ -53,7 +53,7 @@ extendedTest.describe('App Component', () => {
 
   extendedTest('shows empty state when no session is selected', async ({ page, server }) => {
     // Log all console messages for debugging
-    page.on('console', (msg) => {})
+    page.on('console', () => {})
 
     // Clear any existing sessions
     const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
@@ -91,7 +91,7 @@ extendedTest.describe('App Component', () => {
       async ({ page, server }) => {
         extendedTest.setTimeout(15000) // Increase timeout for slow session startup
         // Log all console messages for debugging
-        page.on('console', (msg) => {})
+        page.on('console', () => {})
         page.on('pageerror', (error) => log.error('PAGE ERROR: ' + error.message))
 
         // Navigate and wait for initial setup
@@ -102,7 +102,7 @@ extendedTest.describe('App Component', () => {
 
         // Create a test session that produces continuous output
 
-        const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+        await page.request.post(server.baseURL + '/api/sessions', {
           data: {
             command: 'bash',
             args: [
@@ -131,11 +131,9 @@ extendedTest.describe('App Component', () => {
 
         // Check session status
         const sessionItems = page.locator('.session-item')
-        const sessionCount = await sessionItems.count()
 
         // Click on the first session
         const firstSession = sessionItems.first()
-        const statusBadge = await firstSession.locator('.status-badge').textContent()
 
         await firstSession.click()
 
@@ -156,7 +154,7 @@ extendedTest.describe('App Component', () => {
             `${server.baseURL}/api/sessions/${sessionId}/output`
           )
           if (outputResponse.status() === 200) {
-            const outputData = await outputResponse.json()
+            await outputResponse.json()
           } else {
           }
         }
@@ -181,7 +179,7 @@ extendedTest.describe('App Component', () => {
       'does not increment WS counter for messages from inactive sessions',
       async ({ page, server }) => {
         // Log all console messages for debugging
-        page.on('console', (msg) => {})
+        page.on('console', () => {})
 
         // This test would require multiple sessions and verifying that messages
         // for non-active sessions don't increment the counter
@@ -241,7 +239,7 @@ extendedTest.describe('App Component', () => {
 
     extendedTest('resets WS counter when switching sessions', async ({ page, server }) => {
       // Log all console messages for debugging
-      page.on('console', (msg) => {})
+      page.on('console', () => {})
 
       await page.goto(server.baseURL + '/')
 
@@ -294,7 +292,7 @@ extendedTest.describe('App Component', () => {
 
     extendedTest('maintains WS counter state during page refresh', async ({ page, server }) => {
       // Log all console messages for debugging
-      page.on('console', (msg) => {})
+      page.on('console', () => {})
 
       await page.goto(server.baseURL + '/')
 

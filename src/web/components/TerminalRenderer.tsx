@@ -37,6 +37,11 @@ function useTerminalSetup(
 
     xtermRef.current = term
 
+    // Expose terminal for testing purposes
+    // This allows e2e tests to access the terminal instance directly
+    console.log('TerminalRenderer: Exposing terminal instance for testing')
+    ;(window as any).xtermTerminal = term
+
     // Write historical output once on mount
     if (output.length > 0) {
       term.write(output.join(''))

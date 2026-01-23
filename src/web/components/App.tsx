@@ -5,16 +5,26 @@ import { useWebSocket } from '../hooks/useWebSocket.ts'
 import { useSessionManager } from '../hooks/useSessionManager.ts'
 
 import { Sidebar } from './Sidebar.tsx'
-import { TerminalRenderer } from './TerminalRenderer.tsx'
+import { ProcessedTerminal, RawTerminal } from './TerminalRenderer.tsx'
+import { TerminalModeSwitcher } from './TerminalModeSwitcher.tsx'
 
 export function App() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [output, setOutput] = useState<string[]>([])
   const [rawOutput, setRawOutput] = useState<string>('')
+  const [terminalMode, setTerminalMode] = useState<'raw' | 'processed'>(() => {
+    // Load from localStorage or default to 'processed'
+    return (localStorage.getItem('terminal-mode') as 'raw' | 'processed') || 'processed'
+  })
 
   const [connected, setConnected] = useState(false)
   const [wsMessageCount, setWsMessageCount] = useState(0)
+
+  const handleTerminalModeChange = useCallback((mode: 'raw' | 'processed') => {
+    setTerminalMode(mode)
+    localStorage.setItem('terminal-mode', mode)
+  }, [])
 
   const { connected: wsConnected, subscribeWithRetry } = useWebSocket({
     activeSession,
@@ -78,12 +88,22 @@ export function App() {
               </button>
             </div>
             <div className="output-container">
-              <TerminalRenderer
-                output={output}
-                onSendInput={handleSendInput}
-                onInterrupt={handleKillSession}
-                disabled={!activeSession || activeSession.status !== 'running'}
-              />
+              <TerminalModeSwitcher mode={terminalMode} onModeChange={handleTerminalModeChange} />
+              {terminalMode === 'raw' ? (
+                <RawTerminal
+                  rawOutput={rawOutput}
+                  onSendInput={handleSendInput}
+                  onInterrupt={handleKillSession}
+                  disabled={!activeSession || activeSession.status !== 'running'}
+                />
+              ) : (
+                <ProcessedTerminal
+                  output={output}
+                  onSendInput={handleSendInput}
+                  onInterrupt={handleKillSession}
+                  disabled={!activeSession || activeSession.status !== 'running'}
+                />
+              )}
             </div>
             {/* Hidden output for testing purposes */}
             <div

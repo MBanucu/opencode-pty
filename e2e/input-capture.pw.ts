@@ -45,8 +45,8 @@ extendedTest.describe('PTY Input Capture', () => {
       })
 
       // Wait for terminal to be ready and focus it
-      await page.waitForSelector('.xterm', { timeout: 5000 })
-      await page.locator('.xterm').click()
+      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
+      await page.locator('.terminal.xterm').click()
       await page.keyboard.type('hello')
 
       await page.waitForTimeout(500)
@@ -91,7 +91,7 @@ extendedTest.describe('PTY Input Capture', () => {
     })
 
     // Type a space character
-    await page.locator('.xterm').click()
+    await page.locator('.terminal.xterm').click()
     await page.keyboard.press(' ')
 
     await page.waitForTimeout(1000)
@@ -129,7 +129,7 @@ extendedTest.describe('PTY Input Capture', () => {
     })
 
     // Type the ls command
-    await page.locator('.xterm').click()
+    await page.locator('.terminal.xterm').click()
     await page.keyboard.type('ls')
     await page.keyboard.press('Enter')
 
@@ -171,7 +171,7 @@ extendedTest.describe('PTY Input Capture', () => {
     })
 
     // Type 'test' then backspace twice
-    await page.locator('.xterm').click()
+    await page.locator('.terminal.xterm').click()
     await page.keyboard.type('test')
     await page.keyboard.press('Backspace')
     await page.keyboard.press('Backspace')
@@ -226,7 +226,7 @@ extendedTest.describe('PTY Input Capture', () => {
 
     // Wait for terminal to be ready and focus it
     await page.waitForSelector('.xterm', { timeout: 5000 })
-    await page.locator('.xterm').click()
+    await page.locator('.terminal.xterm').click()
     await page.keyboard.type('hello')
 
     await page.waitForTimeout(500)
@@ -341,7 +341,7 @@ extendedTest.describe('PTY Input Capture', () => {
       })
 
       // Type the echo command
-      await page.locator('.xterm').click()
+      await page.locator('.terminal.xterm').click()
       await page.keyboard.type("echo 'Hello World'")
       await page.keyboard.press('Enter')
 

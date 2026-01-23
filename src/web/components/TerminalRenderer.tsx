@@ -1,26 +1,51 @@
-import { useEffect, useRef } from 'react'
+import React from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SerializeAddon } from '@xterm/addon-serialize'
 import '@xterm/xterm/css/xterm.css'
-import pinoLogger from '../logger.ts'
 
-interface TerminalRendererProps {
-  output: string[]
+interface BaseTerminalRendererProps {
   onSendInput?: (data: string) => void
   onInterrupt?: () => void
   disabled?: boolean
 }
 
-function useTerminalSetup(
-  terminalRef: React.RefObject<HTMLDivElement>,
-  xtermRef: React.MutableRefObject<Terminal | null>,
-  output: string[],
-  lastOutputLengthRef: React.MutableRefObject<number>
-) {
-  useEffect(() => {
-    if (!terminalRef.current) return
+interface ProcessedTerminalRendererProps extends BaseTerminalRendererProps {
+  output: string[]
+}
 
+interface RawTerminalRendererProps extends BaseTerminalRendererProps {
+  rawOutput: string
+}
+
+// Base abstract class for terminal renderers
+abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRendererProps> {
+  protected terminalRef = React.createRef<HTMLDivElement>()
+  protected xtermInstance: Terminal | null = null
+  protected fitAddon: FitAddon | null = null
+  protected serializeAddon: SerializeAddon | null = null
+
+  // Abstract method that subclasses must implement
+  abstract getDisplayData(): string
+
+  override componentDidMount() {
+    this.initializeTerminal()
+  }
+
+  override componentDidUpdate() {
+    const data = this.getDisplayData()
+    if (data && this.xtermInstance) {
+      this.xtermInstance.write(data)
+    }
+  }
+
+  override componentWillUnmount() {
+    if (this.xtermInstance) {
+      this.xtermInstance.dispose()
+    }
+  }
+
+  private initializeTerminal() {
     const term = new Terminal({
       cursorBlink: true,
       theme: { background: '#1e1e1e', foreground: '#d4d4d4' },
@@ -30,114 +55,108 @@ function useTerminalSetup(
       convertEol: true,
       allowTransparency: true,
     })
-    const fitAddon = new FitAddon()
-    const serializeAddon = new SerializeAddon()
-    term.loadAddon(fitAddon)
-    term.loadAddon(serializeAddon)
 
-    term.open(terminalRef.current)
-    fitAddon.fit()
+    this.fitAddon = new FitAddon()
+    this.serializeAddon = new SerializeAddon()
+    term.loadAddon(this.fitAddon)
+    term.loadAddon(this.serializeAddon)
 
-    xtermRef.current = term
+    if (this.terminalRef.current) {
+      term.open(this.terminalRef.current)
+      this.fitAddon.fit()
+    }
+
+    this.xtermInstance = term
 
     // Expose terminal and serialize addon for testing purposes
-    // This allows e2e tests to access the terminal instance directly
     console.log('TerminalRenderer: Exposing terminal instance and serialize addon for testing')
     ;(window as any).xtermTerminal = term
-    ;(window as any).xtermSerializeAddon = serializeAddon
+    ;(window as any).xtermSerializeAddon = this.serializeAddon
 
-    // Write historical output once on mount
-    if (output.length > 0) {
-      term.write(output.join(''))
-      lastOutputLengthRef.current = output.length
+    // Write initial data
+    const initialData = this.getDisplayData()
+    if (initialData) {
+      term.write(initialData)
     }
 
-    const handleResize = () => fitAddon.fit()
-    window.addEventListener('resize', handleResize)
+    // Set up input handling
+    this.setupInputHandling(term)
+  }
 
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      term.dispose()
-    }
-  }, [])
-}
+  private setupInputHandling(term: Terminal) {
+    const { onSendInput, onInterrupt, disabled } = this.props
 
-function useTerminalInput(
-  xtermRef: React.MutableRefObject<Terminal | null>,
-  onSendInput?: (data: string) => void,
-  onInterrupt?: () => void,
-  disabled?: boolean,
-  logger?: any
-) {
-  useEffect(() => {
-    const term = xtermRef.current
-    if (!term || disabled || !onSendInput) return
+    if (disabled) return
 
-    const onDataHandler = (data: string) => {
-      logger?.debug(
-        {
-          raw: JSON.stringify(data),
-          hex: Array.from(data)
-            .map((c) => c.charCodeAt(0).toString(16).padStart(2, '0'))
-            .join(' '),
-          length: data.length,
-        },
-        'onData → backend'
-      )
-      onSendInput(data) // Send every keystroke chunk
-    }
-
-    const onKeyHandler = ({ domEvent }: { key: string; domEvent: KeyboardEvent }) => {
-      if (domEvent.ctrlKey && domEvent.key.toLowerCase() === 'c') {
-        // Let ^C go through to backend, but also call interrupt
-        if (onInterrupt) onInterrupt()
-      } else if (domEvent.key === 'Enter') {
-        // Handle Enter key since onData doesn't fire for it
-        onSendInput('\r')
-        domEvent.preventDefault()
+    const handleData = (data: string) => {
+      if (data === '\r') {
+        // Enter key pressed
+        term.write('\r\n')
+        onSendInput?.('')
+      } else if (data === '\u0003') {
+        // Ctrl+C
+        onInterrupt?.()
+      } else {
+        // Regular character input
+        term.write(data)
+        onSendInput?.(data)
       }
-      // Space key is now handled by onData, no special case needed
     }
 
-    const dataDisposable = term.onData(onDataHandler)
-    const keyDisposable = term.onKey(onKeyHandler)
-
-    // Focus the terminal so user can type immediately
-    term.focus()
-
-    return () => {
-      dataDisposable.dispose()
-      keyDisposable.dispose()
+    const handleKey = (event: { key: string; domEvent: KeyboardEvent }) => {
+      const { key, domEvent } = event
+      if (key === 'Enter') {
+        domEvent.preventDefault()
+        handleData('\r')
+      } else if (key === 'Backspace') {
+        domEvent.preventDefault()
+        term.write('\b \b')
+        onSendInput?.('\b')
+      }
     }
-  }, [onSendInput, onInterrupt, disabled, logger])
+
+    term.onData(handleData)
+    term.onKey(handleKey)
+  }
+
+  override render() {
+    return (
+      <div ref={this.terminalRef} className="xterm" style={{ width: '100%', height: '100%' }} />
+    )
+  }
 }
 
-export function TerminalRenderer({
-  output,
-  onSendInput,
-  onInterrupt,
-  disabled = false,
-}: TerminalRendererProps) {
-  const logger = pinoLogger.child({ component: 'TerminalRenderer' })
-  const terminalRef = useRef<HTMLDivElement>(null)
-  const xtermRef = useRef<Terminal | null>(null)
-  const lastOutputLengthRef = useRef(0)
+// ProcessedTerminalRenderer subclass - handles line arrays
+export class ProcessedTerminalRenderer extends BaseTerminalRenderer {
+  constructor(props: ProcessedTerminalRendererProps) {
+    super(props)
+  }
 
-  useTerminalSetup(terminalRef, xtermRef, output, lastOutputLengthRef)
+  getDisplayData(): string {
+    // Join processed lines for clean display
+    const { output } = this.props as ProcessedTerminalRendererProps
+    return output.join('\n') + '\n'
+  }
+}
 
-  // Append new output chunks from WebSocket / API
-  useEffect(() => {
-    const term = xtermRef.current
-    if (!term) return
+// RawTerminalRenderer subclass - handles raw strings
+export class RawTerminalRenderer extends BaseTerminalRenderer {
+  constructor(props: RawTerminalRendererProps) {
+    super(props)
+  }
 
-    const newLines = output.slice(lastOutputLengthRef.current)
-    if (newLines.length > 0) {
-      term.write(newLines.join(''))
-      lastOutputLengthRef.current = output.length
-    }
-  }, [output])
+  getDisplayData(): string {
+    // Raw data goes directly to terminal (preserves ANSI codes, formatting)
+    const { rawOutput } = this.props as RawTerminalRendererProps
+    return rawOutput
+  }
+}
 
-  useTerminalInput(xtermRef, onSendInput, onInterrupt, disabled, logger)
+// Functional wrappers for easier usage
+export const ProcessedTerminal: React.FC<ProcessedTerminalRendererProps> = (props) => {
+  return <ProcessedTerminalRenderer {...props} />
+}
 
-  return <div ref={terminalRef} style={{ height: '100%', width: '100%' }} />
+export const RawTerminal: React.FC<RawTerminalRendererProps> = (props) => {
+  return <RawTerminalRenderer {...props} />
 }

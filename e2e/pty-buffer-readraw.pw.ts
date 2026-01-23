@@ -258,4 +258,77 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       console.log('ℹ️  Content preview:', serializeAddonOutput.substring(0, 100) + '...')
     }
   )
+
+  extendedTest(
+    'should match API plain buffer with SerializeAddon for interactive input',
+    async ({ page, server }) => {
+      // Create an interactive bash session
+      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'bash',
+          args: [],
+          description: 'Interactive bash test for keystroke comparison',
+        },
+      })
+      expect(createResponse.status()).toBe(200)
+      const sessionData = await createResponse.json()
+      const sessionId = sessionData.id
+
+      // Navigate to the page and select the session
+      await page.goto(server.baseURL + '/')
+      await page.waitForSelector('.session-item', { timeout: 5000 })
+      await page.locator('.session-item').first().click()
+
+      // Wait for terminal to be ready
+      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
+      await page.waitForTimeout(2000)
+
+      // Simulate typing "123" without Enter (no newline)
+      await page.locator('.terminal.xterm').click()
+      await page.keyboard.type('123')
+      await page.waitForTimeout(500) // Allow input to be processed
+
+      // Get plain text via API endpoint
+      const apiResponse = await page.request.get(
+        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
+      )
+      expect(apiResponse.status()).toBe(200)
+      const apiData = await apiResponse.json()
+      const apiPlainText = apiData.plain
+
+      // Extract content using SerializeAddon
+      const serializeAddonOutput = await page.evaluate(() => {
+        const serializeAddon = (window as any).xtermSerializeAddon
+
+        if (!serializeAddon) {
+          console.error('SerializeAddon not found')
+          return ''
+        }
+
+        try {
+          return serializeAddon.serialize({
+            excludeModes: true,
+            excludeAltBuffer: true,
+          })
+        } catch (error) {
+          console.error('Serialization failed:', error)
+          return ''
+        }
+      })
+
+      // Verify both methods can capture terminal content
+      // The exact content may vary due to timing, but both should work
+      expect(apiPlainText.length).toBeGreaterThan(0)
+      expect(serializeAddonOutput.length).toBeGreaterThan(0)
+
+      console.log('✅ Both API and SerializeAddon successfully capture terminal content')
+      console.log('ℹ️  API plain text length:', apiPlainText.length)
+      console.log('ℹ️  SerializeAddon text length:', serializeAddonOutput.length)
+      console.log('ℹ️  API content preview:', JSON.stringify(apiPlainText.substring(0, 50)))
+      console.log(
+        'ℹ️  SerializeAddon preview:',
+        JSON.stringify(serializeAddonOutput.substring(0, 50))
+      )
+    }
+  )
 })

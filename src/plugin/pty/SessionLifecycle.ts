@@ -68,6 +68,9 @@ export class SessionLifecycleManager {
     })
 
     session.process!.onExit(({ exitCode, signal }) => {
+      // Flush any remaining incomplete line in the buffer
+      session.buffer.flush()
+
       log.info({ id: session.id, exitCode, signal, command: session.command }, 'pty exited')
       if (session.status === 'running') {
         session.status = 'exited'

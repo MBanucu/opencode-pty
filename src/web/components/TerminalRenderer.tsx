@@ -134,7 +134,6 @@ export function TerminalRenderer({
     if (newLines.length > 0) {
       term.write(newLines.join(''))
       lastOutputLengthRef.current = output.length
-      term.scrollToBottom()
     }
   }, [output])
 

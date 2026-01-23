@@ -13,18 +13,36 @@ export interface SearchMatch {
 export class RingBuffer {
   private lines: string[] = []
   private maxLines: number
+  private currentLine: string = ''
 
   constructor(maxLines: number = DEFAULT_MAX_LINES) {
     this.maxLines = maxLines
   }
 
   append(data: string): void {
-    const newLines = data.split('\n')
-    for (const line of newLines) {
-      this.lines.push(line)
+    // Accumulate data, splitting on newlines
+    let remaining = data
+    let newlineIndex
+
+    while ((newlineIndex = remaining.indexOf('\n')) !== -1) {
+      // Add everything up to the newline to the current line
+      this.currentLine += remaining.substring(0, newlineIndex)
+      // Store the completed line
+      this.lines.push(this.currentLine)
+      // Reset current line for next accumulation
+      this.currentLine = ''
+      // Continue with remaining data
+      remaining = remaining.substring(newlineIndex + 1)
+
+      // Maintain max lines limit
       if (this.lines.length > this.maxLines) {
         this.lines.shift()
       }
+    }
+
+    // Add any remaining data to current line (no newline yet)
+    if (remaining) {
+      this.currentLine += remaining
     }
   }
 
@@ -49,7 +67,21 @@ export class RingBuffer {
     return this.lines.length
   }
 
+  flush(): void {
+    // Flush any remaining incomplete line
+    if (this.currentLine) {
+      this.lines.push(this.currentLine)
+      this.currentLine = ''
+
+      // Maintain max lines limit after flush
+      if (this.lines.length > this.maxLines) {
+        this.lines.shift()
+      }
+    }
+  }
+
   clear(): void {
     this.lines = []
+    this.currentLine = ''
   }
 }

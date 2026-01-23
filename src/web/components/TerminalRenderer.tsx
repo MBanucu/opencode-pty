@@ -89,7 +89,13 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
     if (disabled) return
 
     const handleData = (data: string) => {
+      console.log('🔄 TERMINAL handleData called:', {
+        input: JSON.stringify(data),
+        isEnter: data === '\r',
+      })
+
       if (data === '\r') {
+        console.log('🔄 ENTER KEY: Writing \\r\\n to terminal, sending \\n to PTY')
         // Enter key pressed
         term.write('\r\n')
         onSendInput?.('\n')
@@ -97,8 +103,8 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
         // Ctrl+C
         onInterrupt?.()
       } else {
-        // Regular character input
-        term.write(data)
+        console.log('🔄 REGULAR INPUT: Sending to PTY, no local echo')
+        // Regular character input - let PTY handle echo, no local echo
         onSendInput?.(data)
       }
     }

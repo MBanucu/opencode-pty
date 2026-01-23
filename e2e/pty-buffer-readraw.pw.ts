@@ -443,4 +443,120 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       expect(typeof serializeAddonOutput).toBe('string')
     }
   )
+
+  extendedTest(
+    'should prevent double-echo by comparing terminal content before and after input',
+    async ({ page, server }) => {
+      // Create an interactive bash session
+      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'bash',
+          args: [],
+          description: 'Double-echo prevention test',
+        },
+      })
+      expect(createResponse.status()).toBe(200)
+      const sessionData = await createResponse.json()
+      const sessionId = sessionData.id
+
+      // Navigate to the page and select the newly created session
+      await page.goto(server.baseURL + '/')
+      await page.waitForSelector('.session-item', { timeout: 5000 })
+
+      // Give time for session to appear, then select the first (most recent) session
+      await page.waitForTimeout(2000)
+      await page.locator('.session-item').first().click()
+
+      // Wait for terminal to be ready
+      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
+      await page.waitForTimeout(2000)
+
+      // Clear terminal for clean state and capture initial content
+      const initialContent = await page.evaluate(() => {
+        const xtermTerminal = (window as any).xtermTerminal
+        const serializeAddon = (window as any).xtermSerializeAddon
+
+        // Clear terminal
+        if (xtermTerminal) {
+          xtermTerminal.clear()
+          console.log('🔄 BROWSER: Terminal cleared')
+        }
+
+        // Capture initial content after clear
+        if (!serializeAddon) return ''
+        const content = serializeAddon.serialize({
+          excludeModes: true,
+          excludeAltBuffer: true,
+        })
+        console.log('🔄 BROWSER: Initial content captured, length:', content.length)
+        return content
+      })
+
+      // Type "1" with debug logging
+      await page.locator('.terminal.xterm').click()
+
+      // Listen for console messages during typing
+      page.on('console', (msg) => {
+        console.log(`[PAGE DURING TYPE] ${msg.text()}`)
+      })
+
+      await page.keyboard.type('1')
+      await page.waitForTimeout(500) // Allow PTY echo to complete
+
+      // Get API buffer content to see what PTY echoed
+      const apiResponse = await page.request.get(
+        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
+      )
+      expect(apiResponse.status()).toBe(200)
+      const apiData = await apiResponse.json()
+      const apiBufferContent = apiData.plain
+
+      console.log(
+        'ℹ️  API buffer content (session',
+        sessionId,
+        '):',
+        JSON.stringify(apiBufferContent)
+      )
+
+      // Capture content after input
+      const afterContent = await page.evaluate(() => {
+        const serializeAddon = (window as any).xtermSerializeAddon
+        if (!serializeAddon) return ''
+        const content = serializeAddon.serialize({
+          excludeModes: true,
+          excludeAltBuffer: true,
+        })
+        console.log('🔄 BROWSER: After content captured, length:', content.length)
+        return content
+      })
+
+      // Strip ANSI codes and count actual "1" characters (not in escape sequences)
+      const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+
+      const cleanInitial = stripAnsi(initialContent)
+      const cleanAfter = stripAnsi(afterContent)
+      const cleanApiBuffer = stripAnsi(apiBufferContent)
+
+      const initialCount = (cleanInitial.match(/1/g) || []).length
+      const afterCount = (cleanAfter.match(/1/g) || []).length
+      const apiBufferCount = (cleanApiBuffer.match(/1/g) || []).length
+
+      console.log('ℹ️  Raw initial content:', JSON.stringify(initialContent.substring(0, 100)))
+      console.log('ℹ️  Raw after content:', JSON.stringify(afterContent.substring(0, 100)))
+      console.log('ℹ️  Clean initial "1" count:', initialCount)
+      console.log('ℹ️  Clean after "1" count:', afterCount)
+      console.log('ℹ️  API buffer "1" count:', apiBufferCount)
+
+      // API buffer should contain the echoed "1"
+      expect(apiBufferCount).toBe(1)
+
+      // Terminal display should also contain exactly one "1" (no double-echo)
+      expect(afterCount - initialCount).toBe(1)
+
+      console.log('✅ Content comparison shows no double-echo')
+      console.log('ℹ️  Initial "1" count:', initialCount)
+      console.log('ℹ️  After "1" count:', afterCount)
+      console.log('ℹ️  Difference:', afterCount - initialCount)
+    }
+  )
 })

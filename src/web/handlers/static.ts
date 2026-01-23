@@ -17,10 +17,7 @@ function getSecurityHeaders(): Record<string, string> {
 
 export async function handleRoot(): Promise<Response> {
   // In test mode, serve built HTML from dist/web, otherwise serve source
-  const htmlPath =
-    process.env.NODE_ENV === 'test'
-      ? resolve(PROJECT_ROOT, 'dist/web/index.html')
-      : resolve(PROJECT_ROOT, 'src/web/index.html')
+  const htmlPath = 'dist/web/index.html'
   return new Response(await Bun.file(htmlPath).bytes(), {
     headers: { 'Content-Type': 'text/html', ...getSecurityHeaders() },
   })

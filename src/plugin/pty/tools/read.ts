@@ -1,9 +1,31 @@
 import { tool } from '@opencode-ai/plugin'
 import { manager } from '../manager.ts'
-import { DEFAULT_READ_LIMIT, MAX_LINE_LENGTH } from '../../constants.ts'
+import { DEFAULT_READ_LIMIT, MAX_LINE_LENGTH } from '../../../shared/constants.ts'
 import { buildSessionNotFoundError } from '../utils.ts'
 import { formatLine } from '../formatters.ts'
 import DESCRIPTION from './read.txt'
+
+/**
+ * Formats PTY output with XML tags and pagination
+ */
+function formatPtyOutput(
+  id: string,
+  status: string,
+  pattern: string | undefined,
+  formattedLines: string[],
+  hasMore: boolean,
+  paginationMessage: string,
+  endMessage: string
+): string {
+  const output = [
+    `<pty_output id="${id}" status="${status}"${pattern ? ` pattern="${pattern}"` : ''}>`,
+    ...formattedLines,
+    '',
+    hasMore ? paginationMessage : endMessage,
+    `</pty_output>`,
+  ]
+  return output.join('\n')
+}
 
 /**
  * Validates and creates a RegExp from pattern string
@@ -47,24 +69,18 @@ function handlePatternRead(args: any, session: any, offset: number, limit: numbe
     formatLine(match.text, match.lineNumber, MAX_LINE_LENGTH)
   )
 
-  const output = [
-    `<pty_output id="${args.id}" status="${session.status}" pattern="${args.pattern}">`,
-    ...formattedLines,
-    '',
-  ]
+  const paginationMessage = `(${result.matches.length} of ${result.totalMatches} matches shown. Use offset=${offset + result.matches.length} to see more.)`
+  const endMessage = `(${result.totalMatches} match${result.totalMatches === 1 ? '' : 'es'} from ${result.totalLines} total lines)`
 
-  if (result.hasMore) {
-    output.push(
-      `(${result.matches.length} of ${result.totalMatches} matches shown. Use offset=${offset + result.matches.length} to see more.)`
-    )
-  } else {
-    output.push(
-      `(${result.totalMatches} match${result.totalMatches === 1 ? '' : 'es'} from ${result.totalLines} total lines)`
-    )
-  }
-  output.push(`</pty_output>`)
-
-  return output.join('\n')
+  return formatPtyOutput(
+    args.id,
+    session.status,
+    args.pattern,
+    formattedLines,
+    result.hasMore,
+    paginationMessage,
+    endMessage
+  )
 }
 
 /**
@@ -89,20 +105,18 @@ function handlePlainRead(args: any, session: any, offset: number, limit: number)
     formatLine(line, result.offset + index + 1, MAX_LINE_LENGTH)
   )
 
-  const output = [`<pty_output id="${args.id}" status="${session.status}">`, ...formattedLines]
+  const paginationMessage = `(Buffer has more lines. Use offset=${result.offset + result.lines.length} to read beyond line ${result.offset + result.lines.length})`
+  const endMessage = `(End of buffer - total ${result.totalLines} lines)`
 
-  if (result.hasMore) {
-    output.push('')
-    output.push(
-      `(Buffer has more lines. Use offset=${result.offset + result.lines.length} to read beyond line ${result.offset + result.lines.length})`
-    )
-  } else {
-    output.push('')
-    output.push(`(End of buffer - total ${result.totalLines} lines)`)
-  }
-  output.push(`</pty_output>`)
-
-  return output.join('\n')
+  return formatPtyOutput(
+    args.id,
+    session.status,
+    undefined,
+    formattedLines,
+    result.hasMore,
+    paginationMessage,
+    endMessage
+  )
 }
 
 /**

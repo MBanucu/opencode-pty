@@ -15,6 +15,26 @@ const defaultConfig: ServerConfig = {
 
 let server: Server<WSClient> | null = null
 const wsClients: Map<ServerWebSocket<WSClient>, WSClient> = new Map()
+
+type Route = {
+  path: string
+  method: string
+  handler: (url: URL, req: Request) => Promise<Response>
+}
+
+const routes: Route[] = [
+  {
+    path: '/',
+    method: 'GET',
+    handler: async () => handleRoot(),
+  },
+  {
+    path: '/health',
+    method: 'GET',
+    handler: async () => handleHealth(wsClients.size),
+  },
+]
+
 function subscribeToSession(wsClient: WSClient, sessionId: string): boolean {
   const session = manager.get(sessionId)
   if (!session) {
@@ -62,6 +82,49 @@ function sendSessionList(ws: ServerWebSocket<WSClient>): void {
   ws.send(JSON.stringify(message))
 }
 
+function handleSubscribe(
+  ws: ServerWebSocket<WSClient>,
+  wsClient: WSClient,
+  message: WSMessage
+): void {
+  if (message.sessionId) {
+    log.info({ sessionId: message.sessionId }, 'Client subscribing to session')
+    const success = subscribeToSession(wsClient, message.sessionId)
+    if (!success) {
+      log.warn({ sessionId: message.sessionId }, 'Subscription failed - session not found')
+      ws.send(JSON.stringify({ type: 'error', error: `Session ${message.sessionId} not found` }))
+    } else {
+      log.info({ sessionId: message.sessionId }, 'Subscription successful')
+    }
+  }
+}
+
+function handleUnsubscribe(
+  _ws: ServerWebSocket<WSClient>,
+  wsClient: WSClient,
+  message: WSMessage
+): void {
+  if (message.sessionId) {
+    unsubscribeFromSession(wsClient, message.sessionId)
+  }
+}
+
+function handleSessionListRequest(
+  ws: ServerWebSocket<WSClient>,
+  _wsClient: WSClient,
+  _message: WSMessage
+): void {
+  sendSessionList(ws)
+}
+
+function handleUnknownMessage(
+  ws: ServerWebSocket<WSClient>,
+  _wsClient: WSClient,
+  _message: WSMessage
+): void {
+  ws.send(JSON.stringify({ type: 'error', error: 'Unknown message type' }))
+}
+
 // Set callback for session updates
 setOnSessionUpdate(() => {
   for (const [ws] of wsClients) {
@@ -79,32 +142,19 @@ function handleWebSocketMessage(
 
     switch (message.type) {
       case 'subscribe':
-        if (message.sessionId) {
-          log.info({ sessionId: message.sessionId }, 'Client subscribing to session')
-          const success = subscribeToSession(wsClient, message.sessionId)
-          if (!success) {
-            log.warn({ sessionId: message.sessionId }, 'Subscription failed - session not found')
-            ws.send(
-              JSON.stringify({ type: 'error', error: `Session ${message.sessionId} not found` })
-            )
-          } else {
-            log.info({ sessionId: message.sessionId }, 'Subscription successful')
-          }
-        }
+        handleSubscribe(ws, wsClient, message)
         break
 
       case 'unsubscribe':
-        if (message.sessionId) {
-          unsubscribeFromSession(wsClient, message.sessionId)
-        }
+        handleUnsubscribe(ws, wsClient, message)
         break
 
       case 'session_list':
-        sendSessionList(ws)
+        handleSessionListRequest(ws, wsClient, message)
         break
 
       default:
-        ws.send(JSON.stringify({ type: 'error', error: 'Unknown message type' }))
+        handleUnknownMessage(ws, wsClient, message)
     }
   } catch (err) {
     log.debug({ error: String(err) }, 'failed to handle ws message')
@@ -150,16 +200,15 @@ async function handleRequest(req: Request, server: Server<WSClient>): Promise<Re
     return new Response('WebSocket upgrade failed', { status: 400 })
   }
 
-  if (url.pathname === '/') {
-    return handleRoot()
+  // Check routes
+  for (const route of routes) {
+    if (url.pathname === route.path && req.method === route.method) {
+      return await route.handler(url, req)
+    }
   }
 
   const staticResponse = await handleStaticAssets(url)
   if (staticResponse) return staticResponse
-
-  if (url.pathname === '/health' && req.method === 'GET') {
-    return handleHealth(wsClients.size)
-  }
 
   const apiResponse = await handleAPISessions(url, req, wsClients)
   if (apiResponse) return apiResponse

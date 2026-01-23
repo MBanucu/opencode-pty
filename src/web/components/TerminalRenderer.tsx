@@ -11,17 +11,12 @@ interface TerminalRendererProps {
   disabled?: boolean
 }
 
-export function TerminalRenderer({
-  output,
-  onSendInput,
-  onInterrupt,
-  disabled = false,
-}: TerminalRendererProps) {
-  const logger = pinoLogger.child({ component: 'TerminalRenderer' })
-  const terminalRef = useRef<HTMLDivElement>(null)
-  const xtermRef = useRef<Terminal | null>(null)
-  const lastOutputLengthRef = useRef(0)
-
+function useTerminalSetup(
+  terminalRef: React.RefObject<HTMLDivElement>,
+  xtermRef: React.MutableRefObject<Terminal | null>,
+  output: string[],
+  lastOutputLengthRef: React.MutableRefObject<number>
+) {
   useEffect(() => {
     if (!terminalRef.current) return
 
@@ -56,27 +51,21 @@ export function TerminalRenderer({
       term.dispose()
     }
   }, [])
+}
 
-  // Append new output chunks from WebSocket / API
-  useEffect(() => {
-    const term = xtermRef.current
-    if (!term) return
-
-    const newLines = output.slice(lastOutputLengthRef.current)
-    if (newLines.length > 0) {
-      term.write(newLines.join(''))
-      lastOutputLengthRef.current = output.length
-      term.scrollToBottom()
-    }
-  }, [output])
-
-  // Handle user input → forward raw to backend
+function useTerminalInput(
+  xtermRef: React.MutableRefObject<Terminal | null>,
+  onSendInput?: (data: string) => void,
+  onInterrupt?: () => void,
+  disabled?: boolean,
+  logger?: any
+) {
   useEffect(() => {
     const term = xtermRef.current
     if (!term || disabled || !onSendInput) return
 
     const onDataHandler = (data: string) => {
-      logger.debug(
+      logger?.debug(
         {
           raw: JSON.stringify(data),
           hex: Array.from(data)
@@ -111,7 +100,36 @@ export function TerminalRenderer({
       dataDisposable.dispose()
       keyDisposable.dispose()
     }
-  }, [onSendInput, onInterrupt, disabled])
+  }, [onSendInput, onInterrupt, disabled, logger])
+}
+
+export function TerminalRenderer({
+  output,
+  onSendInput,
+  onInterrupt,
+  disabled = false,
+}: TerminalRendererProps) {
+  const logger = pinoLogger.child({ component: 'TerminalRenderer' })
+  const terminalRef = useRef<HTMLDivElement>(null)
+  const xtermRef = useRef<Terminal | null>(null)
+  const lastOutputLengthRef = useRef(0)
+
+  useTerminalSetup(terminalRef, xtermRef, output, lastOutputLengthRef)
+
+  // Append new output chunks from WebSocket / API
+  useEffect(() => {
+    const term = xtermRef.current
+    if (!term) return
+
+    const newLines = output.slice(lastOutputLengthRef.current)
+    if (newLines.length > 0) {
+      term.write(newLines.join(''))
+      lastOutputLengthRef.current = output.length
+      term.scrollToBottom()
+    }
+  }, [output])
+
+  useTerminalInput(xtermRef, onSendInput, onInterrupt, disabled, logger)
 
   return <div ref={terminalRef} style={{ height: '100%', width: '100%' }} />
 }

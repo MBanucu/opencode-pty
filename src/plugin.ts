@@ -12,6 +12,15 @@ import { startWebServer } from './web/server.ts'
 
 const log = logger.child({ service: 'pty.plugin' })
 
+interface SessionDeletedEvent {
+  type: 'session.deleted'
+  properties: {
+    info: {
+      id: string
+    }
+  }
+}
+
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initLogger(client)
   initPermissions(client, directory)
@@ -31,9 +40,10 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
         input.command = {}
       }
       input.command['background-pty-server-url'] = {
-        template: 'Get the URL of the running PTY web server instance by calling the pty_server_url tool and display it.',
+        template:
+          'Get the URL of the running PTY web server instance by calling the pty_server_url tool and display it.',
         description: 'Get the link to the running PTY web server',
-      };
+      }
       startWebServer()
     },
     event: async ({ event }) => {
@@ -42,7 +52,8 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       }
 
       if (event.type === 'session.deleted') {
-        const sessionId = (event as { properties: { info: { id: string } } }).properties?.info?.id
+        const sessionEvent = event as SessionDeletedEvent
+        const sessionId = sessionEvent.properties?.info?.id
         if (sessionId) {
           log.info({ sessionId }, 'cleaning up PTYs for deleted session')
           manager.cleanupBySession(sessionId)

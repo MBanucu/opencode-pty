@@ -1,5 +1,5 @@
 import { manager } from '../../plugin/pty/manager.ts'
-import { DEFAULT_READ_LIMIT } from '../constants.ts'
+import { DEFAULT_READ_LIMIT } from '../../shared/constants.ts'
 import type { ServerWebSocket } from 'bun'
 import type { WSClient } from '../types.ts'
 

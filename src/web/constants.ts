@@ -1,11 +1,4 @@
 // Web-specific constants for the web server and related components
-import {
-  DEFAULT_READ_LIMIT,
-  MAX_LINE_LENGTH,
-  DEFAULT_MAX_BUFFER_LINES,
-} from '../shared/constants.ts'
-
-export { DEFAULT_READ_LIMIT, MAX_LINE_LENGTH, DEFAULT_MAX_BUFFER_LINES }
 
 export const DEFAULT_SERVER_PORT = 8765
 

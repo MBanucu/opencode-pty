@@ -1,4 +1,4 @@
-import { DEFAULT_MAX_BUFFER_LINES } from '../constants.ts'
+import { DEFAULT_MAX_BUFFER_LINES } from '../../shared/constants.ts'
 
 const DEFAULT_MAX_LINES = parseInt(
   process.env.PTY_MAX_BUFFER_LINES || DEFAULT_MAX_BUFFER_LINES.toString(),

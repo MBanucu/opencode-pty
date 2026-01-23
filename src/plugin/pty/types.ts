@@ -18,7 +18,7 @@ export interface PTYSession {
   parentSessionId: string
   notifyOnExit: boolean
   buffer: RingBuffer
-  process: IPty
+  process: IPty | null
 }
 
 export interface PTYSessionInfo {

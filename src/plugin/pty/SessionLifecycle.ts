@@ -6,10 +6,10 @@ import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS } from '../constants.ts'
 
 const log = logger.child({ service: 'pty.lifecycle' })
 
-const ID_BYTES = 4
+const SESSION_ID_BYTE_LENGTH = 4
 
 function generateId(): string {
-  const hex = Array.from(crypto.getRandomValues(new Uint8Array(ID_BYTES)))
+  const hex = Array.from(crypto.getRandomValues(new Uint8Array(SESSION_ID_BYTE_LENGTH)))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
   return `pty_${hex}`
@@ -40,7 +40,7 @@ export class SessionLifecycleManager {
       parentSessionId: opts.parentSessionId,
       notifyOnExit: opts.notifyOnExit ?? false,
       buffer,
-      process: null as any, // will be set
+      process: null, // will be set
     }
   }
 
@@ -62,12 +62,12 @@ export class SessionLifecycleManager {
     onData: (id: string, data: string) => void,
     onExit: (id: string, exitCode: number | null) => void
   ): void {
-    session.process.onData((data: string) => {
+    session.process!.onData((data: string) => {
       session.buffer.append(data)
       onData(session.id, data)
     })
 
-    session.process.onExit(({ exitCode, signal }) => {
+    session.process!.onExit(({ exitCode, signal }) => {
       log.info({ id: session.id, exitCode, signal, command: session.command }, 'pty exited')
       if (session.status === 'running') {
         session.status = 'exited'
@@ -99,7 +99,7 @@ export class SessionLifecycleManager {
 
     if (session.status === 'running') {
       try {
-        session.process.kill()
+        session.process!.kill()
       } catch {
         // Ignore kill errors
       }

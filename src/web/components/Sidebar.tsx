@@ -28,7 +28,7 @@ export function Sidebar({ sessions, activeSession, onSessionClick, connected }: 
               className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
               onClick={() => onSessionClick(session)}
             >
-              <div className="session-title">{session.title}</div>
+              <div className="session-title">{session.description ?? session.title}</div>
               <div className="session-info">
                 <span>{session.command}</span>
                 <span className={`status-badge status-${session.status}`}>{session.status}</span>

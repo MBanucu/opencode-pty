@@ -33,6 +33,7 @@ export interface WSClient {
 export interface Session {
   id: string
   title: string
+  description?: string
   command: string
   status: 'running' | 'exited' | 'killed'
   exitCode?: number

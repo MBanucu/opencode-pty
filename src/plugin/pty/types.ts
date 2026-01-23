@@ -24,6 +24,7 @@ export interface PTYSession {
 export interface PTYSessionInfo {
   id: string
   title: string
+  description?: string
   command: string
   args: string[]
   workdir: string

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Session } from '../types.ts'
 import pinoLogger from '../logger.ts'
-import { TerminalRenderer } from './TerminalRenderer.tsx'
+
 import { Sidebar } from './Sidebar.tsx'
+import { TerminalRenderer } from './TerminalRenderer.tsx'
 
 const logger = pinoLogger.child({ module: 'App' })
 
@@ -381,7 +382,11 @@ export function App() {
       return
     }
 
-    if (!confirm(`Are you sure you want to kill session "${activeSession.title}"?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to kill session "${activeSession.description ?? activeSession.title}"?`
+      )
+    ) {
       return
     }
 
@@ -422,23 +427,33 @@ export function App() {
         {activeSession ? (
           <>
             <div className="output-header">
-              <div className="output-title">{activeSession.title}</div>
+              <div className="output-title">{activeSession.description ?? activeSession.title}</div>
               <button className="kill-btn" onClick={handleKillSession}>
                 Kill Session
               </button>
             </div>
             <div className="output-container">
-              {output.length === 0 ? (
-                <div className="empty-state">Waiting for output...</div>
-              ) : (
-                <TerminalRenderer
-                  key={activeSession?.id}
-                  output={output}
-                  onSendInput={handleSendInput}
-                  onInterrupt={handleKillSession}
-                  disabled={activeSession?.status !== 'running'}
-                />
-              )}
+              <TerminalRenderer
+                output={output}
+                onSendInput={handleSendInput}
+                onInterrupt={handleKillSession}
+                disabled={!activeSession || activeSession.status !== 'running'}
+              />
+            </div>
+            <div className="debug-info" data-testid="debug-info">
+              Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}
+              {wsMessageCount}
+            </div>
+            {/* Hidden output for testing purposes */}
+            <div
+              style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
+              data-testid="test-output"
+            >
+              {output.map((line, i) => (
+                <div key={i} className="output-line">
+                  {line}
+                </div>
+              ))}
             </div>
             <div className="debug-info">
               Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}

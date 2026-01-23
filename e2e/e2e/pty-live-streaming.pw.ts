@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
 import { createTestLogger } from '../test-logger.ts'
 
@@ -8,27 +8,28 @@ extendedTest.describe('PTY Live Streaming', () => {
   extendedTest(
     'should load historical buffered output when connecting to running PTY session',
     async ({ page, server }) => {
+      page.on('console', (msg) => log.info({ msg, text: msg.text() }, 'PAGE CONSOLE'))
+
       // Navigate to the web UI (test server should be running)
       await page.goto(server.baseURL + '/')
 
-      // Check if there are sessions, if not, create one for testing
-      const initialResponse = await page.request.get(server.baseURL + '/api/sessions')
-      const initialSessions = await initialResponse.json()
-      if (initialSessions.length === 0) {
-        log.info('No sessions found, creating a test session for streaming...')
-        await page.request.post(server.baseURL + '/api/sessions', {
-          data: {
-            command: 'bash',
-            args: [
-              '-c',
-              'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
-            ],
-            description: 'Live streaming test session',
-          },
-        })
-        // Wait a bit for the session to start and reload to get updated session list
-        await page.waitForTimeout(1000)
-      }
+      // Clear any existing sessions to ensure clean state
+      await page.request.post(server.baseURL + '/api/sessions/clear')
+
+      // Create a fresh test session for streaming
+      log.info('Creating a test session for streaming...')
+      await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'bash',
+          args: [
+            '-c',
+            'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
+          ],
+          description: 'Live streaming test session',
+        },
+      })
+      // Wait a bit for the session to start and reload to get updated session list
+      await page.waitForTimeout(1000)
 
       // Wait for sessions to load
       await page.waitForSelector('.session-item', { timeout: 5000 })
@@ -66,10 +67,10 @@ extendedTest.describe('PTY Live Streaming', () => {
       expect(headerTitle).toContain('Live streaming test session')
 
       // Now wait for output to appear
-      await page.waitForSelector('.output-line', { timeout: 5000 })
+      await page.waitForSelector('[data-testid="test-output"] .output-line', { timeout: 5000 })
 
       // Get initial output count
-      const initialOutputLines = page.locator('.output-line')
+      const initialOutputLines = page.locator('[data-testid="test-output"] .output-line')
       const initialCount = await initialOutputLines.count()
       log.info(`Initial output lines: ${initialCount}`)
 
@@ -83,7 +84,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       expect(initialCount).toBeGreaterThan(0)
 
       // Verify the output contains the initial welcome message from the bash command
-      const allText = await page.locator('.output-container').textContent()
+      const allText = await page.locator('[data-testid="test-output"]').textContent()
       expect(allText).toContain('Welcome to live streaming test')
 
       log.info(
@@ -153,7 +154,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       }
 
       await testSession.click()
-      await page.waitForSelector('.output-line', { timeout: 5000 })
+      await page.waitForSelector('[data-testid="test-output"] .output-line', { timeout: 5000 })
 
       // Verify the API returns the expected historical data
       const sessionData = await page.request.get(
@@ -165,7 +166,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       expect(outputData.lines.length).toBeGreaterThan(0)
 
       // Check that historical output is present in the UI
-      const allText = await page.locator('.output-container').textContent()
+      const allText = await page.locator('[data-testid="test-output"]').textContent()
       expect(allText).toContain('=== START HISTORICAL ===')
       expect(allText).toContain('Line A')
       expect(allText).toContain('Line B')
@@ -240,10 +241,10 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.waitForTimeout(2000)
 
       // Wait for initial output
-      await page.waitForSelector('.output-line', { timeout: 3000 })
+      await page.waitForSelector('[data-testid="test-output"] .output-line', { timeout: 3000 })
 
       // Get initial count
-      const outputLines = page.locator('.output-line')
+      const outputLines = page.locator('[data-testid="test-output"] .output-line')
       const initialCount = await outputLines.count()
       expect(initialCount).toBeGreaterThan(0)
 

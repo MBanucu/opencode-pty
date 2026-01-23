@@ -331,4 +331,74 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       )
     }
   )
+
+  extendedTest(
+    'should compare API plain text with SerializeAddon for initial bash state',
+    async ({ page, server }) => {
+      // Create an interactive bash session
+      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'bash',
+          args: [],
+          description: 'Initial bash state test for plain text comparison',
+        },
+      })
+      expect(createResponse.status()).toBe(200)
+      const sessionData = await createResponse.json()
+      const sessionId = sessionData.id
+
+      // Navigate to the page and select the session
+      await page.goto(server.baseURL + '/')
+      await page.waitForSelector('.session-item', { timeout: 5000 })
+      await page.locator('.session-item').first().click()
+
+      // Wait for terminal to be ready (no input sent)
+      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
+      await page.waitForTimeout(3000)
+
+      // Get plain text via API endpoint
+      const apiResponse = await page.request.get(
+        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
+      )
+      expect(apiResponse.status()).toBe(200)
+      const apiData = await apiResponse.json()
+      const apiPlainText = apiData.plain
+
+      // Extract content using SerializeAddon
+      const serializeAddonOutput = await page.evaluate(() => {
+        const serializeAddon = (window as any).xtermSerializeAddon
+
+        if (!serializeAddon) {
+          console.error('SerializeAddon not found')
+          return ''
+        }
+
+        try {
+          return serializeAddon.serialize({
+            excludeModes: true,
+            excludeAltBuffer: true,
+          })
+        } catch (error) {
+          console.error('Serialization failed:', error)
+          return ''
+        }
+      })
+
+      // Both should contain some terminal content (bash prompt, etc.)
+      expect(apiPlainText.length).toBeGreaterThan(0)
+      expect(serializeAddonOutput.length).toBeGreaterThan(0)
+
+      // Both should contain shell prompt elements
+      expect(apiPlainText).toContain('$')
+      expect(serializeAddonOutput).toContain('$')
+
+      console.log('✅ Both API and SerializeAddon capture initial bash state')
+      console.log('ℹ️  API plain text length:', apiPlainText.length)
+      console.log('ℹ️  SerializeAddon text length:', serializeAddonOutput.length)
+      console.log(
+        'ℹ️  Both contain prompt:',
+        apiPlainText.includes('$') && serializeAddonOutput.includes('$')
+      )
+    }
+  )
 })

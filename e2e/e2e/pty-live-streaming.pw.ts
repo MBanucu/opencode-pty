@@ -145,12 +145,12 @@ extendedTest.describe('PTY Live Streaming', () => {
 
       // Verify the API returns the expected historical data
       const sessionData = await page.request.get(
-        server.baseURL + `/api/sessions/${testSessionData.id}/output`
+        server.baseURL + `/api/sessions/${testSessionData.id}/buffer/raw`
       )
-      const outputData = await sessionData.json()
-      expect(outputData.lines).toBeDefined()
-      expect(Array.isArray(outputData.lines)).toBe(true)
-      expect(outputData.lines.length).toBeGreaterThan(0)
+      const bufferData = await sessionData.json()
+      expect(bufferData.raw).toBeDefined()
+      expect(typeof bufferData.raw).toBe('string')
+      expect(bufferData.raw.length).toBeGreaterThan(0)
 
       // Check that historical output is present in the UI
       const allText = await page.locator('[data-testid="test-output"]').textContent()

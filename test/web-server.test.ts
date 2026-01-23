@@ -213,16 +213,15 @@ describe('Web Server', () => {
       // Wait a bit for output to be captured
       await new Promise((resolve) => setTimeout(resolve, 100))
 
-      const response = await fetch(`${serverUrl}/api/sessions/${session.id}/output`)
+      const response = await fetch(`${serverUrl}/api/sessions/${session.id}/buffer/raw`)
       expect(response.status).toBe(200)
 
-      const outputData = await response.json()
-      expect(outputData).toHaveProperty('lines')
-      expect(outputData).toHaveProperty('totalLines')
-      expect(outputData).toHaveProperty('offset')
-      expect(outputData).toHaveProperty('hasMore')
-      expect(Array.isArray(outputData.lines)).toBe(true)
-      expect(outputData.lines.length).toBeGreaterThan(0)
+      const bufferData = await response.json()
+      expect(bufferData).toHaveProperty('raw')
+      expect(bufferData).toHaveProperty('byteLength')
+      expect(typeof bufferData.raw).toBe('string')
+      expect(typeof bufferData.byteLength).toBe('number')
+      expect(bufferData.raw.length).toBeGreaterThan(0)
     })
 
     it('should return 404 for non-existent endpoints', async () => {

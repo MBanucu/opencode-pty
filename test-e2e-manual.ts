@@ -55,7 +55,7 @@ async function runBrowserTest() {
   // Give it time to produce initial output
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
-  // Check if sessions have output
+  // Check if sessions have buffer content
 
   // Launch browser
   const browser = await chromium.launch({

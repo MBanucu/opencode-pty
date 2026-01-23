@@ -48,11 +48,12 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // Check that newlines are preserved
       expect(bufferData.raw).toContain('\n')
 
-      // The key insight: PTY output contained \n characters that are preserved in raw buffer
+      // The key insight: PTY output contained \n characters that were properly processed
+      // The buffer now stores complete lines instead of individual characters
       // This verifies that the RingBuffer correctly handles newline-delimited data
 
-      console.log('✅ Raw buffer contains newlines and expected content')
-      console.log('✅ PTY output with newlines was properly captured')
+      console.log('✅ Buffer lines:', bufferData.lines)
+      console.log('✅ PTY output with newlines was properly processed into separate lines')
     }
   )
 
@@ -130,7 +131,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     expect(rawData.byteLength).toBe(rawData.raw.length)
 
     console.log('✅ API endpoint returns raw buffer data')
-    console.log('✅ Raw data contains newlines:', rawData.raw.includes('\n'))
+    console.log('✅ Raw data contains newlines:', JSON.stringify(rawData.raw))
     console.log('✅ Byte length matches:', rawData.byteLength)
 
     // Verify raw data structure

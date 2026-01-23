@@ -36,18 +36,13 @@ export function useSessionManager({
         try {
           const baseUrl = `${location.protocol}//${location.host}`
 
-          // Make parallel API calls for both data formats
-          const [rawResponse, linesResponse] = await Promise.all([
-            fetch(`${baseUrl}/api/sessions/${session.id}/buffer/raw`),
-            fetch(`${baseUrl}/api/sessions/${session.id}/output`),
-          ])
+          // Fetch raw buffer data only (processed output endpoint removed)
+          const rawResponse = await fetch(`${baseUrl}/api/sessions/${session.id}/buffer/raw`)
 
-          // Process responses independently with graceful error handling
+          // Process response with graceful error handling
           const rawData = rawResponse.ok ? await rawResponse.json() : { raw: '' }
-          const linesData = linesResponse.ok ? await linesResponse.json() : { lines: [] }
 
-          // Call callbacks with their respective data formats
-          onOutputUpdate?.(linesData.lines || [])
+          // Call callback with raw data
           onRawOutputUpdate?.(rawData.raw || '')
         } catch (fetchError) {
           logger.error({ error: fetchError }, 'Network error fetching session data')

@@ -190,13 +190,13 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
       // Get server buffer content via API
       const bufferResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/output`
+        server.baseURL + `/api/sessions/${sessionId}/buffer/raw`
       )
       expect(bufferResponse.status()).toBe(200)
       const bufferData = await bufferResponse.json()
 
-      // Verify server buffer contains the expected command and output
-      expect(bufferData.lines.length).toBeGreaterThan(0)
+      // Verify server buffer contains the expected content
+      expect(bufferData.raw.length).toBeGreaterThan(0)
 
       // Check that the buffer contains the command execution
       const bufferText = bufferData.lines.join('\n')

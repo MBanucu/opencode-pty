@@ -158,11 +158,11 @@ extendedTest.describe('App Component', () => {
 
         // Check if session has output
         if (sessionId) {
-          const outputResponse = await page.request.get(
-            `${server.baseURL}/api/sessions/${sessionId}/output`
+          const bufferResponse = await page.request.get(
+            `${server.baseURL}/api/sessions/${sessionId}/buffer/raw`
           )
-          if (outputResponse.status() === 200) {
-            await outputResponse.json()
+          if (bufferResponse.status() === 200) {
+            await bufferResponse.json()
           } else {
           }
         }

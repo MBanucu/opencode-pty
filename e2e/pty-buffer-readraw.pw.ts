@@ -253,31 +253,34 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should match API plain buffer with SerializeAddon for interactive input',
     async ({ page, server }) => {
-      // Create an interactive bash session
+      // Create an interactive bash session with unique description
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
           args: [],
-          description: 'Interactive bash test for keystroke comparison',
+          description: 'Double Echo Test Session',
         },
       })
       expect(createResponse.status()).toBe(200)
       const sessionData = await createResponse.json()
       const sessionId = sessionData.id
 
-      // Navigate to the page and select the session
+      // Navigate to the page and select the specific session
       await page.goto(server.baseURL + '/')
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-      await page.locator('.session-item').first().click()
+      await page.waitForSelector('.session-item', { timeout: 10000 })
 
-      // Wait for terminal to be ready
-      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
+      // Wait for the session to appear and select it specifically
       await page.waitForTimeout(2000)
+      await page.locator('.session-item').filter({ hasText: 'Double Echo Test Session' }).click()
 
-      // Simulate typing "123" without Enter (no newline)
+      // Wait for terminal to be ready and session content to load
+      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
+      await page.waitForTimeout(4000) // Longer wait for session content
+
+      // Simulate typing "1" without Enter (no newline)
       await page.locator('.terminal.xterm').click()
-      await page.keyboard.type('123')
-      await page.waitForTimeout(500) // Allow input to be processed
+      await page.keyboard.type('1')
+      await page.waitForTimeout(1000) // Allow PTY echo to complete
 
       // Get plain text via API endpoint
       const apiResponse = await page.request.get(

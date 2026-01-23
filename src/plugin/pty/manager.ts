@@ -94,6 +94,15 @@ class PTYManager {
     return this.lifecycleManager.toInfo(session)
   }
 
+  getRawBuffer(id: string): { raw: string; byteLength: number } | null {
+    const session = this.lifecycleManager.getSession(id)
+    if (!session) return null
+    return {
+      raw: session.buffer.readRaw(),
+      byteLength: session.buffer.byteLength,
+    }
+  }
+
   kill(id: string, cleanup: boolean = false): boolean {
     return this.lifecycleManager.kill(id, cleanup)
   }

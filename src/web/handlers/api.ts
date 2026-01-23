@@ -1,5 +1,5 @@
 import { manager } from '../../plugin/pty/manager.ts'
-import { DEFAULT_READ_LIMIT } from '../../shared/constants.ts'
+
 import type { ServerWebSocket } from 'bun'
 import type { WSClient } from '../types.ts'
 
@@ -149,23 +149,6 @@ export async function handleAPISessions(
       return new Response('Failed to kill session', { status: 400 })
     }
     return secureJsonResponse({ success: true })
-  }
-
-  const outputMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/output$/)
-  if (outputMatch && req.method === 'GET') {
-    const sessionId = outputMatch[1]
-    if (!sessionId) return new Response('Invalid session ID', { status: 400 })
-
-    const result = manager.read(sessionId, 0, DEFAULT_READ_LIMIT)
-    if (!result) {
-      return new Response('Session not found', { status: 404 })
-    }
-    return secureJsonResponse({
-      lines: result.lines,
-      totalLines: result.totalLines,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    })
   }
 
   const rawBufferMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/buffer\/raw$/)

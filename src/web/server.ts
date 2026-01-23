@@ -1,5 +1,5 @@
 import type { Server, ServerWebSocket } from 'bun'
-import { manager, onOutput, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
+import { manager, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import logger from './logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
 import { handleRoot, handleStaticAssets } from './handlers/static.ts'
@@ -46,25 +46,6 @@ function subscribeToSession(wsClient: WSClient, sessionId: string): boolean {
 
 function unsubscribeFromSession(wsClient: WSClient, sessionId: string): void {
   wsClient.subscribedSessions.delete(sessionId)
-}
-
-function broadcastSessionData(sessionId: string, data: string[]): void {
-  const message: WSMessage = { type: 'data', sessionId, data }
-  const messageStr = JSON.stringify(message)
-
-  let sentCount = 0
-  for (const [ws, client] of wsClients) {
-    if (client.subscribedSessions.has(sessionId)) {
-      try {
-        ws.send(messageStr)
-        sentCount++
-      } catch (err) {
-        log.error({ error: String(err) }, 'Failed to send to client')
-      }
-    }
-  }
-
-  log.debug({ sessionId, sentCount, messageSize: messageStr.length }, 'broadcast data message')
 }
 
 function broadcastRawSessionData(sessionId: string, rawData: string): void {
@@ -246,10 +227,6 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
     log.warn('web server already running')
     return `http://${server.hostname}:${server.port}`
   }
-
-  onOutput((sessionId, data) => {
-    broadcastSessionData(sessionId, data)
-  })
 
   onRawOutput((sessionId, rawData) => {
     broadcastRawSessionData(sessionId, rawData)

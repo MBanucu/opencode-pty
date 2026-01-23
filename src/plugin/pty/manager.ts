@@ -13,29 +13,12 @@ export function setOnSessionUpdate(callback: () => void) {
 
 const log = logger.child({ service: 'pty.manager' })
 
-type OutputCallback = (sessionId: string, data: string[]) => void
-const outputCallbacks: OutputCallback[] = []
-
 type RawOutputCallback = (sessionId: string, rawData: string) => void
-const rawOutputCallbacks: RawOutputCallback[] = []
 
-export function onOutput(callback: OutputCallback): void {
-  outputCallbacks.push(callback)
-}
+const rawOutputCallbacks: RawOutputCallback[] = []
 
 export function onRawOutput(callback: RawOutputCallback): void {
   rawOutputCallbacks.push(callback)
-}
-
-function notifyOutput(sessionId: string, data: string): void {
-  const lines = data.split('\n')
-  for (const callback of outputCallbacks) {
-    try {
-      callback(sessionId, lines)
-    } catch (err) {
-      log.error({ sessionId, error: String(err) }, 'output callback failed')
-    }
-  }
 }
 
 function notifyRawOutput(sessionId: string, rawData: string): void {
@@ -65,7 +48,6 @@ class PTYManager {
     return this.lifecycleManager.spawn(
       opts,
       (id, data) => {
-        notifyOutput(id, data)
         notifyRawOutput(id, data)
       },
       async (id, exitCode) => {

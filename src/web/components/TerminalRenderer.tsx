@@ -10,10 +10,6 @@ interface BaseTerminalRendererProps {
   disabled?: boolean
 }
 
-interface ProcessedTerminalRendererProps extends BaseTerminalRendererProps {
-  output: string[]
-}
-
 interface RawTerminalRendererProps extends BaseTerminalRendererProps {
   rawOutput: string
 }
@@ -132,24 +128,6 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
   }
 }
 
-// ProcessedTerminalRenderer subclass - handles line arrays
-export class ProcessedTerminalRenderer extends BaseTerminalRenderer {
-  constructor(props: ProcessedTerminalRendererProps) {
-    super(props)
-  }
-
-  getDisplayData(): string {
-    // Join processed lines for clean display
-    const { output } = this.props as ProcessedTerminalRendererProps
-
-    // Only add trailing newline if there are actual lines to display
-    const joined = output.join('\n')
-    const withTrailing = output.length > 0 ? joined + '\n' : ''
-
-    return withTrailing
-  }
-}
-
 // RawTerminalRenderer subclass - handles raw strings
 export class RawTerminalRenderer extends BaseTerminalRenderer {
   constructor(props: RawTerminalRendererProps) {
@@ -163,11 +141,7 @@ export class RawTerminalRenderer extends BaseTerminalRenderer {
   }
 }
 
-// Functional wrappers for easier usage
-export const ProcessedTerminal: React.FC<ProcessedTerminalRendererProps> = (props) => {
-  return <ProcessedTerminalRenderer {...props} />
-}
-
+// Functional wrapper for easier usage
 export const RawTerminal: React.FC<RawTerminalRendererProps> = (props) => {
   return <RawTerminalRenderer {...props} />
 }

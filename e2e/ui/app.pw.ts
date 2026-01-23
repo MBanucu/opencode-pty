@@ -315,25 +315,20 @@ extendedTest.describe('App Component', () => {
       // Wait for some messages
       await page.waitForTimeout(2000)
 
-      const debugElement = page.locator('[data-testid="debug-info"]')
-      await debugElement.waitFor({ state: 'attached', timeout: 2000 })
-      const firstSessionDebug = (await debugElement.textContent()) || ''
-      const firstSessionWsMatch = firstSessionDebug.match(/WS messages:\s*(\d+)/)
-      const firstSessionCount =
-        firstSessionWsMatch && firstSessionWsMatch[1] ? parseInt(firstSessionWsMatch[1]) : 0
-
       // Switch to second session
       await sessionItems.nth(1).click()
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // The counter should reset or be lower for the new session
+      // Check that counter resets when switching sessions
+      const debugElement = page.locator('[data-testid="debug-info"]')
+      await debugElement.waitFor({ state: 'attached', timeout: 2000 })
       const secondSessionDebug = (await debugElement.textContent()) || ''
       const secondSessionWsMatch = secondSessionDebug.match(/WS messages:\s*(\d+)/)
       const secondSessionCount =
         secondSessionWsMatch && secondSessionWsMatch[1] ? parseInt(secondSessionWsMatch[1]) : 0
 
-      // Counter should be lower for the new session (or reset to 0)
-      expect(secondSessionCount).toBeLessThanOrEqual(firstSessionCount)
+      // Counter should reset when switching sessions (allow some messages due to streaming)
+      expect(secondSessionCount).toBeLessThanOrEqual(5)
     })
 
     extendedTest('maintains WS counter state during page refresh', async ({ page, server }) => {

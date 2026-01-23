@@ -31,17 +31,6 @@ export function onOutput(callback: OutputCallback): void {
 }
 
 function notifyOutput(sessionId: string, data: string): void {
-  log.debug(
-    {
-      sessionId,
-      dataLength: data.length,
-      data:
-        data.length > DEFAULT_TERMINAL_COLS / 2
-          ? data.slice(0, DEFAULT_TERMINAL_COLS / 2) + '...'
-          : data,
-    },
-    'notifyOutput called'
-  )
   const lines = data.split('\n')
   for (const callback of outputCallbacks) {
     try {
@@ -86,8 +75,6 @@ class PTYManager {
     const env = { ...process.env, ...opts.env } as Record<string, string>
     const title =
       opts.title ?? (`${opts.command} ${args.join(' ')}`.trim() || `Terminal ${id.slice(-4)}`)
-
-    log.debug({ id, command: opts.command, args, workdir }, 'Spawning PTY')
 
     const ptyProcess: IPty = spawn(opts.command, args, {
       name: 'xterm-256color',
@@ -157,27 +144,14 @@ class PTYManager {
   }
 
   write(id: string, data: string): boolean {
-    log.debug(
-      {
-        id,
-        dataLength: data.length,
-        data:
-          data.length > DEFAULT_TERMINAL_COLS / 2
-            ? data.slice(0, DEFAULT_TERMINAL_COLS / 2) + '...'
-            : data,
-      },
-      'Manager.write called'
-    )
     const session = this.sessions.get(id)
     if (!session) {
-      log.debug({ id }, 'Manager.write: session not found')
       return false
     }
     try {
       session.process.write(data)
       return true
     } catch (err) {
-      log.debug({ id, error: String(err) }, 'write to exited process')
       return true // allow write to exited process for tests
     }
   }
@@ -212,17 +186,7 @@ class PTYManager {
   }
 
   get(id: string): PTYSessionInfo | null {
-    log.debug({ id }, 'Manager.get called')
     const session = this.sessions.get(id)
-    log.debug(
-      {
-        id,
-        found: !!session,
-        command: session?.command,
-        status: session?.status,
-      },
-      'Manager.get result'
-    )
     return session ? this.toInfo(session) : null
   }
 

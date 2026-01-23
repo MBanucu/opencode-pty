@@ -95,7 +95,6 @@ export function TerminalRenderer({
         if (onInterrupt) onInterrupt()
       } else if (domEvent.key === 'Enter') {
         // Handle Enter key since onData doesn't fire for it
-        console.log('onKey: Enter pressed')
         onSendInput('\r')
         domEvent.preventDefault()
       }

@@ -28,21 +28,14 @@ export function App() {
 
   // Connect to WebSocket on mount
   useEffect(() => {
-    logger.debug({ activeSessionId: activeSession?.id }, 'WebSocket useEffect: starting execution')
     const ws = new WebSocket(`ws://${location.host}`)
-    logger.debug('WebSocket useEffect: created new WebSocket instance')
     ws.onopen = () => {
-      logger.debug('WebSocket onopen: connection established, readyState is OPEN')
       logger.info('WebSocket connected')
       setConnected(true)
       // Request initial session list
       ws.send(JSON.stringify({ type: 'session_list' }))
       // Resubscribe to active session if exists
       if (activeSessionRef.current) {
-        logger.debug(
-          { sessionId: activeSessionRef.current.id },
-          'WebSocket onopen: resubscribing to active session'
-        )
         ws.send(JSON.stringify({ type: 'subscribe', sessionId: activeSessionRef.current.id }))
       }
       // Send ping every 30 seconds to keep connection alive
@@ -57,13 +50,6 @@ export function App() {
         const data = JSON.parse(event.data)
         logger.info({ type: data.type, sessionId: data.sessionId }, 'WebSocket message received')
         if (data.type === 'session_list') {
-          logger.debug(
-            {
-              sessionCount: data.sessions?.length,
-              activeSessionId: activeSession?.id,
-            },
-            'WebSocket onmessage: received session_list'
-          )
           logger.info(
             {
               sessionCount: data.sessions?.length,
@@ -74,45 +60,18 @@ export function App() {
           setSessions(data.sessions || [])
           // Auto-select first running session if none selected (skip in tests that need empty state)
           const shouldSkipAutoselect = localStorage.getItem('skip-autoselect') === 'true'
-          logger.debug(
-            {
-              sessionsLength: data.sessions?.length || 0,
-              hasActiveSession: !!activeSession,
-              shouldSkipAutoselect,
-              skipAutoselectValue: localStorage.getItem('skip-autoselect'),
-            },
-            'Auto-selection: checking conditions'
-          )
           if (data.sessions.length > 0 && !activeSession && !shouldSkipAutoselect) {
-            logger.debug('Auto-selection: conditions met, proceeding with auto-selection')
             logger.info('Condition met for auto-selection')
             const runningSession = data.sessions.find((s: Session) => s.status === 'running')
             const sessionToSelect = runningSession || data.sessions[0]
-            logger.debug(
-              {
-                runningSessionId: runningSession?.id,
-                firstSessionId: data.sessions[0]?.id,
-                selectedSessionId: sessionToSelect.id,
-                selectedSessionStatus: sessionToSelect.status,
-              },
-              'Auto-selection: selected session details'
-            )
             logger.info({ sessionId: sessionToSelect.id }, 'Auto-selecting session')
             activeSessionRef.current = sessionToSelect
+            // Reset WS message counter when switching sessions
+            wsMessageCountRef.current = 0
+            setWsMessageCount(0)
             setActiveSession(sessionToSelect)
             // Subscribe to the auto-selected session for live updates
             const readyState = wsRef.current?.readyState
-            logger.debug(
-              {
-                sessionId: sessionToSelect.id,
-                readyState,
-                OPEN: WebSocket.OPEN,
-                CONNECTING: WebSocket.CONNECTING,
-                CLOSING: WebSocket.CLOSING,
-                CLOSED: WebSocket.CLOSED,
-              },
-              'Auto-selection: checking WebSocket readyState for subscription'
-            )
             logger.info(
               {
                 sessionId: sessionToSelect.id,
@@ -124,39 +83,23 @@ export function App() {
             )
 
             if (readyState === WebSocket.OPEN && wsRef.current) {
-              logger.debug(
-                { sessionId: sessionToSelect.id },
-                'Auto-selection: WebSocket ready, sending subscribe message'
-              )
               logger.info({ sessionId: sessionToSelect.id }, 'Subscribing to auto-selected session')
               wsRef.current.send(
                 JSON.stringify({ type: 'subscribe', sessionId: sessionToSelect.id })
               )
               logger.info({ sessionId: sessionToSelect.id }, 'Subscription message sent')
             } else {
-              logger.debug(
-                { sessionId: sessionToSelect.id, readyState },
-                'Auto-selection: WebSocket not ready, scheduling retry'
-              )
               logger.warn(
                 { sessionId: sessionToSelect.id, readyState },
                 'WebSocket not ready for subscription, will retry'
               )
               setTimeout(() => {
                 const retryReadyState = wsRef.current?.readyState
-                logger.debug(
-                  { sessionId: sessionToSelect.id, retryReadyState },
-                  'Auto-selection: retry check for WebSocket subscription'
-                )
                 logger.info(
                   { sessionId: sessionToSelect.id, retryReadyState },
                   'Retry check for WebSocket subscription'
                 )
                 if (retryReadyState === WebSocket.OPEN && wsRef.current) {
-                  logger.debug(
-                    { sessionId: sessionToSelect.id },
-                    'Auto-selection: retry successful, sending subscribe message'
-                  )
                   logger.info(
                     { sessionId: sessionToSelect.id },
                     'Subscribing to auto-selected session (retry)'
@@ -169,10 +112,6 @@ export function App() {
                     'Subscription message sent (retry)'
                   )
                 } else {
-                  logger.debug(
-                    { sessionId: sessionToSelect.id, retryReadyState },
-                    'Auto-selection: retry failed, WebSocket still not ready'
-                  )
                   logger.error(
                     { sessionId: sessionToSelect.id, retryReadyState },
                     'WebSocket still not ready after retry'
@@ -180,49 +119,21 @@ export function App() {
                 }
               }, 500) // Increased delay
             }
-            // Load historical output for the auto-selected session
-            logger.debug(
-              { sessionId: sessionToSelect.id },
-              'Auto-selection: fetching historical output'
-            )
             fetch(
               `${location.protocol}//${location.host}/api/sessions/${sessionToSelect.id}/output`
             )
               .then((response) => {
-                logger.debug(
-                  { sessionId: sessionToSelect.id, ok: response.ok, status: response.status },
-                  'Auto-selection: fetch output response'
-                )
                 return response.ok ? response.json() : []
               })
               .then((outputData) => {
-                logger.debug(
-                  { sessionId: sessionToSelect.id, linesCount: outputData.lines?.length },
-                  'Auto-selection: setting historical output'
-                )
                 setOutput(outputData.lines || [])
               })
-              .catch((error) => {
-                logger.debug(
-                  { sessionId: sessionToSelect.id, error },
-                  'Auto-selection: failed to fetch historical output'
-                )
+              .catch(() => {
                 setOutput([])
               })
-          } else {
-            logger.debug('Auto-selection: conditions not met, skipping auto-selection')
           }
         } else if (data.type === 'data') {
           const isForActiveSession = data.sessionId === activeSessionRef.current?.id
-          logger.debug(
-            {
-              dataSessionId: data.sessionId,
-              activeSessionId: activeSessionRef.current?.id,
-              isForActiveSession,
-              dataLength: data.data?.length,
-            },
-            'WebSocket onmessage: received data message'
-          )
           logger.info(
             {
               dataSessionId: data.sessionId,
@@ -232,26 +143,13 @@ export function App() {
             'Received data message'
           )
           if (isForActiveSession) {
-            logger.debug(
-              { dataLength: data.data?.length, currentOutputLength: output.length },
-              'Data message: processing for active session'
-            )
             logger.info({ dataLength: data.data?.length }, 'Processing data for active session')
             setOutput((prev) => [...prev, ...data.data])
             wsMessageCountRef.current++
             setWsMessageCount(wsMessageCountRef.current)
-            logger.debug(
-              { wsMessageCountAfter: wsMessageCountRef.current },
-              'Data message: WS message counter incremented'
-            )
             logger.info(
               { wsMessageCountAfter: wsMessageCountRef.current },
               'WS message counter incremented'
-            )
-          } else {
-            logger.debug(
-              { dataSessionId: data.sessionId, activeSessionId: activeSessionRef.current?.id },
-              'Data message: ignoring for inactive session'
             )
           }
         }
@@ -259,16 +157,7 @@ export function App() {
         logger.error({ error }, 'Failed to parse WebSocket message')
       }
     }
-    ws.onclose = (event) => {
-      logger.debug(
-        {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-          readyState: ws.readyState,
-        },
-        'WebSocket onclose: connection closed'
-      )
+    ws.onclose = () => {
       logger.info('WebSocket disconnected')
       setConnected(false)
       // Clear ping interval
@@ -278,16 +167,10 @@ export function App() {
       }
     }
     ws.onerror = (error) => {
-      logger.debug(
-        { error, readyState: ws.readyState },
-        'WebSocket onerror: connection error occurred'
-      )
       logger.error({ error }, 'WebSocket error')
     }
     wsRef.current = ws
-    logger.debug('WebSocket useEffect: setup complete, returning cleanup function')
     return () => {
-      logger.debug('WebSocket useEffect: cleanup function executing, closing WebSocket')
       ws.close()
     }
   }, [activeSession])
@@ -302,10 +185,10 @@ export function App() {
         return
       }
       activeSessionRef.current = session
-      setActiveSession(session)
       // Reset WebSocket message counter when switching sessions
-      setWsMessageCount(0)
       wsMessageCountRef.current = 0
+      setWsMessageCount(0)
+      setActiveSession(session)
 
       // Subscribe to this session for live updates
       if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -343,10 +226,6 @@ export function App() {
 
   const handleSendInput = useCallback(
     async (data: string) => {
-      logger.debug(
-        { data: JSON.stringify(data), sessionId: activeSession?.id },
-        'Sending input to PTY'
-      )
       if (!data || !activeSession) {
         return
       }
@@ -399,6 +278,9 @@ export function App() {
       if (response.ok) {
         setActiveSession(null)
         setOutput([])
+        // Reset WebSocket message counter when no session is active
+        wsMessageCountRef.current = 0
+        setWsMessageCount(0)
       } else {
         const errorText = await response.text().catch(() => 'Unable to read error response')
         logger.error(
@@ -440,10 +322,6 @@ export function App() {
                 disabled={!activeSession || activeSession.status !== 'running'}
               />
             </div>
-            <div className="debug-info" data-testid="debug-info">
-              Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}
-              {wsMessageCount}
-            </div>
             {/* Hidden output for testing purposes */}
             <div
               style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
@@ -455,7 +333,7 @@ export function App() {
                 </div>
               ))}
             </div>
-            <div className="debug-info">
+            <div className="debug-info" data-testid="debug-info">
               Debug: {output.length} lines, active: {activeSession?.id || 'none'}, WS messages:{' '}
               {wsMessageCount}
             </div>

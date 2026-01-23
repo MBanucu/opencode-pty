@@ -5,6 +5,14 @@ extendedTest.describe('PTY Input Capture', () => {
   extendedTest(
     'should capture and send printable character input (letters)',
     async ({ page, server }) => {
+      // Clear any existing sessions before page loads
+      await page.request.post(server.baseURL + '/api/sessions/clear')
+
+      // Set localStorage before page loads to prevent auto-selection
+      await page.addInitScript(() => {
+        localStorage.setItem('skip-autoselect', 'true')
+      })
+
       // Navigate to the test server
       await page.goto(server.baseURL)
 
@@ -15,17 +23,18 @@ extendedTest.describe('PTY Input Capture', () => {
       await page.evaluate(() => console.log('Test console log from browser'))
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
-      // Create a test session
+      // Create an interactive bash session that stays running
       await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: ['-c', 'echo "Ready for input"'],
+          args: [], // Interactive bash that stays running
           description: 'Input test session',
         },
       })
 
-      // Wait for session to appear and auto-select
+      // Wait for session to appear and select it explicitly
       await page.waitForSelector('.session-item', { timeout: 5000 })
+      await page.locator('.session-item:has-text("Input test session")').click()
       await page.waitForSelector('.output-container', { timeout: 5000 })
 
       const inputRequests: string[] = []
@@ -60,6 +69,20 @@ extendedTest.describe('PTY Input Capture', () => {
     // Skip auto-selection to avoid interference with other tests
     await page.evaluate(() => localStorage.setItem('skip-autoselect', 'true'))
 
+    // Create an interactive bash session that stays running
+    await page.request.post(server.baseURL + '/api/sessions', {
+      data: {
+        command: 'bash',
+        args: [], // Interactive bash that stays running
+        description: 'Space test session',
+      },
+    })
+
+    // Wait for session to appear and auto-select
+    await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.waitForSelector('.output-container', { timeout: 5000 })
+    await page.waitForSelector('.xterm', { timeout: 5000 })
+
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
       const request = route.request()
@@ -70,11 +93,8 @@ extendedTest.describe('PTY Input Capture', () => {
       await route.continue()
     })
 
-    // Wait for session to be active
-    await page.waitForSelector('[data-active-session]')
-
-    await page.locator('.output-container').click()
-    await page.focus('.xterm')
+    // Type a space character
+    await page.locator('.xterm').click()
     await page.keyboard.press(' ')
 
     await page.waitForTimeout(1000)
@@ -132,6 +152,20 @@ extendedTest.describe('PTY Input Capture', () => {
     // Skip auto-selection to avoid interference with other tests
     await page.evaluate(() => localStorage.setItem('skip-autoselect', 'true'))
 
+    // Create a test session
+    await page.request.post(server.baseURL + '/api/sessions', {
+      data: {
+        command: 'bash',
+        args: ['-c', 'echo "Ready for backspace test"'],
+        description: 'Backspace test session',
+      },
+    })
+
+    // Wait for session to appear and auto-select
+    await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.waitForSelector('.output-container', { timeout: 5000 })
+    await page.waitForSelector('.xterm', { timeout: 5000 })
+
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
       if (route.request().method() === 'POST') {
@@ -140,7 +174,8 @@ extendedTest.describe('PTY Input Capture', () => {
       await route.continue()
     })
 
-    await page.locator('.output-container').click()
+    // Type 'test' then backspace twice
+    await page.locator('.xterm').click()
     await page.keyboard.type('test')
     await page.keyboard.press('Backspace')
     await page.keyboard.press('Backspace')
@@ -334,10 +369,6 @@ extendedTest.describe('PTY Input Capture', () => {
         .locator('[data-testid="test-output"] .output-line')
         .allTextContents()
       const allOutput = outputLines.join('\n')
-
-      // Debug: log what we captured
-      console.log('Captured output lines:', outputLines.length)
-      console.log('All output:', JSON.stringify(allOutput))
 
       // Verify that we have output lines
       expect(outputLines.length).toBeGreaterThan(0)

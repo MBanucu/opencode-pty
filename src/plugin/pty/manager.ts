@@ -1,14 +1,9 @@
-import { spawn, type IPty } from 'bun-pty'
 import logger from '../logger.ts'
-import { RingBuffer } from './buffer.ts'
-import type { PTYSession, PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from './types.ts'
+import type { PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from './types.ts'
 import type { OpencodeClient } from '@opencode-ai/sdk'
-import {
-  DEFAULT_TERMINAL_COLS,
-  DEFAULT_TERMINAL_ROWS,
-  NOTIFICATION_LINE_TRUNCATE,
-  NOTIFICATION_TITLE_TRUNCATE,
-} from '../constants.ts'
+import { SessionLifecycleManager } from './SessionLifecycle.ts'
+import { OutputManager } from './OutputManager.ts'
+import { NotificationManager } from './NotificationManager.ts'
 
 let onSessionUpdate: (() => void) | undefined
 
@@ -18,13 +13,8 @@ export function setOnSessionUpdate(callback: () => void) {
 
 const log = logger.child({ service: 'pty.manager' })
 
-let client: OpencodeClient | null = null
 type OutputCallback = (sessionId: string, data: string[]) => void
 const outputCallbacks: OutputCallback[] = []
-
-export function initManager(opcClient: OpencodeClient): void {
-  client = opcClient
-}
 
 export function onOutput(callback: OutputCallback): void {
   outputCallbacks.push(callback)
@@ -41,197 +31,78 @@ function notifyOutput(sessionId: string, data: string): void {
   }
 }
 
-function generateId(): string {
-  const hex = Array.from(crypto.getRandomValues(new Uint8Array(4)))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-  return `pty_${hex}`
-}
-
 class PTYManager {
-  private sessions: Map<string, PTYSession> = new Map()
+  private lifecycleManager = new SessionLifecycleManager()
+  private outputManager = new OutputManager()
+  private notificationManager = new NotificationManager()
+
+  init(client: OpencodeClient): void {
+    this.notificationManager.init(client)
+  }
 
   clearAllSessions(): void {
-    // Kill all running processes
-    for (const session of this.sessions.values()) {
-      if (session.status === 'running') {
-        try {
-          session.process.kill()
-        } catch (err) {
-          log.warn({ id: session.id, error: String(err) }, 'failed to kill process during clear')
-        }
-      }
-    }
-
-    // Clear all sessions
-    this.sessions.clear()
-    log.info('cleared all sessions')
+    this.lifecycleManager.clearAllSessions()
   }
 
   spawn(opts: SpawnOptions): PTYSessionInfo {
-    const id = generateId()
-    const args = opts.args ?? []
-    const workdir = opts.workdir ?? process.cwd()
-    const env = { ...process.env, ...opts.env } as Record<string, string>
-    const title =
-      opts.title ?? (`${opts.command} ${args.join(' ')}`.trim() || `Terminal ${id.slice(-4)}`)
-
-    const ptyProcess: IPty = spawn(opts.command, args, {
-      name: 'xterm-256color',
-      cols: DEFAULT_TERMINAL_COLS,
-      rows: DEFAULT_TERMINAL_ROWS,
-      cwd: workdir,
-      env,
-    })
-
-    const buffer = new RingBuffer()
-    const session: PTYSession = {
-      id,
-      title,
-      description: opts.description,
-      command: opts.command,
-      args,
-      workdir,
-      env: opts.env,
-      status: 'running',
-      pid: ptyProcess.pid,
-      createdAt: new Date(),
-      parentSessionId: opts.parentSessionId,
-      notifyOnExit: opts.notifyOnExit ?? false,
-      buffer,
-      process: ptyProcess,
-    }
-
-    this.sessions.set(id, session)
-
-    ptyProcess.onData((data: string) => {
-      buffer.append(data)
-      notifyOutput(id, data)
-    })
-
-    ptyProcess.onExit(async ({ exitCode, signal }) => {
-      log.info({ id, exitCode, signal, command: opts.command }, 'pty exited')
-      if (session.status === 'running') {
-        session.status = 'exited'
-        session.exitCode = exitCode
+    return this.lifecycleManager.spawn(
+      opts,
+      (id, data) => {
+        notifyOutput(id, data)
+      },
+      async (id, exitCode) => {
         if (onSessionUpdate) onSessionUpdate()
-      }
-
-      if (session.notifyOnExit && client) {
-        try {
-          const message = this.buildExitNotification(session, exitCode)
-          await client.session.promptAsync({
-            path: { id: session.parentSessionId },
-            body: {
-              parts: [{ type: 'text', text: message }],
-            },
-          })
-          log.info(
-            {
-              id,
-              exitCode,
-              parentSessionId: session.parentSessionId,
-            },
-            'sent exit notification'
-          )
-        } catch (err) {
-          log.error({ id, error: String(err) }, 'failed to send exit notification')
+        const session = this.lifecycleManager.getSession(id)
+        if (session && session.notifyOnExit) {
+          await this.notificationManager.sendExitNotification(session, exitCode || 0)
         }
       }
-    })
-
-    return this.toInfo(session)
+    )
   }
 
   write(id: string, data: string): boolean {
-    const session = this.sessions.get(id)
+    const session = this.lifecycleManager.getSession(id)
     if (!session) {
       return false
     }
-    try {
-      session.process.write(data)
-      return true
-    } catch (err) {
-      return true // allow write to exited process for tests
-    }
+    return this.outputManager.write(session, data)
   }
 
   read(id: string, offset: number = 0, limit?: number): ReadResult | null {
-    const session = this.sessions.get(id)
+    const session = this.lifecycleManager.getSession(id)
     if (!session) {
       return null
     }
-    const lines = session.buffer.read(offset, limit)
-    const totalLines = session.buffer.length
-    const hasMore = offset + lines.length < totalLines
-    return { lines, totalLines, offset, hasMore }
+    return this.outputManager.read(session, offset, limit)
   }
 
   search(id: string, pattern: RegExp, offset: number = 0, limit?: number): SearchResult | null {
-    const session = this.sessions.get(id)
+    const session = this.lifecycleManager.getSession(id)
     if (!session) {
       return null
     }
-    const allMatches = session.buffer.search(pattern)
-    const totalMatches = allMatches.length
-    const totalLines = session.buffer.length
-    const paginatedMatches =
-      limit !== undefined ? allMatches.slice(offset, offset + limit) : allMatches.slice(offset)
-    const hasMore = offset + paginatedMatches.length < totalMatches
-    return { matches: paginatedMatches, totalMatches, totalLines, offset, hasMore }
+    return this.outputManager.search(session, pattern, offset, limit)
   }
 
   list(): PTYSessionInfo[] {
-    return Array.from(this.sessions.values()).map((s) => this.toInfo(s))
+    return this.lifecycleManager.listSessions().map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      command: s.command,
+      args: s.args,
+      workdir: s.workdir,
+      status: s.status,
+      exitCode: s.exitCode,
+      pid: s.pid,
+      createdAt: s.createdAt,
+      lineCount: s.buffer.length,
+    }))
   }
 
   get(id: string): PTYSessionInfo | null {
-    const session = this.sessions.get(id)
-    return session ? this.toInfo(session) : null
-  }
-
-  kill(id: string, cleanup: boolean = false): boolean {
-    const session = this.sessions.get(id)
-    if (!session) {
-      return false
-    }
-
-    log.info({ id, cleanup }, 'killing pty')
-
-    if (session.status === 'running') {
-      try {
-        session.process.kill()
-      } catch {
-        // Ignore kill errors
-      }
-      session.status = 'killed'
-    }
-
-    if (cleanup) {
-      session.buffer.clear()
-      this.sessions.delete(id)
-    }
-
-    return true
-  }
-
-  cleanupBySession(parentSessionId: string): void {
-    log.info({ parentSessionId }, 'cleaning up ptys for session')
-    for (const [id, session] of this.sessions) {
-      if (session.parentSessionId === parentSessionId) {
-        this.kill(id, true)
-      }
-    }
-  }
-
-  cleanupAll(): void {
-    log.info('cleaning up all ptys')
-    for (const id of this.sessions.keys()) {
-      this.kill(id, true)
-    }
-  }
-
-  private toInfo(session: PTYSession): PTYSessionInfo {
+    const session = this.lifecycleManager.getSession(id)
+    if (!session) return null
     return {
       id: session.id,
       title: session.title,
@@ -247,50 +118,21 @@ class PTYManager {
     }
   }
 
-  private buildExitNotification(session: PTYSession, exitCode: number): string {
-    const lineCount = session.buffer.length
-    let lastLine = ''
-    if (lineCount > 0) {
-      for (let i = lineCount - 1; i >= 0; i--) {
-        const bufferLines = session.buffer.read(i, 1)
-        const line = bufferLines[0]
-        if (line !== undefined && line.trim() !== '') {
-          lastLine =
-            line.length > NOTIFICATION_LINE_TRUNCATE
-              ? line.slice(0, NOTIFICATION_LINE_TRUNCATE) + '...'
-              : line
-          break
-        }
-      }
-    }
+  kill(id: string, cleanup: boolean = false): boolean {
+    return this.lifecycleManager.kill(id, cleanup)
+  }
 
-    const displayTitle = session.description ?? session.title
-    const truncatedTitle =
-      displayTitle.length > NOTIFICATION_TITLE_TRUNCATE
-        ? displayTitle.slice(0, NOTIFICATION_TITLE_TRUNCATE) + '...'
-        : displayTitle
+  cleanupBySession(parentSessionId: string): void {
+    this.lifecycleManager.cleanupBySession(parentSessionId)
+  }
 
-    const lines = [
-      '<pty_exited>',
-      `ID: ${session.id}`,
-      `Description: ${truncatedTitle}`,
-      `Exit Code: ${exitCode}`,
-      `Output Lines: ${lineCount}`,
-      `Last Line: ${lastLine}`,
-      '</pty_exited>',
-      '',
-    ]
-
-    if (exitCode === 0) {
-      lines.push('Use pty_read to check the full output.')
-    } else {
-      lines.push(
-        'Process failed. Use pty_read with the pattern parameter to search for errors in the output.'
-      )
-    }
-
-    return lines.join('\n')
+  cleanupAll(): void {
+    this.lifecycleManager.cleanupAll()
   }
 }
 
 export const manager = new PTYManager()
+
+export function initManager(opcClient: OpencodeClient): void {
+  manager.init(opcClient)
+}

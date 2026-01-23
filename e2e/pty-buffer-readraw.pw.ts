@@ -399,6 +399,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         'ℹ️  Both contain prompt:',
         apiPlainText.includes('$') && serializeAddonOutput.includes('$')
       )
+      console.log('📄 API plain text content:', JSON.stringify(apiPlainText))
+      console.log('📄 SerializeAddon plain text content:', JSON.stringify(serializeAddonOutput))
     }
   )
 })

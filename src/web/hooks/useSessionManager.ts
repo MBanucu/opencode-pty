@@ -32,11 +32,13 @@ export function useSessionManager({
 
         try {
           const baseUrl = `${location.protocol}//${location.host}`
-          const response = await fetch(`${baseUrl}/api/sessions/${session.id}/output`)
+          const response = await fetch(`${baseUrl}/api/sessions/${session.id}/buffer/raw`)
 
           if (response.ok) {
             const outputData = await response.json()
-            onOutputUpdate(outputData.lines || [])
+            onOutputUpdate(
+              outputData.raw ? outputData.raw.split('\n').filter((line: string) => line !== '') : []
+            )
           } else {
             const errorText = await response.text().catch(() => 'Unable to read error response')
             logger.error({ status: response.status, error: errorText }, 'Fetch failed')

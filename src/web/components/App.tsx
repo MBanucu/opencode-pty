@@ -25,9 +25,11 @@ export function App() {
       setSessions(newSessions)
       if (autoSelected) {
         setActiveSession(autoSelected)
-        fetch(`${location.protocol}//${location.host}/api/sessions/${autoSelected.id}/output`)
-          .then((response) => (response.ok ? response.json() : { lines: [] }))
-          .then((data) => setOutput(data.lines || []))
+        fetch(`${location.protocol}//${location.host}/api/sessions/${autoSelected.id}/buffer/raw`)
+          .then((response) => (response.ok ? response.json() : { raw: '' }))
+          .then((data) =>
+            setOutput(data.raw ? data.raw.split('\n').filter((line: string) => line !== '') : [])
+          )
           .catch(() => setOutput([]))
       }
     }, []),

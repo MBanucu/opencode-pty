@@ -1,9 +1,5 @@
-import { DEFAULT_MAX_BUFFER_LINES } from '../../shared/constants.ts'
-
-const DEFAULT_MAX_LINES = parseInt(
-  process.env.PTY_MAX_BUFFER_LINES || DEFAULT_MAX_BUFFER_LINES.toString(),
-  10
-)
+// Default buffer size in characters (approximately 1MB)
+const DEFAULT_MAX_BUFFER_SIZE = parseInt(process.env.PTY_MAX_BUFFER_SIZE || '1000000', 10)
 
 export interface SearchMatch {
   lineNumber: number
@@ -11,52 +7,39 @@ export interface SearchMatch {
 }
 
 export class RingBuffer {
-  private lines: string[] = []
-  private maxLines: number
-  private currentLine: string = ''
+  private buffer: string = ''
+  private maxSize: number
 
-  constructor(maxLines: number = DEFAULT_MAX_LINES) {
-    this.maxLines = maxLines
+  constructor(maxSize: number = DEFAULT_MAX_BUFFER_SIZE) {
+    this.maxSize = maxSize
   }
 
   append(data: string): void {
-    // Accumulate data, splitting on newlines
-    let remaining = data
-    let newlineIndex
-
-    while ((newlineIndex = remaining.indexOf('\n')) !== -1) {
-      // Add everything up to the newline to the current line
-      this.currentLine += remaining.substring(0, newlineIndex)
-      // Store the completed line
-      this.lines.push(this.currentLine)
-      // Reset current line for next accumulation
-      this.currentLine = ''
-      // Continue with remaining data
-      remaining = remaining.substring(newlineIndex + 1)
-
-      // Maintain max lines limit
-      if (this.lines.length > this.maxLines) {
-        this.lines.shift()
-      }
-    }
-
-    // Add any remaining data to current line (no newline yet)
-    if (remaining) {
-      this.currentLine += remaining
+    this.buffer += data
+    // Simple byte-level truncation: keep only the last maxSize characters
+    if (this.buffer.length > this.maxSize) {
+      this.buffer = this.buffer.slice(-this.maxSize)
     }
   }
 
   read(offset: number = 0, limit?: number): string[] {
+    const lines: string[] = this.buffer.split('\n')
     const start = Math.max(0, offset)
-    const end = limit !== undefined ? start + limit : this.lines.length
-    return this.lines.slice(start, end)
+    const end = limit !== undefined ? start + limit : lines.length
+    return lines.slice(start, end)
+  }
+
+  readRaw(): string {
+    return this.buffer
   }
 
   search(pattern: RegExp): SearchMatch[] {
     const matches: SearchMatch[] = []
-    for (let i = 0; i < this.lines.length; i++) {
-      const line = this.lines[i]
-      if (line !== undefined && pattern.test(line)) {
+    const lines: string[] = this.buffer.split('\n')
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      if (line && pattern.test(line)) {
         matches.push({ lineNumber: i + 1, text: line })
       }
     }
@@ -64,24 +47,18 @@ export class RingBuffer {
   }
 
   get length(): number {
-    return this.lines.length
+    return this.buffer.split('\n').length
+  }
+
+  get byteLength(): number {
+    return this.buffer.length
   }
 
   flush(): void {
-    // Flush any remaining incomplete line
-    if (this.currentLine) {
-      this.lines.push(this.currentLine)
-      this.currentLine = ''
-
-      // Maintain max lines limit after flush
-      if (this.lines.length > this.maxLines) {
-        this.lines.shift()
-      }
-    }
+    // No-op in new implementation
   }
 
   clear(): void {
-    this.lines = []
-    this.currentLine = ''
+    this.buffer = ''
   }
 }

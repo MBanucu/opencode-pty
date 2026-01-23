@@ -62,7 +62,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
 
   extendedTest(
     'should demonstrate readRaw functionality preserves newlines',
-    async ({ page, server }) => {
+    async ({ page: _page, server: _server }) => {
       // This test documents the readRaw() capability
       // In a real implementation, readRaw() would return: "line1\nline2\nline3\n"
       // While read() returns: ["line1", "line2", "line3", ""]
@@ -149,4 +149,56 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
 
     console.log('✅ Raw API data consistent with regular output API')
   })
+
+  extendedTest(
+    'should expose plain text buffer data via API endpoint',
+    async ({ page, server }) => {
+      // Create a session that produces output with ANSI escape codes
+      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'bash',
+          args: ['-c', 'echo -e "\x1b[31mRed text\x1b[0m and \x1b[32mgreen text\x1b[0m"'],
+          description: 'ANSI test session for plain buffer endpoint',
+        },
+      })
+      expect(createResponse.status()).toBe(200)
+      const sessionData = await createResponse.json()
+      const sessionId = sessionData.id
+
+      // Wait for the session to complete and capture output
+      await page.waitForTimeout(2000)
+
+      // Test the new plain buffer API endpoint
+      const plainResponse = await page.request.get(
+        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
+      )
+      expect(plainResponse.status()).toBe(200)
+      const plainData = await plainResponse.json()
+
+      // Verify the response structure
+      expect(plainData).toHaveProperty('plain')
+      expect(plainData).toHaveProperty('byteLength')
+      expect(typeof plainData.plain).toBe('string')
+      expect(typeof plainData.byteLength).toBe('number')
+
+      // Verify ANSI codes are stripped
+      expect(plainData.plain).toContain('Red text and green text')
+      expect(plainData.plain).not.toContain('\x1b[') // No ANSI escape sequences
+
+      // Compare with raw endpoint to ensure ANSI codes were present originally
+      const rawResponse = await page.request.get(
+        server.baseURL + `/api/sessions/${sessionId}/buffer/raw`
+      )
+      expect(rawResponse.status()).toBe(200)
+      const rawData = await rawResponse.json()
+
+      // Raw data should contain ANSI codes
+      expect(rawData.raw).toContain('\x1b[')
+      // Plain data should be different from raw data
+      expect(plainData.plain).not.toBe(rawData.raw)
+
+      console.log('✅ Plain API endpoint strips ANSI codes properly')
+      console.log('ℹ️  Plain text:', JSON.stringify(plainData.plain))
+    }
+  )
 })

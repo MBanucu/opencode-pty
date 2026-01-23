@@ -181,5 +181,22 @@ export async function handleAPISessions(
     return secureJsonResponse(bufferData)
   }
 
+  const plainBufferMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/buffer\/plain$/)
+  if (plainBufferMatch && req.method === 'GET') {
+    const sessionId = plainBufferMatch[1]
+    if (!sessionId) return new Response('Invalid session ID', { status: 400 })
+
+    const bufferData = manager.getRawBuffer(sessionId)
+    if (!bufferData) {
+      return new Response('Session not found', { status: 404 })
+    }
+
+    const plainText = Bun.stripANSI(bufferData.raw)
+    return secureJsonResponse({
+      plain: plainText,
+      byteLength: new TextEncoder().encode(plainText).length,
+    })
+  }
+
   return null
 }

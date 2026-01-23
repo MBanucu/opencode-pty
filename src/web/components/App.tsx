@@ -52,7 +52,12 @@ export function App() {
     activeSession,
     setActiveSession,
     subscribeWithRetry,
-    onOutputUpdate: setOutput,
+    onOutputUpdate: useCallback((output: string[]) => {
+      setOutput(output)
+    }, []),
+    onRawOutputUpdate: useCallback((rawOutput: string) => {
+      setRawOutput(rawOutput)
+    }, []),
   })
 
   return (

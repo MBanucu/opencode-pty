@@ -8,7 +8,8 @@ interface UseSessionManagerOptions {
   activeSession: Session | null
   setActiveSession: (session: Session | null) => void
   subscribeWithRetry: (sessionId: string) => void
-  onOutputUpdate: (output: string[], rawOutput: string) => void
+  onOutputUpdate?: (output: string[]) => void
+  onRawOutputUpdate?: (rawOutput: string) => void
 }
 
 export function useSessionManager({
@@ -16,6 +17,7 @@ export function useSessionManager({
   setActiveSession,
   subscribeWithRetry,
   onOutputUpdate,
+  onRawOutputUpdate,
 }: UseSessionManagerOptions) {
   const handleSessionClick = useCallback(
     async (session: Session) => {
@@ -26,38 +28,40 @@ export function useSessionManager({
           return
         }
         setActiveSession(session)
-        onOutputUpdate([], '')
+        onOutputUpdate?.([])
+        onRawOutputUpdate?.('')
         // Subscribe to this session for live updates
         subscribeWithRetry(session.id)
 
         try {
           const baseUrl = `${location.protocol}//${location.host}`
-          const response = await fetch(`${baseUrl}/api/sessions/${session.id}/buffer/raw`)
 
-          if (response.ok) {
-            const outputData = await response.json()
-            onOutputUpdate(
-              outputData.raw
-                ? outputData.raw.split('\n').filter((line: string) => line !== '')
-                : [],
-              outputData.raw || ''
-            )
-          } else {
-            const errorText = await response.text().catch(() => 'Unable to read error response')
-            logger.error({ status: response.status, error: errorText }, 'Fetch failed')
-            onOutputUpdate([], '')
-          }
+          // Make parallel API calls for both data formats
+          const [rawResponse, linesResponse] = await Promise.all([
+            fetch(`${baseUrl}/api/sessions/${session.id}/buffer/raw`),
+            fetch(`${baseUrl}/api/sessions/${session.id}/output`),
+          ])
+
+          // Process responses independently with graceful error handling
+          const rawData = rawResponse.ok ? await rawResponse.json() : { raw: '' }
+          const linesData = linesResponse.ok ? await linesResponse.json() : { lines: [] }
+
+          // Call callbacks with their respective data formats
+          onOutputUpdate?.(linesData.lines || [])
+          onRawOutputUpdate?.(rawData.raw || '')
         } catch (fetchError) {
-          logger.error({ error: fetchError }, 'Network error fetching output')
-          onOutputUpdate([], '')
+          logger.error({ error: fetchError }, 'Network error fetching session data')
+          onOutputUpdate?.([])
+          onRawOutputUpdate?.('')
         }
       } catch (error) {
         logger.error({ error }, 'Unexpected error in handleSessionClick')
         // Ensure UI remains stable
-        onOutputUpdate([], '')
+        onOutputUpdate?.([])
+        onRawOutputUpdate?.('')
       }
     },
-    [subscribeWithRetry, onOutputUpdate]
+    [setActiveSession, subscribeWithRetry, onOutputUpdate, onRawOutputUpdate]
   )
 
   const handleSendInput = useCallback(
@@ -113,7 +117,8 @@ export function useSessionManager({
 
       if (response.ok) {
         setActiveSession(null)
-        onOutputUpdate([], '')
+        onOutputUpdate?.([])
+        onRawOutputUpdate?.('')
       } else {
         const errorText = await response.text().catch(() => 'Unable to read error response')
         logger.error(

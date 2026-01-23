@@ -92,7 +92,7 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
       if (data === '\r') {
         // Enter key pressed
         term.write('\r\n')
-        onSendInput?.('')
+        onSendInput?.('\n')
       } else if (data === '\u0003') {
         // Ctrl+C
         onInterrupt?.()
@@ -135,7 +135,12 @@ export class ProcessedTerminalRenderer extends BaseTerminalRenderer {
   getDisplayData(): string {
     // Join processed lines for clean display
     const { output } = this.props as ProcessedTerminalRendererProps
-    return output.join('\n') + '\n'
+
+    // Only add trailing newline if there are actual lines to display
+    const joined = output.join('\n')
+    const withTrailing = output.length > 0 ? joined + '\n' : ''
+
+    return withTrailing
   }
 }
 

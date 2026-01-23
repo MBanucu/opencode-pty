@@ -16,7 +16,6 @@ export class RingBuffer {
 
   append(data: string): void {
     this.buffer += data
-    // Simple byte-level truncation: keep only the last maxSize characters
     if (this.buffer.length > this.maxSize) {
       this.buffer = this.buffer.slice(-this.maxSize)
     }

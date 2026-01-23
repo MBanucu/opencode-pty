@@ -320,15 +320,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // The exact content may vary due to timing, but both should work
       expect(apiPlainText.length).toBeGreaterThan(0)
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
-
-      console.log('✅ Both API and SerializeAddon successfully capture terminal content')
-      console.log('ℹ️  API plain text length:', apiPlainText.length)
-      console.log('ℹ️  SerializeAddon text length:', serializeAddonOutput.length)
-      console.log('ℹ️  API content preview:', JSON.stringify(apiPlainText.substring(0, 50)))
-      console.log(
-        'ℹ️  SerializeAddon preview:',
-        JSON.stringify(serializeAddonOutput.substring(0, 50))
-      )
     }
   )
 
@@ -391,16 +382,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // Both should contain shell prompt elements
       expect(apiPlainText).toContain('$')
       expect(serializeAddonOutput).toContain('$')
-
-      console.log('✅ Both API and SerializeAddon capture initial bash state')
-      console.log('ℹ️  API plain text length:', apiPlainText.length)
-      console.log('ℹ️  SerializeAddon text length:', serializeAddonOutput.length)
-      console.log(
-        'ℹ️  Both contain prompt:',
-        apiPlainText.includes('$') && serializeAddonOutput.includes('$')
-      )
-      console.log('📄 API plain text content:', JSON.stringify(apiPlainText))
-      console.log('📄 SerializeAddon plain text content:', JSON.stringify(serializeAddonOutput))
     }
   )
 
@@ -457,15 +438,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       })
 
       // Cat command waits for input, so may have minimal output
-      // Just verify both methods return valid strings and show the content
+      // Just verify both methods return valid strings
       expect(typeof apiPlainText).toBe('string')
       expect(typeof serializeAddonOutput).toBe('string')
-
-      console.log('✅ Both API and SerializeAddon handle cat command state')
-      console.log('ℹ️  API plain text length:', apiPlainText.length)
-      console.log('ℹ️  SerializeAddon text length:', serializeAddonOutput.length)
-      console.log('📄 API plain text content:', JSON.stringify(apiPlainText))
-      console.log('📄 SerializeAddon plain text content:', JSON.stringify(serializeAddonOutput))
     }
   )
 })

@@ -4,9 +4,6 @@ import { chromium } from 'playwright-core'
 import { initManager, manager } from './src/plugin/pty/manager.ts'
 import { initLogger } from './src/plugin/logger.ts'
 import { startWebServer, stopWebServer } from './src/web/server.ts'
-import { createLogger } from './src/plugin/logger.ts'
-
-const log = createLogger('e2e-manual')
 
 // Mock OpenCode client for testing
 const fakeClient = {
@@ -32,14 +29,13 @@ async function runBrowserTest() {
   })
 
   // Wait for output and exit
-  log.info('Waiting for exited session to complete')
+
   let attempts = 0
   while (attempts < 50) {
     // Wait up to 5 seconds
     const currentSession = manager.get(exitedSession.id)
     const output = manager.read(exitedSession.id)
     if (currentSession?.status === 'exited' && output && output.lines.length > 0) {
-      log.info('Exited session has completed with output')
       break
     }
     await new Promise((resolve) => setTimeout(resolve, 100))

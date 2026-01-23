@@ -29,10 +29,8 @@ function unsubscribeFromSession(wsClient: WSClient, sessionId: string): void {
 }
 
 function broadcastSessionData(sessionId: string, data: string[]): void {
-  log.info({ sessionId, dataLength: data.length }, 'broadcastSessionData called')
   const message: WSMessage = { type: 'data', sessionId, data }
   const messageStr = JSON.stringify(message)
-  log.info({ clientCount: wsClients.size }, 'Broadcasting session data')
 
   let sentCount = 0
   for (const [ws, client] of wsClients) {
@@ -45,7 +43,6 @@ function broadcastSessionData(sessionId: string, data: string[]): void {
       }
     }
   }
-  log.info({ sentCount }, 'Broadcast complete')
 }
 
 function sendSessionList(ws: ServerWebSocket<WSClient>): void {
@@ -181,7 +178,6 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
   }
 
   onOutput((sessionId, data) => {
-    log.info({ sessionId, dataLength: data.length }, 'PTY output received')
     broadcastSessionData(sessionId, data)
   })
 

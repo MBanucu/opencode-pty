@@ -1,10 +1,7 @@
 import { join, resolve } from 'path'
 import { ASSET_CONTENT_TYPES } from '../constants.ts'
-import logger from '../logger.ts'
 
 const PROJECT_ROOT = resolve(process.cwd())
-
-const log = logger.child({ module: 'static-handler' })
 
 // Security headers for all responses
 function getSecurityHeaders(): Record<string, string> {
@@ -19,7 +16,6 @@ function getSecurityHeaders(): Record<string, string> {
 }
 
 export async function handleRoot(): Promise<Response> {
-  log.info({ nodeEnv: process.env.NODE_ENV }, 'Serving root')
   // In test mode, serve built HTML from dist/web, otherwise serve source
   const htmlPath =
     process.env.NODE_ENV === 'test'
@@ -33,7 +29,6 @@ export async function handleRoot(): Promise<Response> {
 export async function handleStaticAssets(url: URL): Promise<Response | null> {
   // Serve static assets
   if (url.pathname.startsWith('/assets/')) {
-    log.info({ pathname: url.pathname, nodeEnv: process.env.NODE_ENV }, 'Serving asset')
     // Always serve assets from dist/web in both test and production
     const baseDir = 'dist/web'
     const assetDir = resolve(process.cwd(), baseDir)
@@ -58,7 +53,6 @@ export async function handleStaticAssets(url: URL): Promise<Response | null> {
       url.pathname.endsWith('.jsx') ||
       url.pathname.endsWith('.js'))
   ) {
-    log.info({ pathname: url.pathname }, 'Serving TypeScript file in test mode')
     const filePath = join(process.cwd(), 'src/web', url.pathname)
     const file = Bun.file(filePath)
     const exists = await file.exists()

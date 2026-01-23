@@ -9,11 +9,6 @@ extendedTest.describe('App Component', () => {
     const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
     expect(clearResponse.status()).toBe(200)
 
-    // Log all console messages for debugging
-    page.on('console', (msg) => {
-      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-    })
-
     // Log page errors
     page.on('pageerror', (error) => {
       log.error(`PAGE ERROR: ${error.message}`)
@@ -24,20 +19,15 @@ extendedTest.describe('App Component', () => {
   })
 
   extendedTest('shows connected status when WebSocket connects', async ({ page, server }) => {
-    // Log all console messages for debugging
-    page.on('console', (msg) => {
-      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-    })
-
     await page.goto(server.baseURL + '/')
     await expect(page.getByText('● Connected')).toBeVisible()
   })
 
   extendedTest('receives WebSocket session_list messages', async ({ page, server }) => {
     let sessionListReceived = false
+
     // Log all console messages and check for session_list
     page.on('console', (msg) => {
-      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
       if (msg.text().includes('session_list')) {
         sessionListReceived = true
       }
@@ -50,18 +40,11 @@ extendedTest.describe('App Component', () => {
   })
 
   extendedTest('shows no active sessions message when empty', async ({ page, server }) => {
-    // Log all console messages for debugging
-    page.on('console', (msg) => {
-      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-    })
-
-    // Clear all sessions first to ensure empty state
+    // Clear any existing sessions
     const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
     expect(clearResponse.status()).toBe(200)
 
     await page.goto(server.baseURL + '/')
-
-    // Wait for WebSocket to connect
     await expect(page.getByText('● Connected')).toBeVisible()
 
     // Now check that "No active sessions" appears in the sidebar
@@ -70,9 +53,7 @@ extendedTest.describe('App Component', () => {
 
   extendedTest('shows empty state when no session is selected', async ({ page, server }) => {
     // Log all console messages for debugging
-    page.on('console', (msg) => {
-      log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-    })
+    page.on('console', (msg) => {})
 
     // Clear any existing sessions
     const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
@@ -110,9 +91,7 @@ extendedTest.describe('App Component', () => {
       async ({ page, server }) => {
         extendedTest.setTimeout(15000) // Increase timeout for slow session startup
         // Log all console messages for debugging
-        page.on('console', (msg) => {
-          log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-        })
+        page.on('console', (msg) => {})
         page.on('pageerror', (error) => log.error('PAGE ERROR: ' + error.message))
 
         // Navigate and wait for initial setup
@@ -122,7 +101,7 @@ extendedTest.describe('App Component', () => {
         await page.request.post(server.baseURL + '/api/sessions/clear')
 
         // Create a test session that produces continuous output
-        log.info('Creating fresh test session for WebSocket counter test')
+
         const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
           data: {
             command: 'bash',
@@ -133,7 +112,6 @@ extendedTest.describe('App Component', () => {
             description: 'Live streaming test session',
           },
         })
-        log.info(`Session creation response: ${createResponse.status()}`)
 
         // Wait for session to actually start
         await page.waitForTimeout(5000)
@@ -141,9 +119,8 @@ extendedTest.describe('App Component', () => {
         // Check session status
         const sessionsResponse = await page.request.get(server.baseURL + '/api/sessions')
         const sessions = await sessionsResponse.json()
-        log.info(`Sessions after creation: ${sessions.length}`)
+
         if (sessions.length > 0) {
-          log.info(`Session status: ${sessions[0].status}, PID: ${sessions[0].pid}`)
         }
 
         // Don't reload - wait for the session to appear in the UI
@@ -155,21 +132,16 @@ extendedTest.describe('App Component', () => {
         // Check session status
         const sessionItems = page.locator('.session-item')
         const sessionCount = await sessionItems.count()
-        log.info(`Found ${sessionCount} sessions`)
 
         // Click on the first session
         const firstSession = sessionItems.first()
         const statusBadge = await firstSession.locator('.status-badge').textContent()
-        log.info(`Session status: ${statusBadge}`)
 
-        log.info('Clicking on first session...')
         await firstSession.click()
-        log.info('Session clicked, waiting for output header...')
 
         // Wait for session to be active and debug element to appear
         await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
         await page.waitForSelector('[data-testid="debug-info"]', { timeout: 2000 })
-        log.info('Debug element found!')
 
         // Get session ID from debug element
         const initialDebugElement = page.locator('[data-testid="debug-info"]')
@@ -177,7 +149,6 @@ extendedTest.describe('App Component', () => {
         const initialDebugText = (await initialDebugElement.textContent()) || ''
         const activeMatch = initialDebugText.match(/active:\s*([^\s,]+)/)
         const sessionId = activeMatch && activeMatch[1] ? activeMatch[1] : null
-        log.info(`Active session ID: ${sessionId}`)
 
         // Check if session has output
         if (sessionId) {
@@ -186,17 +157,12 @@ extendedTest.describe('App Component', () => {
           )
           if (outputResponse.status() === 200) {
             const outputData = await outputResponse.json()
-            log.info(`Session output lines: ${outputData.lines?.length || 0}`)
           } else {
-            log.info(
-              `Session output check failed: ${outputResponse.status()} ${await outputResponse.text()}`
-            )
           }
         }
 
         const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
         const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
-        log.info(`Initial WS message count: ${initialCount}`)
 
         // Wait for some WebSocket messages to arrive (the session should be running)
         await page.waitForTimeout(5000)
@@ -205,7 +171,6 @@ extendedTest.describe('App Component', () => {
         const finalDebugText = (await initialDebugElement.textContent()) || ''
         const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
         const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
-        log.info(`Final WS message count: ${finalCount}`)
 
         // The test should fail if no messages were received
         expect(finalCount).toBeGreaterThan(initialCount)
@@ -216,9 +181,7 @@ extendedTest.describe('App Component', () => {
       'does not increment WS counter for messages from inactive sessions',
       async ({ page, server }) => {
         // Log all console messages for debugging
-        page.on('console', (msg) => {
-          log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-        })
+        page.on('console', (msg) => {})
 
         // This test would require multiple sessions and verifying that messages
         // for non-active sessions don't increment the counter
@@ -278,9 +241,7 @@ extendedTest.describe('App Component', () => {
 
     extendedTest('resets WS counter when switching sessions', async ({ page, server }) => {
       // Log all console messages for debugging
-      page.on('console', (msg) => {
-        log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-      })
+      page.on('console', (msg) => {})
 
       await page.goto(server.baseURL + '/')
 
@@ -333,9 +294,7 @@ extendedTest.describe('App Component', () => {
 
     extendedTest('maintains WS counter state during page refresh', async ({ page, server }) => {
       // Log all console messages for debugging
-      page.on('console', (msg) => {
-        log.info(`PAGE ${msg.type().toUpperCase()}: ${msg.text()}`)
-      })
+      page.on('console', (msg) => {})
 
       await page.goto(server.baseURL + '/')
 

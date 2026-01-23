@@ -1,8 +1,5 @@
 import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
-import { createTestLogger } from '../test-logger.ts'
-
-const log = createTestLogger('e2e-server-clean')
 
 extendedTest.describe('Server Clean Start', () => {
   extendedTest('should start with empty session list via API', async ({ request, server }) => {
@@ -18,8 +15,6 @@ extendedTest.describe('Server Clean Start', () => {
     // Should be an empty array
     expect(Array.isArray(sessions)).toBe(true)
     expect(sessions.length).toBe(0)
-
-    log.info('Server started cleanly with no sessions via API')
   })
 
   extendedTest('should start with empty session list via browser', async ({ page, server }) => {

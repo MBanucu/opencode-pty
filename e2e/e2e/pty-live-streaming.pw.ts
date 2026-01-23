@@ -1,14 +1,11 @@
 import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
-import { createTestLogger } from '../test-logger.ts'
-
-const log = createTestLogger('e2e-live-streaming')
 
 extendedTest.describe('PTY Live Streaming', () => {
   extendedTest(
     'should load historical buffered output when connecting to running PTY session',
     async ({ page, server }) => {
-      page.on('console', (msg) => log.info({ msg, text: msg.text() }, 'PAGE CONSOLE'))
+      page.on('console', () => {})
 
       // Navigate to the web UI (test server should be running)
       await page.goto(server.baseURL + '/')
@@ -17,7 +14,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.request.post(server.baseURL + '/api/sessions/clear')
 
       // Create a fresh test session for streaming
-      log.info('Creating a test session for streaming...')
+
       await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
@@ -36,7 +33,6 @@ extendedTest.describe('PTY Live Streaming', () => {
 
       // Find the running session (there should be at least one)
       const sessionCount = await page.locator('.session-item').count()
-      log.info(`📊 Found ${sessionCount} sessions`)
 
       // Find a running session
       const allSessions = page.locator('.session-item')
@@ -54,8 +50,6 @@ extendedTest.describe('PTY Live Streaming', () => {
         throw new Error('No running session found')
       }
 
-      log.info('✅ Found running session')
-
       // Click on the running session
       await runningSession.click()
 
@@ -72,13 +66,11 @@ extendedTest.describe('PTY Live Streaming', () => {
       // Get initial output count
       const initialOutputLines = page.locator('[data-testid="test-output"] .output-line')
       const initialCount = await initialOutputLines.count()
-      log.info(`Initial output lines: ${initialCount}`)
 
       // Check debug info using data-testid
       const debugElement = page.locator('[data-testid="debug-info"]')
       await debugElement.waitFor({ timeout: 10000 })
       const debugText = await debugElement.textContent()
-      log.info(`Debug info: ${debugText}`)
 
       // Verify we have some initial output
       expect(initialCount).toBeGreaterThan(0)
@@ -86,10 +78,6 @@ extendedTest.describe('PTY Live Streaming', () => {
       // Verify the output contains the initial welcome message from the bash command
       const allText = await page.locator('[data-testid="test-output"]').textContent()
       expect(allText).toContain('Welcome to live streaming test')
-
-      log.info(
-        '✅ Historical data loading test passed - buffered output from before UI connection is displayed'
-      )
     }
   )
 
@@ -108,7 +96,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.waitForTimeout(500) // Allow cleanup to complete
 
       // Create a fresh session that produces identifiable historical output
-      log.info('Creating fresh session with historical output markers...')
+
       await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
@@ -175,10 +163,6 @@ extendedTest.describe('PTY Live Streaming', () => {
 
       // Verify live updates are also working
       expect(allText).toMatch(/LIVE: \d{2}/)
-
-      log.info(
-        '✅ Historical buffer preservation test passed - pre-connection data is loaded correctly'
-      )
     }
   )
 
@@ -186,7 +170,7 @@ extendedTest.describe('PTY Live Streaming', () => {
     'should receive live WebSocket updates from running PTY session',
     async ({ page, server }) => {
       // Listen to page console for debugging
-      page.on('console', (msg) => log.info('PAGE CONSOLE: ' + msg.text()))
+      page.on('console', () => {})
 
       // Navigate to the web UI
       await page.goto(server.baseURL + '/')
@@ -199,7 +183,6 @@ extendedTest.describe('PTY Live Streaming', () => {
       const initialResponse = await page.request.get(server.baseURL + '/api/sessions')
       const initialSessions = await initialResponse.json()
       if (initialSessions.length === 0) {
-        log.info('No sessions found, creating a test session for streaming...')
         await page.request.post(server.baseURL + '/api/sessions', {
           data: {
             command: 'bash',
@@ -248,17 +231,13 @@ extendedTest.describe('PTY Live Streaming', () => {
       const initialCount = await outputLines.count()
       expect(initialCount).toBeGreaterThan(0)
 
-      log.info(`Initial output lines: ${initialCount}`)
-
       // Check the debug info
       const debugInfo = await page.locator('.output-container').textContent()
       const debugText = (debugInfo || '') as string
-      log.info(`Debug info: ${debugText}`)
 
       // Extract WS message count
       const wsMatch = debugText.match(/WS messages: (\d+)/)
       const initialWsMessages = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
-      log.info(`Initial WS messages: ${initialWsMessages}`)
 
       // Wait for at least 1 WebSocket streaming update
       let attempts = 0
@@ -272,7 +251,6 @@ extendedTest.describe('PTY Live Streaming', () => {
         currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0
         if (attempts % 10 === 0) {
           // Log every second
-          log.info(`Attempt ${attempts}: WS messages: ${currentWsMessages}`)
         }
         attempts++
       }
@@ -282,33 +260,25 @@ extendedTest.describe('PTY Live Streaming', () => {
       const finalWsMatch = finalDebugText.match(/WS messages: (\d+)/)
       const finalWsMessages = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
 
-      log.info(`Final WS messages: ${finalWsMessages}`)
-
       // Check final output count
       const finalCount = await outputLines.count()
-      log.info(`Final output lines: ${finalCount}`)
-
       // Validate that live streaming is working by checking output increased
 
       // Check that the new lines contain the expected timestamp format if output increased
       // Check that new live update lines were added during WebSocket streaming
       const finalOutputLines = await outputLines.count()
-      log.info(`Final output lines: ${finalOutputLines}, initial was: ${initialCount}`)
-
       // Look for lines that contain "Live update..." pattern
       let liveUpdateFound = false
       for (let i = Math.max(0, finalOutputLines - 10); i < finalOutputLines; i++) {
         const lineText = await outputLines.nth(i).textContent()
         if (lineText && lineText.includes('Live update...')) {
           liveUpdateFound = true
-          log.info(`Found live update line ${i}: "${lineText}"`)
+
           break
         }
       }
 
       expect(liveUpdateFound).toBe(true)
-
-      log.info(`✅ Live streaming test passed - received ${finalCount - initialCount} live updates`)
     }
   )
 })

@@ -24,19 +24,27 @@ extendedTest.describe('App Component', () => {
   })
 
   extendedTest('receives WebSocket session_list messages', async ({ page, server }) => {
-    let sessionListReceived = false
+    // Clear any existing sessions for clean state
+    await page.request.post(server.baseURL + '/api/sessions/clear')
 
-    // Log all console messages and check for session_list
-    page.on('console', (msg) => {
-      if (msg.text().includes('session_list')) {
-        sessionListReceived = true
-      }
+    // Navigate to page and wait for WebSocket connection
+    await page.goto(server.baseURL + '/')
+
+    // Create a session to trigger session_list update
+    await page.request.post(server.baseURL + '/api/sessions', {
+      data: {
+        command: 'echo',
+        args: ['test'],
+        description: 'Test session for WebSocket check',
+      },
     })
 
-    await page.goto(server.baseURL + '/')
-    // Wait for WebSocket to connect and receive messages
-    await page.waitForTimeout(1000)
-    expect(sessionListReceived).toBe(true)
+    // Wait for session to appear in UI (indicates WebSocket session_list was processed)
+    await page.waitForSelector('.session-item', { timeout: 5000 })
+
+    // Verify session appears in the list
+    const sessionText = await page.locator('.session-item').first().textContent()
+    expect(sessionText).toContain('Test session for WebSocket check')
   })
 
   extendedTest('shows no active sessions message when empty', async ({ page, server }) => {

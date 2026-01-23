@@ -31,11 +31,18 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
     // Type a simple command and wait for output
     await page.locator('.xterm').click()
-    await page.keyboard.type('echo "Hello from xterm test"')
+    await page.waitForTimeout(500) // Wait for terminal to be focused
+
+    // Type command character by character with small delays
+    await page.keyboard.type('echo', { delay: 50 })
+    await page.keyboard.type(' ', { delay: 50 })
+    await page.keyboard.type('"', { delay: 50 })
+    await page.keyboard.type('Hello from xterm test', { delay: 50 })
+    await page.keyboard.type('"', { delay: 50 })
     await page.keyboard.press('Enter')
 
     // Wait for command to execute and output to appear
-    await page.waitForTimeout(1000)
+    await page.waitForTimeout(1500)
 
     // Extract content directly from xterm.js Terminal buffer
     const extractedContent = await page.evaluate(() => {
@@ -112,11 +119,18 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
     // Type a simple command and wait for output
     await page.locator('.xterm').click()
-    await page.keyboard.type('echo "Hello from SerializeAddon test"')
+    await page.waitForTimeout(500) // Wait for terminal to be focused
+
+    // Type command character by character with small delays
+    await page.keyboard.type('echo', { delay: 50 })
+    await page.keyboard.type(' ', { delay: 50 })
+    await page.keyboard.type('"', { delay: 50 })
+    await page.keyboard.type('Hello from SerializeAddon test', { delay: 50 })
+    await page.keyboard.type('"', { delay: 50 })
     await page.keyboard.press('Enter')
 
     // Wait for command to execute and output to appear
-    await page.waitForTimeout(1000)
+    await page.waitForTimeout(1500)
 
     // Extract content using SerializeAddon
     const extractedContent = await page.evaluate(() => {

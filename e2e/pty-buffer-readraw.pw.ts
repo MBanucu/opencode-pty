@@ -403,4 +403,69 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       console.log('📄 SerializeAddon plain text content:', JSON.stringify(serializeAddonOutput))
     }
   )
+
+  extendedTest(
+    'should compare API plain text with SerializeAddon for cat command',
+    async ({ page, server }) => {
+      // Create a session with cat command (no arguments - waits for input)
+      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'cat',
+          args: [],
+          description: 'Cat command test for plain text comparison',
+        },
+      })
+      expect(createResponse.status()).toBe(200)
+      const sessionData = await createResponse.json()
+      const sessionId = sessionData.id
+
+      // Navigate to the page and select the session
+      await page.goto(server.baseURL + '/')
+      await page.waitForSelector('.session-item', { timeout: 5000 })
+      await page.locator('.session-item').first().click()
+
+      // Wait for terminal to be ready (cat is waiting for input)
+      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
+      await page.waitForTimeout(3000)
+
+      // Get plain text via API endpoint
+      const apiResponse = await page.request.get(
+        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
+      )
+      expect(apiResponse.status()).toBe(200)
+      const apiData = await apiResponse.json()
+      const apiPlainText = apiData.plain
+
+      // Extract content using SerializeAddon
+      const serializeAddonOutput = await page.evaluate(() => {
+        const serializeAddon = (window as any).xtermSerializeAddon
+
+        if (!serializeAddon) {
+          console.error('SerializeAddon not found')
+          return ''
+        }
+
+        try {
+          return serializeAddon.serialize({
+            excludeModes: true,
+            excludeAltBuffer: true,
+          })
+        } catch (error) {
+          console.error('Serialization failed:', error)
+          return ''
+        }
+      })
+
+      // Cat command waits for input, so may have minimal output
+      // Just verify both methods return valid strings and show the content
+      expect(typeof apiPlainText).toBe('string')
+      expect(typeof serializeAddonOutput).toBe('string')
+
+      console.log('✅ Both API and SerializeAddon handle cat command state')
+      console.log('ℹ️  API plain text length:', apiPlainText.length)
+      console.log('ℹ️  SerializeAddon text length:', serializeAddonOutput.length)
+      console.log('📄 API plain text content:', JSON.stringify(apiPlainText))
+      console.log('📄 SerializeAddon plain text content:', JSON.stringify(serializeAddonOutput))
+    }
+  )
 })

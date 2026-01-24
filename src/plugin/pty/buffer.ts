@@ -15,22 +15,42 @@ export class RingBuffer {
   }
 
   append(data: string): void {
+    console.log(
+      '🔍 BUFFER APPEND:',
+      'incoming length:',
+      data.length,
+      'data:',
+      JSON.stringify(data.substring(0, 50))
+    )
     this.buffer += data
+    console.log('🔍 BUFFER APPEND:', 'buffer length now:', this.buffer.length)
     if (this.buffer.length > this.maxSize) {
       this.buffer = this.buffer.slice(-this.maxSize)
     }
   }
 
   read(offset: number = 0, limit?: number): string[] {
+    console.log(
+      '🔍 BUFFER READ:',
+      'buffer length:',
+      this.buffer.length,
+      'offset:',
+      offset,
+      'limit:',
+      limit
+    )
     if (this.buffer === '') return []
     const lines: string[] = this.buffer.split('\n')
+    console.log('🔍 BUFFER READ:', 'split into', lines.length, 'lines')
     // Remove empty string at end if buffer doesn't end with newline
     if (lines[lines.length - 1] === '') {
       lines.pop()
     }
     const start = Math.max(0, offset)
     const end = limit !== undefined ? start + limit : lines.length
-    return lines.slice(start, end)
+    const result = lines.slice(start, end)
+    console.log('🔍 BUFFER READ:', 'returning', result.length, 'lines')
+    return result
   }
 
   readRaw(): string {

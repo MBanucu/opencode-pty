@@ -49,6 +49,14 @@ function unsubscribeFromSession(wsClient: WSClient, sessionId: string): void {
 }
 
 function broadcastRawSessionData(sessionId: string, rawData: string): void {
+  console.log(
+    '🔍 WEBSOCKET BROADCAST:',
+    sessionId,
+    'data length:',
+    rawData.length,
+    'data:',
+    JSON.stringify(rawData.substring(0, 50))
+  )
   const message: WSMessage = { type: 'raw_data', sessionId, rawData }
   const messageStr = JSON.stringify(message)
 
@@ -58,13 +66,14 @@ function broadcastRawSessionData(sessionId: string, rawData: string): void {
       try {
         ws.send(messageStr)
         sentCount++
+        console.log('🔍 WEBSOCKET SENT to client, sentCount now:', sentCount)
       } catch (err) {
-        log.error({ error: String(err) }, 'Failed to send raw data to client')
+        log.error({ error: String(err) }, 'Failed to send to client')
       }
     }
   }
 
-  log.debug({ sessionId, sentCount, messageSize: messageStr.length }, 'broadcast raw_data message')
+  log.debug({ sessionId, sentCount, messageSize: messageStr.length }, 'broadcast raw data message')
 }
 
 function sendSessionList(ws: ServerWebSocket<WSClient>): void {

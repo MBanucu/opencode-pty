@@ -26,23 +26,44 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
 
   override componentDidMount() {
     this.initializeTerminal()
+    if (this.xtermInstance && this.getDisplayData()) {
+      this.xtermInstance.write(this.getDisplayData())
+    }
   }
 
-  override componentDidUpdate() {
-    const data = this.getDisplayData()
-    if (this.xtermInstance) {
-      if (data) {
-        this.xtermInstance.write(data)
-      } else {
-        // Clear terminal when no data (session switch)
-        this.xtermInstance.clear()
-      }
+  override componentDidUpdate(prevProps: BaseTerminalRendererProps) {
+    const currentData = this.getDisplayData()
+    const prevData = (prevProps as any).rawOutput || ''
+    const newData = currentData.slice(prevData.length)
+
+    console.log(
+      '🔍 TERMINAL RENDER:',
+      'current length:',
+      currentData.length,
+      'prev length:',
+      prevData.length,
+      'new length:',
+      newData.length,
+      'new data:',
+      JSON.stringify(newData.substring(0, 50))
+    )
+    if (this.xtermInstance && newData) {
+      console.log('🔍 TERMINAL WRITE:', 'writing new data to xterm')
+      this.xtermInstance.write(newData)
+    } else {
+      console.log('🔍 TERMINAL RENDER:', 'no new data or no xterm instance')
     }
   }
 
   override componentWillUnmount() {
     if (this.xtermInstance) {
       this.xtermInstance.dispose()
+    }
+  }
+
+  clear() {
+    if (this.xtermInstance) {
+      this.xtermInstance.clear()
     }
   }
 
@@ -95,12 +116,7 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
         isEnter: data === '\r',
       })
 
-      if (data === '\r') {
-        console.log('🔄 ENTER KEY: Writing \\r\\n to terminal, sending \\n to PTY')
-        // Enter key pressed
-        term.write('\r\n')
-        onSendInput?.('\n')
-      } else if (data === '\u0003') {
+      if (data === '\u0003') {
         // Ctrl+C
         onInterrupt?.()
       } else {

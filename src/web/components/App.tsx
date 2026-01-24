@@ -70,6 +70,7 @@ export function App() {
             </div>
             <div className="output-container">
               <RawTerminal
+                key={activeSession?.id}
                 rawOutput={rawOutput}
                 onSendInput={handleSendInput}
                 onInterrupt={handleKillSession}
@@ -79,6 +80,13 @@ export function App() {
             <div className="debug-info" data-testid="debug-info">
               Debug: {rawOutput.length} chars, active: {activeSession?.id || 'none'}, WS messages:{' '}
               {wsMessageCount}
+            </div>
+            <div data-testid="test-output" style={{ position: 'absolute', left: '-9999px' }}>
+              {rawOutput.split('\n').map((line, i) => (
+                <div key={i} className="output-line">
+                  {line}
+                </div>
+              ))}
             </div>
           </>
         ) : (

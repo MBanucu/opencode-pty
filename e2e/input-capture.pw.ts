@@ -135,10 +135,10 @@ extendedTest.describe('PTY Input Capture', () => {
 
     await page.waitForTimeout(1000)
 
-    // Should have sent 'l', 's', and '\r' (Enter)
+    // Should have sent 'l', 's', and '\n' (Enter sends newline to API)
     expect(inputRequests).toContain('l')
     expect(inputRequests).toContain('s')
-    expect(inputRequests).toContain('\r')
+    expect(inputRequests).toContain('\n')
   })
 
   extendedTest('should send backspace sequences', async ({ page, server }) => {
@@ -357,7 +357,7 @@ extendedTest.describe('PTY Input Capture', () => {
       expect(inputRequests).toContain("'")
       expect(inputRequests).toContain('H')
       expect(inputRequests).toContain('W')
-      expect(inputRequests).toContain('\r')
+      expect(inputRequests).toContain('\n')
 
       // Get output from the test output div (since xterm.js canvas can't be read)
       const outputLines = await page

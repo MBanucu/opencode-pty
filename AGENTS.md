@@ -1,177 +1,120 @@
 # AGENTS.md
 
-This document provides essential instructions for agentic coding assistants and developers working with this repository. It contains codebase conventions, installation paths, PTY lifecycle, permission caveats, troubleshooting, and guidelines specific to plugin and agent workflow.
+This document is the authoritative and up-to-date guide for both agentic coding assistants and developers working with this repository. It contains essential information, conventions, troubleshooting, workflow guidance, and up-to-date instructions reflecting the current codebase and recommended practices.
 
-## Project Overview
+**opencode-pty** is an OpenCode/Bun plugin enabling interactive management of PTY (pseudo-terminal) sessions from both APIs and a modern web UI. It supports concurrent shell sessions, interactive input/output, real-time streaming, regex output filtering, buffer management, status/exits, permission-aware process handling, and agent/plugin extensibility.
 
-**opencode-pty** is an OpenCode/Bun plugin for interactive PTY (pseudo-terminal) management. It enables multiple concurrent shell sessions, sending/receiving input/output, regex filtering, output buffering, exit code/status monitoring, and permission-aware process handling. The system supports direct programmatic (API/tool) access and a modern React-based web UI with real-time streaming and interaction.
+## Quickstart
 
----
+### For Users (Install / Upgrade)
 
-## Installation / Loading
-
-### NPM Installation
-
-- For production or standard user installs, add to the OpenCode config’s `plugin` array:
+- Add `opencode-pty` to your OpenCode config in the `plugin` array:
   ```json
   {
     "$schema": "https://opencode.ai/config.json",
     "plugin": ["opencode-pty"]
   }
   ```
-- OpenCode will install/update the plugin on next run. **Note:** OpenCode does NOT auto-update plugins—clear cache (`rm -rf ~/.cache/opencode/node_modules/opencode-pty`) and rerun as needed to fetch new versions.
+- To force an upgrade or clear a corrupted cache:
+  ```sh
+  rm -rf ~/.cache/opencode/node_modules/opencode-pty # then rerun opencode
+  ```
+- OpenCode will install/update plugins on the next run; plugins are not auto-updated.
 
-### Local Plugin Development
+### For Plugin/Agent Developers (Local Plugins)
 
-- For development and agent authoring, modify `.opencode/plugins/` directly:
-  - Place TypeScript or JavaScript files in `.opencode/plugins/`.
-  - Include a minimal `.opencode/package.json` for local dependencies:
-    ```json
-    {
-      "name": "my-opencode-plugins",
-      "private": true,
-      "dependencies": { "@opencode-ai/plugin": "^1.x" }
-    }
+- Place TypeScript or JavaScript plugins in `.opencode/plugins/` in your project root.
+- For dependencies, include a minimal `.opencode/package.json` (see appendix below).
+- No extra config is required for plugins in this directory — just restart OpenCode to reload any changes.
+- **If you add dependencies:** Run `bun install` in `.opencode/`. Restart OpenCode to reload new modules.
+- For multi-file or build-step plugins, output built files to `.opencode/plugins/`.
+
+### Running the Web UI (PTY sessions)
+
+- Start the PTY Web UI in dev mode:
+  ```sh
+  bun run test-web-server.ts
+  ```
+- Open http://localhost:8766 in your browser (shows session management, streaming, and toolkit features).
+
+---
+
+## Project Structure (Directory/Files)
+
+- `src/plugin/pty/` — Core PTY logic, types, manager, buffer, permissions, and tools
+- `src/web/` — React-based web UI, server, live session and terminal interaction
+- `test/` — Unit and agent-facing tests
+- `e2e/` — End-to-end (Playwright) tests, for web UI/session validation
+- Use camelCase for function/variable names; PascalCase for types/classes; UPPER_CASE for constants; kebab-case for directories.
+
+---
+
+## Core Commands & Scripts
+
+- **Development/Run/Build:**
+  - `bun run dev` — Start Vite-based development server (frontend only)
+  - `bun run dev:server` — Start PTY Web UI/API in dev mode (test Web server)
+  - `bun run build` — Clean, typecheck, and build all assets
+  - `bun run build:dev` — Build assets in development mode
+  - `bun run build:prod` — Build assets in production mode
+  - `bun run build:plugin` — Build plugin for OpenCode consumption
+  - `bun run install:plugin:dev` — Build + install plugin to local .opencode
+  - `bun run install:web:dev` — Build web client in dev mode
+  - `bun run install:all:dev` — Build/install plugin & web client
+  - `bun run run:all:dev` — Full build/install workflow then run OpenCode (silent)
+  - `bun run preview` — Preview built UI site
+- **Lint/Format/Quality:**
+  - `bun run lint` — Run ESLint on all source (strict)
+  - `bun run lint:fix` — ESLint auto-fix
+  - `bun run format` — Prettier formatting (writes changes)
+  - `bun run format:check` — Prettier check only
+  - `bun run quality` — Lint, format check, and typecheck (all code-quality checks)
+- **Test & Typecheck:**
+  - `bun run typecheck` — Typescript strict check (no emit)
+  - `bun run typecheck:watch` — Typecheck in watch mode
+  - `bun run test` — Unit tests (Bun test runner, all but e2e/web)
+  - `bun run test:watch` — Unit tests in watch mode
+  - `bun run test:e2e` — Playwright end-to-end tests; ensure dev server built, use `PW_DISABLE_TS_ESM=1` for Bun
+  - `bun run test:all` — All unit + E2E tests
+  - Run single/filtered unit test: `bun test --match "<pattern>"`
+- **Other:**
+  - `bun run clean` — Remove build artifacts, test results, etc.
+
+**Note:** Many scripts have special requirements or additional ENV flags; see inline package.json script comments for platform- or environment-specific details (e.g. Playwright+Bun TS support requires `PW_DISABLE_TS_ESM=1`).
+
+---
+
+## Testing Approach
+
+- **Unit Tests:**
+  - Use Bun's test runner (TypeScript; see `test/` folder for examples).
+  - Run with `bun run test`.
+  - To run a single unit test, use: `bun test --match "<pattern>"`.
+  - Test coverage includes agent-facing APIs, logic utilities, and PTY manager functions.
+
+- **End-to-End (E2E) Tests:**
+  - Use Playwright (see `e2e/` folder) to validate web UI, PTY session streaming, live events.
+  - Run with `bun run test:e2e`. Note for Bun: Playwright requires `PW_DISABLE_TS_ESM=1` as an env var for TypeScript ESM compatibility in Bun; script handles this automatically.
+  - To run/play only selected E2E tests, use Playwright's `--grep "<pattern>"`:
+    ```sh
+    bun run test:e2e -- --grep "SomeFeatureOrTitle"
     ```
-  - No config entry is required for local plugins—they are loaded automatically by placement.
-  - After editing local plugins, **restart OpenCode** to see changes. Use `bun install` in the .opencode directory for new dependencies.
-  - For multi-file or build-step plugins, output built files to `.opencode/plugins/`.
+  - (Note: `--match` does NOT work for E2E tests; always use `--grep` for Playwright filtering.)
+
+- **All Tests:**
+  - Run all (unit and E2E) with `bun run test:all`.
+  - CI pipeline uses `bun run ci` (runs lint, format check, typecheck, then all tests).
+
+- **Test structure and conventions:**
+  - Place new unit tests in the `test/` folder. Place Playwright/E2E tests in `e2e/`.
+  - Use `.test.ts`/`.pw.ts` suffixes for test files as appropriate.
+  - For PTY/agent testing, always cover error cases (permission denied, session not found, regex errors).
+
+- **Troubleshooting:**
+  - If tests fail intermittently, check for process cleanup and unique session IDs per run.
+  - Playwright E2E failures often relate to port conflicts, dev server not running, or TypeScript loader problems.
+  - Use `bun run typecheck`, `bun run lint`, and ensure Playwright can launch browsers in your environment (see docs).
 
 ---
 
-## Core Commands: Build, Lint, Test
-
-- **Typecheck TypeScript:** `bun run typecheck` (strict, no emit)
-- **Unit testing:** `bun test` (Bun’s test runner, excludes e2e/web)
-- **Single test:** `bun test --match "<pattern>"`
-- **E2E web UI tests:** `bun run test:e2e` (Playwright; validates session creation, streaming, web interaction)
-- **Linting:** `bun run lint` (ESLint with Prettier integration; `lint:fix` for auto-fixes)
-- **Formatting:** `bun run format`, check with `format:check`
-- **Aggregate checks:** `bun run quality` (lint, format check, typecheck), `bun run ci` (quality + all tests)
-
----
-
-## Project Structure & Style
-
-- **Source Layout:**
-  - `src/plugin/pty/{types, manager, buffer, permissions, wildcard, tools/}` — core code, types, and PTY management tools
-  - `src/web/` — React UI components, server, session listing/interactivity
-  - Test files in `test/` and `e2e/`
-- **File and Code Style:**
-  - TypeScript 5.x (strict mode; all strict flags enabled)
-  - Use ESNext, explicit `.ts` extensions, relative imports, and verbatim module syntax
-  - Prefer camelCase for vars/functions, PascalCase for types/classes/enums, UPPER_CASE for constants
-  - Kebab-case for directories, camelCase for most files
-  - Organize imports: external first, then internal; types explicit: `import type ...`
-  - Always use arrow functions for tools, regular for general utilities; all async I/O should use async/await
-  - Use `createLogger` (`src/plugin/logger.ts`) for logging, not ad-hoc prints
-- **ESLint + Prettier enforced** at error-level; use Prettier for formatting. Key TS/ES rules:
-  - No wildcard imports, no untyped functions, descriptive variables over abbreviations
-
----
-
-## Plugin/Agent Tool Usage
-
-| Tool        | Description                                     |
-| ----------- | ----------------------------------------------- |
-| `pty_spawn` | Start PTY (command, args, workdir, env, title)  |
-| `pty_write` | Send input (text or escape sequences e.g. \x03) |
-| `pty_read`  | Read output buffer, with optional regex filter  |
-| `pty_list`  | List all PTY sessions, status, PIDs, line count |
-| `pty_kill`  | End session and optionally clean output buffer  |
-
-- Use each tool as a pure function (side effects handled by manager singleton).
-- PTY session IDs are unique (crypto-generated) and must be used for all follow-up tool calls.
-- **Exiting or killing a session does NOT remove it from the listing/buffer unless `cleanup=true` is passed to `pty_kill`.**
-- The buffer stores **up to PTY_MAX_BUFFER_LINES (default 50,000 lines)**, oldest lines are dropped when full.
-- To poll/tail, use `limit` and `offset` with `pty_read`.
-
----
-
-## Web UI & REST/WebSocket API
-
-- **Run web UI:** `bun run test-web-server.ts`
-  - Opens test UI at `http://localhost:8766`
-  - Demonstrates session management, input capture, real-time streaming
-- **Endpoints:**
-  - REST: `/api/sessions`, `/api/sessions/:id`, `/api/sessions/:id/output`, `/health`
-  - WebSocket: `/ws` for updates and streaming
-- **Web UI features:** Session list, live output, interactive input, session kill, connection indicator
-  - Real xterm.js for accurate ANSI emulation/interaction
-
----
-
-## Permissions & Security
-
-- **Permission integration:** All PTY commands are checked via OpenCode’s `permission.bash` config
-- **Critical edge cases:**
-  - "ask" permission entries are **treated as deny** (plugin/agent cannot prompt)
-  - For working directories outside the project, `permission.external_directory` set to "ask" is **treated as allow**
-    - To block PTY access to external dirs, set permission explicitly to deny
-  - Commands/dirs not covered are denied by default; all denials surface as logs/warnings
-  - Always validate/escape user input, especially regex in tool calls
-- **Secrets:** Never log sensitive info (refer to `.env` usage only as needed); default environment uses `.envrc` for Nix flakes if present
-
----
-
-## Buffer & Session Lifecycle
-
-- **Sessions remain after exit** for agent log review; explicitly call `pty_kill` with cleanup to remove
-- **Session lifecycle:**
-  - `spawn` → `running` → [`exited` | `killed`] (remains listed until cleaned)
-  - Check exit code and output buffer after exit; compare logs across multiple runs using persistent session IDs
-- **Buffer management:** 2k character limit per line, up to 50k lines (see env var `PTY_MAX_BUFFER_LINES`)
-
----
-
-## Plugin Authoring & Contributing
-
-- Use plain .ts or .js in `.opencode/plugins/` for quick plugins; use build and outDir for complex plugins
-- Always export a valid `plugin` object; see plugin API docs for all hooks/tools
-- **Common mistakes to avoid:**
-  - Missing `.opencode/package.json` (leads to dependency failures)
-  - Not exporting correct plugin shape (plugin ignored silently)
-  - Not restarting after file changes
-  - Using `import ... from "npm:..."` without `.opencode/package.json`
-
----
-
-## Testing & Quality
-
-- Write tests for all public agent-facing APIs (unit and e2e)
-- Test error conditions and edge cases (invalid regex, permissions, session not found, denied commands)
-- Use Bun's test framework for unit, Playwright for e2e; run all with `bun run ci`
-- Mock external dependencies if needed for agent test stability
-
----
-
-## Troubleshooting & Edge Cases
-
-- **Permission denied:** Check your `permission.bash` config
-- **Session not found:** Use `pty_list` to discover session IDs
-- **Invalid regex in read:** Pre-test regexes, use user-friendly errors/explanations
-- **Web UI not launching:** Ensure you ran the correct dev command; see port/URL above
-- **Plugin not loading:** Check export signatures, restarts, presence of `.opencode/package.json`, and logs for errors
-- **Type errors:** Fix using `bun run typecheck`
-- **Test fails:** Diagnose by running test directly with `--match` and reading error/log output
-
----
-
-## Commit/Branch Workflow
-
-- Use feature branches for changes
-- Typecheck and test before committing
-- Follow conventional commit format (`feat:`, `fix:`, `refactor:`, etc.)
-- DO NOT commit secrets (env files, credentials, etc.)
-
----
-
-## Update Policy
-
-Keep this document up to date with all new features, conventions, troubleshooting edge cases, and project structure changes affecting agent or plugin development.
-
-For advanced plugin/API reference and hook/tool extension documentation, see:
-
-- https://opencode.ai/docs/plugins
-- https://opencode.ai/docs/permissions
-- https://github.com/shekohex/opencode-pty/
+## [Next sections will follow this improved outline.]

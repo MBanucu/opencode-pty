@@ -14,7 +14,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: ['-c', 'printf "line1\\nline2\\nline3\\n"'],
+          args: ['-c', 'printf "line1\nline2\nline3\n"'],
           description: 'newline preservation test',
         },
       })
@@ -51,9 +51,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // The key insight: PTY output contained \n characters that were properly processed
       // The buffer now stores complete lines instead of individual characters
       // This verifies that the RingBuffer correctly handles newline-delimited data
-
-      // console.log('✅ Buffer lines:', bufferData.lines)
-      // console.log('✅ PTY output with newlines was properly processed into separate lines')
     }
   )
 
@@ -70,11 +67,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
 
       // Verify the relationship between raw and parsed content
       expect(expectedRawContent.split('\n')).toEqual(expectedParsedLines)
-
-      // console.log('✅ readRaw() preserves newlines in buffer content')
-      // console.log('✅ read() provides backward-compatible line array')
-      // console.log('ℹ️  Raw buffer: "line1\\nline2\\nline3\\n"')
-      // console.log('ℹ️  Parsed lines:', expectedParsedLines)
     }
   )
 
@@ -89,7 +81,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: ['-c', 'printf "api\\ntest\\ndata\\n"'],
+        args: ['-c', 'printf "api\ntest\ndata\n"'],
         description: 'API raw buffer test',
       },
     })
@@ -120,9 +112,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     expect(typeof rawData.raw).toBe('string')
     expect(typeof rawData.byteLength).toBe('number')
 
-    // Debug: log the raw data to see its actual content
-    // console.log('🔍 Raw API data:', JSON.stringify(rawData.raw))
-
     // Verify the raw data contains the expected content with newlines
     // The output may contain carriage returns (\r) from printf
     expect(rawData.raw).toMatch(/api[\r\n]+test[\r\n]+data/)
@@ -130,15 +119,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     // Verify byteLength matches the raw string length
     expect(rawData.byteLength).toBe(rawData.raw.length)
 
-    // console.log('✅ API endpoint returns raw buffer data')
-    // console.log('✅ Raw data contains newlines:', JSON.stringify(rawData.raw))
-    // console.log('✅ Byte length matches:', rawData.byteLength)
-
     // Verify raw data structure
     expect(typeof rawData.raw).toBe('string')
     expect(typeof rawData.byteLength).toBe('number')
-
-    // console.log('✅ Raw buffer API provides correct data format')
   })
 
   extendedTest(
@@ -189,9 +172,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       expect(rawData.raw).toContain('\x1b[')
       // Plain data should be different from raw data
       expect(plainData.plain).not.toBe(rawData.raw)
-
-      // console.log('✅ Plain API endpoint strips ANSI codes properly')
-      // console.log('ℹ️  Plain text:', JSON.stringify(plainData.plain))
     }
   )
 
@@ -200,7 +180,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     async ({ page, server }) => {
       // Ensure test isolation by clearing all sessions
       await page.request.post(server.baseURL + '/api/sessions/clear')
-      // Ensure test isolation by clearing all sessions
       await page.request.post(server.baseURL + '/api/sessions/clear')
       // Create a session with a simple echo command
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
@@ -249,10 +228,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // Verify SerializeAddon extracted some terminal content
       // The content may vary depending on terminal state, but it should exist
       expect(serializeAddonOutput.length).toBeGreaterThan(10)
-
-      // console.log('✅ SerializeAddon successfully extracted terminal content')
-      // console.log('ℹ️  Extracted content length:', serializeAddonOutput.length)
-      // console.log('ℹ️  Content preview:', serializeAddonOutput.substring(0, 100) + '...')
     }
   )
 
@@ -319,13 +294,16 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         }
       })
 
-      // Verify both methods can capture terminal content
-      // The exact content may vary due to timing, but both should work
+      // Both should contain some terminal content (bash prompt, etc.)
       expect(apiPlainText.length).toBeGreaterThan(0)
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
+      // Both should contain shell prompt elements
+      expect(apiPlainText).toContain('$')
+      expect(serializeAddonOutput).toContain('$')
     }
   )
 
+  // Restore: Should compare API plain text with SerializeAddon for initial bash state
   extendedTest(
     'should compare API plain text with SerializeAddon for initial bash state',
     async ({ page, server }) => {
@@ -388,7 +366,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // Both should contain some terminal content (bash prompt, etc.)
       expect(apiPlainText.length).toBeGreaterThan(0)
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
-
       // Both should contain shell prompt elements
       expect(apiPlainText).toContain('$')
       expect(serializeAddonOutput).toContain('$')
@@ -494,7 +471,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         // Clear terminal
         if (xtermTerminal) {
           xtermTerminal.clear()
-          // console.log('🔄 BROWSER: Terminal cleared')
         }
 
         // Capture initial content after clear
@@ -503,18 +479,11 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
           excludeModes: true,
           excludeAltBuffer: true,
         })
-        // console.log('🔄 BROWSER: Initial content captured, length:', content.length)
         return content
       })
 
       // Type "1" with debug logging
       await page.locator('.terminal.xterm').click()
-
-      // Listen for console messages during typing
-      // page.on('console', (msg) => {
-      //   console.log(`[PAGE DURING TYPE] ${msg.text()}`)
-      // })
-
       await page.keyboard.type('1')
       await page.waitForTimeout(500) // Allow PTY echo to complete
 
@@ -541,7 +510,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
           excludeModes: true,
           excludeAltBuffer: true,
         })
-        // console.log('🔄 BROWSER: After content captured, length:', content.length)
         return content
       })
 
@@ -554,23 +522,11 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       const initialCount = (cleanInitial.match(/1/g) || []).length
       const afterCount = (cleanAfter.match(/1/g) || []).length
 
-      // console.log('ℹ️  Raw initial content:', JSON.stringify(initialContent.substring(0, 200)))
-      // console.log('ℹ️  Raw after content:', JSON.stringify(afterContent.substring(0, 200)))
-      // console.log('ℹ️  Clean initial "1" count:', initialCount)
-      // console.log('ℹ️  Clean after "1" count:', afterCount)
-      // console.log('ℹ️  API buffer "1" count:', apiBufferCount)
-
       // Terminal display should contain exactly one "1" (no double-echo)
       // This verifies that local echo was successfully removed
       expect(afterCount - initialCount).toBe(1)
 
       // API buffer issue is separate - PTY output not reaching buffer (known issue)
-      // console.log('✅ Double-echo eliminated in terminal display!')
-
-      // console.log('✅ Content comparison shows no double-echo')
-      // console.log('ℹ️  Initial "1" count:', initialCount)
-      // console.log('ℹ️  After "1" count:', afterCount)
-      // console.log('ℹ️  Difference:', afterCount - initialCount)
     }
   )
 
@@ -635,7 +591,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
 
       // Verify session 1 content is shown
       expect(session1Content).toContain('SESSION_ONE_CONTENT')
-      // console.log('✅ Session 1 content loaded:', session1Content.includes('SESSION_ONE_CONTENT'))
 
       // Switch to second session
       await page.locator('.session-item').filter({ hasText: 'Session Two' }).click()
@@ -654,16 +609,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // Verify session 2 content is shown and session 1 content is cleared
       expect(session2Content).toContain('SESSION_TWO_CONTENT')
       expect(session2Content).not.toContain('SESSION_ONE_CONTENT') // No content mixing
-
-      // console.log('✅ Session switching works correctly')
-      // console.log(
-      //   'ℹ️  Session 2 contains correct content:',
-      //   session2Content.includes('SESSION_TWO_CONTENT')
-      // )
-      // console.log(
-      //   'ℹ️  Session 1 content cleared:',
-      //   !session2Content.includes('SESSION_ONE_CONTENT')
-      // )
     }
   )
 })

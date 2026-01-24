@@ -21,13 +21,18 @@ export class RingBuffer {
     }
   }
 
-  read(offset: number = 0, limit?: number): string[] {
-    if (this.buffer === '') return []
+  private splitBufferLines(): string[] {
     const lines: string[] = this.buffer.split('\n')
     // Remove empty string at end if buffer doesn't end with newline
-    if (lines[lines.length - 1] === '') {
+    if (lines.length && lines[lines.length - 1] === '') {
       lines.pop()
     }
+    return lines
+  }
+
+  read(offset: number = 0, limit?: number): string[] {
+    if (this.buffer === '') return []
+    const lines: string[] = this.splitBufferLines()
     const start = Math.max(0, offset)
     const end = limit !== undefined ? start + limit : lines.length
     return lines.slice(start, end)
@@ -39,7 +44,7 @@ export class RingBuffer {
 
   search(pattern: RegExp): SearchMatch[] {
     const matches: SearchMatch[] = []
-    const lines: string[] = this.buffer.split('\n')
+    const lines: string[] = this.splitBufferLines()
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
@@ -52,11 +57,7 @@ export class RingBuffer {
 
   get length(): number {
     if (this.buffer === '') return 0
-    const lines = this.buffer.split('\n')
-    // Remove empty string at end if buffer doesn't end with newline
-    if (lines[lines.length - 1] === '') {
-      lines.pop()
-    }
+    const lines = this.splitBufferLines()
     return lines.length
   }
 

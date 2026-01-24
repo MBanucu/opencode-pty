@@ -606,6 +606,20 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       await page.locator('.session-item').filter({ hasText: 'Session One' }).click()
       await page.waitForTimeout(3000) // Allow session switch and content load
 
+      // Wait for terminal to contain the expected output before capturing
+      await page.waitForFunction(
+        () => {
+          const serializeAddon = (window as any).xtermSerializeAddon
+          if (!serializeAddon) return false
+          const content = serializeAddon.serialize({
+            excludeModes: true,
+            excludeAltBuffer: true,
+          })
+          return content.includes('SESSION_ONE_CONTENT')
+        },
+        { timeout: 7000 }
+      )
+
       // Capture content for session 1
       const session1Content = await page.evaluate(() => {
         const serializeAddon = (window as any).xtermSerializeAddon

@@ -271,9 +271,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         })
         return content
       })
-      const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
-      const cleanInitial = stripAnsi(initialContent)
-      const cleanAfter = stripAnsi(afterContent)
+      const cleanInitial = Bun.stripANSI(initialContent)
+      const cleanAfter = Bun.stripANSI(afterContent)
       const initialCount = (cleanInitial.match(/1/g) || []).length
       const afterCount = (cleanAfter.match(/1/g) || []).length
       expect(afterCount - initialCount).toBe(1)

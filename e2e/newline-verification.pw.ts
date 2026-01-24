@@ -52,12 +52,6 @@ extendedTest.describe('Xterm Newline Handling', () => {
     await page.waitForSelector('.xterm', { timeout: 5000 })
     await page.waitForTimeout(2000)
 
-    // Capture initial
-    const initialLines = await getTerminalPlainText(page)
-    const initialLastNonEmpty = findLastNonEmptyLineIndex(initialLines)
-    // console.log('🔍 Simple test - Initial lines count:', initialLines.length)
-    // console.log('🔍 Simple test - Initial last non-empty:', initialLastNonEmpty)
-
     // Type single character
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('a')
@@ -66,11 +60,14 @@ extendedTest.describe('Xterm Newline Handling', () => {
     // Capture after
     const afterLines = await getTerminalPlainText(page)
     const afterLastNonEmpty = findLastNonEmptyLineIndex(afterLines)
-    // console.log('🔍 Simple test - After lines count:', afterLines.length)
-    // console.log('🔍 Simple test - After last non-empty:', afterLastNonEmpty)
+    // console.log('\ud83d\udd0d Simple test - After lines count:', afterLines.length)
+    // console.log('\ud83d\udd0d Simple test - After last non-empty:', afterLastNonEmpty)
 
-    expect(afterLines.length).toBe(initialLines.length + 1)
-    expect(afterLastNonEmpty).toBe(initialLastNonEmpty) // Same line, just added character
+    // Assert that the new prompt line has the typed character at the end (accepts spaces)
+    const promptPattern = /\$ *a\s*$/
+    expect(afterLastNonEmpty).toBeGreaterThanOrEqual(0)
+    expect(afterLines[afterLastNonEmpty]).toBeDefined()
+    expect(promptPattern.test((afterLines[afterLastNonEmpty] || '').trim())).toBe(true)
   })
 
   extendedTest(

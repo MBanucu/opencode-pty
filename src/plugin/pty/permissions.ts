@@ -48,12 +48,17 @@ async function showToast(
   }
 }
 
+async function denyWithToast(msg: string, details?: string): Promise<never> {
+  await showToast(msg, 'error')
+  throw new Error(details ? `${msg} ${details}` : msg)
+}
+
 async function handleAskPermission(commandLine: string): Promise<never> {
-  await showToast(`PTY: Command "${commandLine}" requires permission (treated as denied)`, 'error')
-  throw new Error(
-    `PTY spawn denied: Command "${commandLine}" requires user permission which is not supported by this plugin. ` +
-      `Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
+  await denyWithToast(
+    `PTY: Command "${commandLine}" requires permission (treated as denied)`,
+    `PTY spawn denied: Command "${commandLine}" requires user permission which is not supported by this plugin. Configure explicit "allow" or "deny" in your opencode.json permission.bash settings.`
   )
+  throw new Error('Unreachable') // For TS, should never hit.
 }
 
 export async function checkCommandPermission(command: string, args: string[]): Promise<void> {
@@ -66,7 +71,7 @@ export async function checkCommandPermission(command: string, args: string[]): P
 
   if (typeof bashPerms === 'string') {
     if (bashPerms === 'deny') {
-      throw new Error(`PTY spawn denied: All bash commands are disabled by user configuration.`)
+      await denyWithToast('PTY spawn denied: All bash commands are disabled by user configuration.')
     }
     if (bashPerms === 'ask') {
       await handleAskPermission(command)
@@ -77,7 +82,7 @@ export async function checkCommandPermission(command: string, args: string[]): P
   const action = allStructured({ head: command, tail: args }, bashPerms)
 
   if (action === 'deny') {
-    throw new Error(
+    await denyWithToast(
       `PTY spawn denied: Command "${command} ${args.join(' ')}" is explicitly denied by user configuration.`
     )
   }
@@ -103,9 +108,8 @@ export async function checkWorkdirPermission(workdir: string): Promise<void> {
   const extDirPerm = config.external_directory
 
   if (extDirPerm === 'deny') {
-    throw new Error(
-      `PTY spawn denied: Working directory "${workdir}" is outside project directory "${_directory}". ` +
-        `External directory access is denied by user configuration.`
+    await denyWithToast(
+      `PTY spawn denied: Working directory "${workdir}" is outside project directory "${_directory}". External directory access is denied by user configuration.`
     )
   }
 

@@ -1,4 +1,4 @@
-import { test as extendedTest, expect } from './fixtures'
+import { test as extendedTest } from './fixtures'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
@@ -37,8 +37,8 @@ extendedTest.describe('Xterm Content Extraction', () => {
       // Wait for command execution
       await page.waitForTimeout(2000)
 
-      // Extract content using DOM scraping
-      const domContent = await page.evaluate(() => {
+      // Extract content using DOM scraping (output intentionally unused for silence)
+      await page.evaluate(() => {
         const terminalElement = document.querySelector('.xterm')
         if (!terminalElement) return []
 
@@ -49,12 +49,11 @@ extendedTest.describe('Xterm Content Extraction', () => {
               .join('')
           }
         )
-
         return lines
       })
 
-      // Extract content using SerializeAddon + strip-ansi
-      const serializeStrippedContent = await page.evaluate(() => {
+      // Extract content using SerializeAddon + strip-ansi (output intentionally unused)
+      await page.evaluate(() => {
         const serializeAddon = (window as any).xtermSerializeAddon
         if (!serializeAddon) return []
 
@@ -72,30 +71,8 @@ extendedTest.describe('Xterm Content Extraction', () => {
         return clean.split('\n')
       })
 
-      // Only log if there is a difference between DOM and Serialize+strip
-      const domVsSerializeDifferences: Array<{
-        index: number
-        dom: string
-        serialize: string
-      }> = []
-      domContent.forEach((domLine, i) => {
-        const serializeLine = serializeStrippedContent[i] || ''
-        if (domLine !== serializeLine) {
-          domVsSerializeDifferences.push({
-            index: i,
-            dom: domLine,
-            serialize: serializeLine,
-          })
-        }
-      })
-      if (domVsSerializeDifferences.length > 0) {
-        const diff = domVsSerializeDifferences[0]
-        console.log(`DIFFERENCE: DOM vs Serialize+strip at line ${diff.index}:`)
-        console.log(`  DOM: ${JSON.stringify(diff.dom)}`)
-        console.log(`  Serialize+strip: ${JSON.stringify(diff.serialize)}`)
-      }
-
-      console.log('✅ Strip-ANSI comparison test completed')
+      // Diff structure removed (variable unused for fully silent output)
+      // (was: domVsSerializeDifferences)
     }
   )
 })

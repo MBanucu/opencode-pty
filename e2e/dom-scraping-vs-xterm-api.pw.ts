@@ -73,13 +73,6 @@ extendedTest.describe('Xterm Content Extraction', () => {
         }
       })
 
-      if (differences.length > 0) {
-        const diff = differences[0]!
-        console.log(
-          `DIFFERENCE: ${differences.length} line(s) diverge. Example: [Line ${diff.index}] DOM: ${JSON.stringify(diff.dom)} | Terminal: ${JSON.stringify(diff.terminal)}`
-        )
-      }
-
       expect(differences.length).toBe(0)
 
       // Verify expected content is present

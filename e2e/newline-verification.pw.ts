@@ -29,13 +29,6 @@ const findLastNonEmptyLineIndex = (lines: string[]): number => {
   return -1
 }
 
-const logLinesUpToIndex = (lines: string[], upToIndex: number, label: string) => {
-  console.log(`🔍 ${label} (lines 0 to ${upToIndex}):`)
-  for (let i = 0; i <= upToIndex; i++) {
-    console.log(`  [${i}]: ${JSON.stringify(lines[i])}`)
-  }
-}
-
 extendedTest.describe('Xterm Newline Handling', () => {
   extendedTest('should capture typed character in xterm display', async ({ page, server }) => {
     // Clear any existing sessions
@@ -62,8 +55,8 @@ extendedTest.describe('Xterm Newline Handling', () => {
     // Capture initial
     const initialLines = await getTerminalPlainText(page)
     const initialLastNonEmpty = findLastNonEmptyLineIndex(initialLines)
-    console.log('🔍 Simple test - Initial lines count:', initialLines.length)
-    console.log('🔍 Simple test - Initial last non-empty:', initialLastNonEmpty)
+    // console.log('🔍 Simple test - Initial lines count:', initialLines.length)
+    // console.log('🔍 Simple test - Initial last non-empty:', initialLastNonEmpty)
 
     // Type single character
     await page.locator('.terminal.xterm').click()
@@ -73,8 +66,8 @@ extendedTest.describe('Xterm Newline Handling', () => {
     // Capture after
     const afterLines = await getTerminalPlainText(page)
     const afterLastNonEmpty = findLastNonEmptyLineIndex(afterLines)
-    console.log('🔍 Simple test - After lines count:', afterLines.length)
-    console.log('🔍 Simple test - After last non-empty:', afterLastNonEmpty)
+    // console.log('🔍 Simple test - After lines count:', afterLines.length)
+    // console.log('🔍 Simple test - After last non-empty:', afterLastNonEmpty)
 
     expect(afterLines.length).toBe(initialLines.length + 1)
     expect(afterLastNonEmpty).toBe(initialLastNonEmpty) // Same line, just added character
@@ -107,9 +100,9 @@ extendedTest.describe('Xterm Newline Handling', () => {
       // Capture initial
       const initialLines = await getTerminalPlainText(page)
       const initialLastNonEmpty = findLastNonEmptyLineIndex(initialLines)
-      console.log('🔍 Initial lines count:', initialLines.length)
-      console.log('🔍 Initial last non-empty line index:', initialLastNonEmpty)
-      logLinesUpToIndex(initialLines, initialLastNonEmpty, 'Initial content')
+      // console.log('🔍 Initial lines count:', initialLines.length)
+      // console.log('🔍 Initial last non-empty line index:', initialLastNonEmpty)
+      // logLinesUpToIndex(initialLines, initialLastNonEmpty, 'Initial content')
 
       // Type command
       await page.locator('.terminal.xterm').click()
@@ -122,9 +115,9 @@ extendedTest.describe('Xterm Newline Handling', () => {
       // Get final displayed plain text content
       const finalLines = await getTerminalPlainText(page)
       const finalLastNonEmpty = findLastNonEmptyLineIndex(finalLines)
-      console.log('🔍 Final lines count:', finalLines.length)
-      console.log('🔍 Final last non-empty line index:', finalLastNonEmpty)
-      logLinesUpToIndex(finalLines, finalLastNonEmpty, 'Final content')
+      // console.log('🔍 Final lines count:', finalLines.length)
+      // console.log('🔍 Final last non-empty line index:', finalLastNonEmpty)
+      // logLinesUpToIndex(finalLines, finalLastNonEmpty, 'Final content')
 
       // Analyze the indices
       const expectedFinalIndex = 2 // Based on user specification

@@ -73,31 +73,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
       // Compare lengths
       expect(domContent.length).toBe(terminalContent.length)
 
-      // Compare content with concise mismatch logging
-      const differences: Array<{
-        index: number
-        dom: string
-        terminal: string
-        domLength: number
-        terminalLength: number
-      }> = []
-      domContent.forEach((domLine, i) => {
-        if (domLine !== terminalContent[i]) {
-          differences.push({
-            index: i,
-            dom: domLine,
-            terminal: terminalContent[i],
-            domLength: domLine.length,
-            terminalLength: terminalContent[i].length,
-          })
-        }
-      })
-      if (differences.length > 0) {
-        const diff = differences[0]!
-        console.log(
-          `DIFFERENCE: ${differences.length} line(s) diverge. Example: [Line ${diff.index}] DOM(${diff.domLength}): ${JSON.stringify(diff.dom)} | Terminal(${diff.terminalLength}): ${JSON.stringify(diff.terminal)}`
-        )
-      }
+      // Compare content (logging removed for minimal output)
 
       // Verify expected content is present
       const domJoined = domContent.join('\n')

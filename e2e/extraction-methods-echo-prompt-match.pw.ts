@@ -73,33 +73,7 @@ extendedTest(
     const serializeBunDollarCount = countDollarSigns(serializeBunStrippedContent)
     const plainDollarCount = countDollarSigns(plainApiContent)
 
-    // Log a summary if there are differences, but avoid full arrays and per-line logs
-    const hasMismatch = !(
-      domNormalized.every((v, i) => v === serializeNormalized[i]) &&
-      domNormalized.every((v, i) => v === serializeBunNormalized[i]) &&
-      domNormalized.every((v, i) => v === plainNormalized[i])
-    )
-    if (hasMismatch) {
-      const diffIndices = domNormalized
-        .map((line, i) =>
-          line !== serializeNormalized[i] ||
-          line !== serializeBunNormalized[i] ||
-          line !== plainNormalized[i]
-            ? i
-            : -1
-        )
-        .filter((idx) => idx !== -1)
-      console.log(
-        `DIFFERENCE: ${diffIndices.length} lines do not match between normalized extraction outputs. Example:`
-      )
-      if (diffIndices[0] !== undefined) {
-        const i = diffIndices[0]
-        console.log(`Line ${i} DOM: ${domNormalized[i]}`)
-        console.log(`Line ${i} SerializeNPM: ${serializeNormalized[i]}`)
-        console.log(`Line ${i} SerializeBun: ${serializeBunNormalized[i]}`)
-        console.log(`Line ${i} Plain: ${plainNormalized[i]}`)
-      }
-    }
+    // Minimal diff logic (unused hasMismatch removed)
     // Show $ count summary only if not all equal
     const dollarCounts = [
       domDollarCount,
@@ -108,12 +82,10 @@ extendedTest(
       plainDollarCount,
     ]
     if (!dollarCounts.every((v) => v === dollarCounts[0])) {
-      console.log(
-        `DIFFERENCE: $ counts across methods: DOM=${domDollarCount}, SerializeNPM=${serializeDollarCount}, SerializeBun=${serializeBunDollarCount}, Plain=${plainDollarCount}`
-      )
+      // console.log(
+      //   `DIFFERENCE: $ counts across methods: DOM=${domDollarCount}, SerializeNPM=${serializeDollarCount}, SerializeBun=${serializeBunDollarCount}, Plain=${plainDollarCount}`
+      // )
     }
-    // Otherwise, keep logs minimal. Detailed breakouts removed.
-
     // === VALIDATION ASSERTIONS ===
 
     // Basic content presence
@@ -141,7 +113,5 @@ extendedTest(
     expect(Math.abs(domContent.length - serializeStrippedContent.length)).toBeLessThan(2)
     expect(Math.abs(domContent.length - serializeBunStrippedContent.length)).toBeLessThan(2)
     expect(Math.abs(domContent.length - plainApiContent.length)).toBeLessThan(2)
-
-    console.log('✅ Echo "Hello World" verification test completed')
   }
 )

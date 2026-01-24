@@ -33,7 +33,6 @@ extendedTest.describe('Xterm Content Extraction', () => {
         const term = (window as any).xtermTerminal
 
         if (!term?.buffer?.active) {
-          console.error('Terminal not found')
           return []
         }
 

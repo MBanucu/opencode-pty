@@ -49,15 +49,7 @@ extendedTest.describe(
         // Only print concise message if key discrepancies (ignoring trivial \r/empty lines)
         const domJoined = domContent.join('\n')
         const serializeJoined = serializeStrippedContent.join('\n')
-        const plainJoined = plainApiContent.join('\n')
-        const lengthMismatch =
-          Math.abs(domContent.length - serializeStrippedContent.length) >= 3 ||
-          Math.abs(domContent.length - plainApiContent.length) >= 3
-        if (lengthMismatch) {
-          console.log(
-            'DIFFERENCE: Content line-count between DOM/Serialize/Plain API is substantially different.'
-          )
-        }
+        // Removed unused lengthMismatch (was for old logging)
 
         // Basic expectations
         expect(domJoined).toContain('Normal text')

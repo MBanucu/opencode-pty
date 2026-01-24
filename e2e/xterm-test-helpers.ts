@@ -5,24 +5,15 @@ import stripAnsi from 'strip-ansi'
 // Use Bun.stripANSI if available, otherwise fallback to npm strip-ansi
 let bunStripANSI: (str: string) => string
 try {
-  // Check if we're running in Bun environment
   if (typeof Bun !== 'undefined' && Bun.stripANSI) {
-    // eslint-disable-next-line no-console
-    console.log('Using Bun.stripANSI for ANSI stripping')
     bunStripANSI = Bun.stripANSI
   } else {
-    // Try to import from bun package
-    // eslint-disable-next-line no-console
-    console.log('Importing stripANSI from bun package')
     // Note: dynamic import only relevant in Bun, for typing only in Node
     // @ts-ignore
     const bunModule = await import('bun')
     bunStripANSI = bunModule.stripANSI
   }
 } catch {
-  // Fallback to npm strip-ansi if Bun is not available
-  // eslint-disable-next-line no-console
-  console.log('Falling back to npm strip-ansi for ANSI stripping')
   bunStripANSI = stripAnsi
 }
 

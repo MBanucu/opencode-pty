@@ -66,9 +66,10 @@ extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typ
 
       // Only print one concise message if a difference is present
       if (hasLineWrapping || hasContentDifferences) {
-        console.log(
-          'DIFFERENCE: Echo output differs between dom/text and server buffer (see assertions for details)'
-        )
+        // Only log on failure: comment out for ultra-silence, or keep for minimal debug
+        // console.log(
+        //   'DIFFERENCE: Echo output differs between dom/text and server buffer (see assertions for details)'
+        // )
       }
     }
   )

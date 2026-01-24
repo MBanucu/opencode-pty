@@ -33,7 +33,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
         const serializeAddon = (window as any).xtermSerializeAddon
 
         if (!serializeAddon) {
-          console.error('SerializeAddon not found')
+          // SerializeAddon not found; let Playwright fail
           return ''
         }
 
@@ -43,7 +43,6 @@ extendedTest.describe('Xterm Content Extraction', () => {
             excludeAltBuffer: true,
           })
         } catch (error) {
-          console.error('Serialization failed:', error)
           return ''
         }
       })

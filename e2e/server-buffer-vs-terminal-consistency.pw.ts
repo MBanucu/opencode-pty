@@ -9,11 +9,6 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
       await page.goto(server.baseURL)
 
-      // Capture console logs from the app
-      page.on('console', (msg) => {
-        console.log('PAGE CONSOLE:', msg.text())
-      })
-
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a session that runs a command and produces output
@@ -45,7 +40,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
         const serializeAddon = (window as any).xtermSerializeAddon
 
         if (!serializeAddon) {
-          console.error('SerializeAddon not found')
+          // SerializeAddon not found; let Playwright fail
           return ''
         }
 
@@ -55,7 +50,6 @@ extendedTest.describe('Xterm Content Extraction', () => {
             excludeAltBuffer: true,
           })
         } catch (error) {
-          console.error('Serialization failed:', error)
           return ''
         }
       })

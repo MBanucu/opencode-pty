@@ -265,8 +265,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [],
+          args: ['-i'],
           description: 'Double Echo Test Session',
+          env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
         },
       })
       expect(createResponse.status()).toBe(200)
@@ -335,8 +336,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [],
+          args: ['-i'],
           description: 'Initial bash state test for plain text comparison',
+          env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
         },
       })
       expect(createResponse.status()).toBe(200)
@@ -402,7 +404,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'cat',
-          args: [],
+          args: ['-i'],
           description: 'Cat command test for plain text comparison',
         },
       })
@@ -463,8 +465,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [],
+          args: ['-i'],
           description: 'Double-echo prevention test',
+          env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
         },
       })
       expect(createResponse.status()).toBe(200)

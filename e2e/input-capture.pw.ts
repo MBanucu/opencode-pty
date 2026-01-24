@@ -14,7 +14,7 @@ extendedTest.describe('PTY Input Capture', () => {
       await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [],
+          args: ['-i'],
           description: 'Input test session',
         },
       })
@@ -61,7 +61,7 @@ extendedTest.describe('PTY Input Capture', () => {
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: [],
+        args: ['-i'],
         description: 'Space test session',
       },
     })
@@ -104,7 +104,7 @@ extendedTest.describe('PTY Input Capture', () => {
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: [],
+        args: ['-i'],
         description: 'ls command test session',
       },
     })
@@ -163,7 +163,7 @@ extendedTest.describe('PTY Input Capture', () => {
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: [],
+        args: ['-i'],
         description: 'Backspace test session',
       },
     })
@@ -211,7 +211,7 @@ extendedTest.describe('PTY Input Capture', () => {
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: [],
+        args: ['-i'],
         description: 'Ctrl+C test session',
       },
     })
@@ -327,7 +327,7 @@ extendedTest.describe('PTY Input Capture', () => {
       await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [],
+          args: ['-i'],
           description: 'Echo test session',
         },
       })

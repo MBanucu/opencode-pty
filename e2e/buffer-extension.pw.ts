@@ -11,7 +11,7 @@ async function setupSession(
 ): Promise<string> {
   await page.request.post(server.baseURL + '/api/sessions/clear')
   const createResp = await page.request.post(server.baseURL + '/api/sessions', {
-    data: { command: 'bash', args: [], description },
+    data: { command: 'bash', args: ['-i'], description },
   })
   expect(createResp.status()).toBe(200)
   const { id } = await createResp.json()

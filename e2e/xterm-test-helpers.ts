@@ -19,6 +19,10 @@ try {
 
 export { bunStripANSI }
 
+/**
+ * Deprecated: Use getSerializedContentByXtermSerializeAddon for all terminal content extraction in E2E tests.
+ * This DOM scraping method should only be used for rare visual/manual cross-checks or debugging.
+ */
 export const getTerminalPlainText = async (page: Page): Promise<string[]> => {
   return await page.evaluate(() => {
     const getPlainText = () => {
@@ -51,6 +55,9 @@ export const getTerminalPlainText = async (page: Page): Promise<string[]> => {
   })
 }
 
+/**
+ * Extract the terminal's plain text using xterm.js SerializeAddon (best-practice for robust E2E/content extraction).
+ */
 export const getSerializedContentByXtermSerializeAddon = async (page: Page) => {
   return await page.evaluate(() => {
     const serializeAddon = (window as any).xtermSerializeAddon as SerializeAddon | undefined

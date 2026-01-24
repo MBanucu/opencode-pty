@@ -38,7 +38,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
     const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: [],
+        args: ['-i'],
         description: 'Simple typing test session',
       },
     })
@@ -80,7 +80,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [],
+          args: ['-i'],
           description: 'PTY Buffer readRaw() Function',
         },
       })

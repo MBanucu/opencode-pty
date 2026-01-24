@@ -15,7 +15,7 @@ extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typ
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [],
+          args: ['-i'],
           description: 'Local vs remote echo test',
         },
       })

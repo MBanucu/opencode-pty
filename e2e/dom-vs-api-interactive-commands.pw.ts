@@ -14,8 +14,9 @@ extendedTest.describe('Xterm Content Extraction', () => {
       await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [],
+          args: ['-i'],
           description: 'Interactive command comparison test',
+          env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
         },
       })
 

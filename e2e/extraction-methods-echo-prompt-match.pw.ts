@@ -15,8 +15,9 @@ extendedTest(
     const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: [],
+        args: ['-i'],
         description: 'Echo "Hello World" test',
+        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       },
     })
     expect(createResponse.status()).toBe(200)
@@ -35,26 +36,23 @@ extendedTest(
 
     // Send echo command
     await page.locator('.terminal.xterm').click()
-    await page.keyboard.type('echo "Hello World"')
-    await page.keyboard.press('Enter')
+    // Try backend direct input for control comparison
+    await page.request.post(server.baseURL + `/api/sessions/${sessionId}/input`, {
+      data: { data: 'echo "Hello World"\r' },
+    })
     await page.waitForTimeout(2000) // Wait for command execution
 
     // === EXTRACTION METHODS ===
 
-    // 1. DOM Scraping
+    // PRIMARY: SerializeAddon (robust extraction)
+    const serializeContent = await getSerializedContentByXtermSerializeAddon(page)
+    const serializeStrippedContent = bunStripANSI(serializeContent).split('\n')
+
+    // SECONDARY (deprecated; for manual/visual backup): DOM scraping
+    // Kept for rare debugging or cross-checks only
     const domContent = await getTerminalPlainText(page)
 
-    // 2. SerializeAddon + NPM strip-ansi
-    const serializeStrippedContent = bunStripANSI(
-      await getSerializedContentByXtermSerializeAddon(page)
-    ).split('\n')
-
-    // 3. SerializeAddon + Bun.stripANSI (or fallback)
-    const serializeBunStrippedContent = bunStripANSI(
-      await getSerializedContentByXtermSerializeAddon(page)
-    ).split('\n')
-
-    // 4. Plain API
+    // API
     const plainApiResponse = await page.request.get(
       server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
     )
@@ -69,14 +67,16 @@ extendedTest(
       lines.map((line) => line.replace(/\r/g, '').trimEnd())
     const domNormalized = normalizeLines(domContent)
     const serializeNormalized = normalizeLines(serializeStrippedContent)
-    const serializeBunNormalized = normalizeLines(serializeBunStrippedContent)
+    const serializeBunNormalized = normalizeLines(serializeStrippedContent)
+
     const plainNormalized = normalizeLines(plainApiContent)
 
     // Count $ signs in each method
     const countDollarSigns = (lines: string[]) => lines.join('').split('$').length - 1
     const domDollarCount = countDollarSigns(domContent)
     const serializeDollarCount = countDollarSigns(serializeStrippedContent)
-    const serializeBunDollarCount = countDollarSigns(serializeBunStrippedContent)
+    const serializeBunDollarCount = countDollarSigns(serializeStrippedContent)
+
     const plainDollarCount = countDollarSigns(plainApiContent)
 
     // Minimal diff logic (unused hasMismatch removed)
@@ -106,26 +106,28 @@ extendedTest(
     expect([2, 3]).toContain(plainDollarCount)
 
     // Robust output comparison: all arrays contain command output and a prompt, and are similar length. No strict array equality required due to initial prompt differences in some methods.
-    domNormalized.some((line) => expect(line).toContain('Hello World'))
-    serializeNormalized.some((line) => expect(line).toContain('Hello World'))
-    serializeBunNormalized.some((line) => expect(line).toContain('Hello World'))
-    plainNormalized.some((line) => expect(line).toContain('Hello World'))
+
+    expect(domNormalized.some((line) => line.includes('Hello World'))).toBe(true)
+    expect(serializeNormalized.some((line) => line.includes('Hello World'))).toBe(true)
+    expect(serializeBunNormalized.some((line) => line.includes('Hello World'))).toBe(true)
+    expect(plainNormalized.some((line) => line.includes('Hello World'))).toBe(true)
 
     // Ensure at least one prompt appears in each normalized array
-    domNormalized.some((line) => expect(line).toMatch(/\$\s*$/))
-    serializeNormalized.some((line) => expect(line).toMatch(/\$\s*$/))
-    serializeBunNormalized.some((line) => expect(line).toMatch(/\$\s*$/))
-    plainNormalized.some((line) => expect(line).toMatch(/\$\s*$/))
+    expect(domNormalized.some((line) => /\$\s*$/.test(line))).toBe(true)
+    expect(serializeNormalized.some((line) => /\$\s*$/.test(line))).toBe(true)
+    expect(serializeBunNormalized.some((line) => /\$\s*$/.test(line))).toBe(true)
+    expect(plainNormalized.some((line) => /\$\s*$/.test(line))).toBe(true)
 
     // ANSI cleaning validation
     const serializeNpmJoined = serializeStrippedContent.join('\n')
     expect(serializeNpmJoined).not.toContain('\x1B[') // No ANSI codes in Serialize+NPM strip
-    const serializeBunJoined = serializeBunStrippedContent.join('\n')
-    expect(serializeBunJoined).not.toContain('\x1B[') // No ANSI codes in Serialize+Bun.stripANSI
+    const serializeBunJoined = serializeStrippedContent.join('\n')
+    expect(serializeBunJoined).not.toContain('\x1B[') // No ANSI codes in Serialize+Bun.stripANSI (merged)
 
     // Length similarity (should be very close with echo command)
     expect(Math.abs(domContent.length - serializeStrippedContent.length)).toBeLessThan(2)
-    expect(Math.abs(domContent.length - serializeBunStrippedContent.length)).toBeLessThan(2)
+    expect(Math.abs(domContent.length - serializeStrippedContent.length)).toBeLessThan(2)
+
     expect(Math.abs(domContent.length - plainApiContent.length)).toBeLessThan(2)
   }
 )

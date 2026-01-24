@@ -32,7 +32,7 @@ describe('PTY Echo Behavior', () => {
     // Spawn interactive bash session
     const session = manager.spawn({
       command: 'bash',
-      args: [],
+      args: ['-i'],
       description: 'Echo test session',
       parentSessionId: 'test',
     })

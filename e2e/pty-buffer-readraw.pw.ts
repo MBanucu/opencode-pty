@@ -42,14 +42,12 @@ async function fetchBufferApi(page: any, server: any, sessionId: string, bufferT
   return res.json()
 }
 
-async function getTerminalContent(page: any) {
-  return await page.evaluate(() => {
-    const serializeAddon = (window as any).xtermSerializeAddon
-    return serializeAddon
-      ? serializeAddon.serialize({ excludeModes: true, excludeAltBuffer: true })
-      : ''
-  })
-}
+import { getSerializedContentByXtermSerializeAddon } from './xterm-test-helpers'
+
+// ...other code...
+
+// Use this in test code:
+// await getSerializedContentByXtermSerializeAddon(page, { excludeModes: true, excludeAltBuffer: true })
 
 extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
@@ -146,7 +144,10 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         5000
       )
       await waitForCommandComplete(page, 3000)
-      const serializeAddonOutput = await getTerminalContent(page)
+      const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
       expect(typeof serializeAddonOutput).toBe('string')
       expect(serializeAddonOutput.length).toBeGreaterThan(10)
@@ -181,7 +182,10 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       await waitForCommandComplete(page, 1000)
       const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
       const apiPlainText = apiData.plain
-      const serializeAddonOutput = await getTerminalContent(page)
+      const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       expect(apiPlainText.length).toBeGreaterThan(0)
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
       expect(apiPlainText).toContain('$')
@@ -208,7 +212,10 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       await waitForCommandComplete(page, 3500)
       const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
       const apiPlainText = apiData.plain
-      const serializeAddonOutput = await getTerminalContent(page)
+      const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       expect(apiPlainText.length).toBeGreaterThan(0)
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
       expect(apiPlainText).toContain('$')
@@ -229,7 +236,10 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       await waitForCommandComplete(page, 3000)
       const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
       const apiPlainText = apiData.plain
-      const serializeAddonOutput = await getTerminalContent(page)
+      const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       expect(typeof apiPlainText).toBe('string')
       expect(typeof serializeAddonOutput).toBe('string')
     }
@@ -247,29 +257,17 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       })
       await gotoAndSelectSession(page, server, 'Double-echo prevention test', 5000)
       await waitForCommandComplete(page, 2000)
-      const initialContent = await page.evaluate(() => {
-        const xtermTerminal = (window as any).xtermTerminal
-        const serializeAddon = (window as any).xtermSerializeAddon
-        if (xtermTerminal) xtermTerminal.clear()
-        if (!serializeAddon) return ''
-        const content = serializeAddon.serialize({
-          excludeModes: true,
-          excludeAltBuffer: true,
-        })
-        return content
+      const initialContent = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
       })
       await page.locator('.terminal.xterm').click()
       await page.keyboard.type('1')
       await waitForCommandComplete(page, 500)
       // const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
-      const afterContent = await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
-        if (!serializeAddon) return ''
-        const content = serializeAddon.serialize({
-          excludeModes: true,
-          excludeAltBuffer: true,
-        })
-        return content
+      const afterContent = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
       })
       const cleanInitial = Bun.stripANSI(initialContent)
       const cleanAfter = Bun.stripANSI(afterContent)
@@ -310,11 +308,17 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         },
         { timeout: 7000 }
       )
-      const session1Content = await getTerminalContent(page)
+      const session1Content = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       expect(session1Content).toContain('SESSION_ONE_CONTENT')
       await page.locator('.session-item').filter({ hasText: 'Session Two' }).click()
       await waitForCommandComplete(page, 3000)
-      const session2Content = await getTerminalContent(page)
+      const session2Content = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       expect(session2Content).toContain('SESSION_TWO_CONTENT')
       expect(session2Content).not.toContain('SESSION_ONE_CONTENT')
     }

@@ -56,16 +56,21 @@ export const getTerminalPlainText = async (page: Page): Promise<string[]> => {
 }
 
 /**
- * Extract the terminal's plain text using xterm.js SerializeAddon (best-practice for robust E2E/content extraction).
+ * Extract terminal text via xterm.js SerializeAddon (configurable modes for DRY E2E usage)
  */
-export const getSerializedContentByXtermSerializeAddon = async (page: Page) => {
-  return await page.evaluate(() => {
-    const serializeAddon = (window as any).xtermSerializeAddon as SerializeAddon | undefined
-    if (!serializeAddon) return ''
-
-    return serializeAddon.serialize({
-      excludeModes: false,
-      excludeAltBuffer: false,
-    })
-  })
+export const getSerializedContentByXtermSerializeAddon = async (
+  page: Page,
+  { excludeModes = false, excludeAltBuffer = false } = {}
+): Promise<string> => {
+  return await page.evaluate(
+    (opts) => {
+      const serializeAddon = (window as any).xtermSerializeAddon as SerializeAddon | undefined
+      if (!serializeAddon) return ''
+      return serializeAddon.serialize({
+        excludeModes: opts.excludeModes,
+        excludeAltBuffer: opts.excludeAltBuffer,
+      })
+    },
+    { excludeModes, excludeAltBuffer }
+  )
 }

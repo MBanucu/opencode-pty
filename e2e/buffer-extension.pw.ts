@@ -39,13 +39,9 @@ async function getRawBuffer(
   const data = await resp.json()
   return data.raw
 }
-async function getXtermSerialized(page: Page): Promise<string> {
-  return await page.evaluate(() => {
-    const serializeAddon = (window as any).xtermSerializeAddon
-    if (!serializeAddon) return ''
-    return serializeAddon.serialize({ excludeModes: true, excludeAltBuffer: true })
-  })
-}
+import { getSerializedContentByXtermSerializeAddon } from './xterm-test-helpers'
+// ...
+// Usage: await getSerializedContentByXtermSerializeAddon(page, { excludeModes: true, excludeAltBuffer: true })
 
 extendedTest.describe('Buffer Extension on Input', () => {
   extendedTest(
@@ -67,10 +63,16 @@ extendedTest.describe('Buffer Extension on Input', () => {
     async ({ page, server }) => {
       const description = 'Xterm display test session'
       await setupSession(page, server, description)
-      const initialContent = await getXtermSerialized(page)
+      const initialContent = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       const initialLength = initialContent.length
       await typeInTerminal(page, 'a', 'a')
-      const afterContent = await getXtermSerialized(page)
+      const afterContent = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       expect(afterContent.length).toBeGreaterThan(initialLength)
       expect(afterContent).toContain('a')
     }
@@ -81,10 +83,16 @@ extendedTest.describe('Buffer Extension on Input', () => {
     async ({ page, server }) => {
       const description = 'Exact display extension test session'
       await setupSession(page, server, description)
-      const initialContent = await getXtermSerialized(page)
+      const initialContent = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       const initialLength = initialContent.length
       await typeInTerminal(page, 'a', 'a')
-      const afterContent = await getXtermSerialized(page)
+      const afterContent = await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
       expect(afterContent.length).toBe(initialLength + 1)
       expect(afterContent).toContain('a')
     }

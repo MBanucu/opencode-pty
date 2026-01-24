@@ -1,8 +1,6 @@
 import { join, resolve } from 'path'
 import { ASSET_CONTENT_TYPES } from '../constants.ts'
 
-const PROJECT_ROOT = resolve(process.cwd())
-
 // Security headers for all responses
 function getSecurityHeaders(): Record<string, string> {
   return {

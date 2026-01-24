@@ -63,14 +63,6 @@ export class SessionLifecycleManager {
     onExit: (id: string, exitCode: number | null) => void
   ): void {
     session.process!.onData((data: string) => {
-      console.log(
-        '🔍 PTY OUTPUT:',
-        session.id,
-        'length:',
-        data.length,
-        'data:',
-        JSON.stringify(data)
-      )
       session.buffer.append(data)
       onData(session.id, data)
     })

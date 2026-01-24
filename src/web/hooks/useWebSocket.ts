@@ -76,16 +76,6 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
           onSessionList(sessions, autoSelected)
         } else if (data.type === 'raw_data') {
           const isForActiveSession = data.sessionId === activeSessionRef.current?.id
-          console.log(
-            '🔍 WEBSOCKET RECEIVE:',
-            data.sessionId,
-            'isActive:',
-            isForActiveSession,
-            'data length:',
-            data.rawData.length,
-            'data:',
-            JSON.stringify(data.rawData.substring(0, 50))
-          )
           if (isForActiveSession) {
             onRawData?.(data.rawData)
           }

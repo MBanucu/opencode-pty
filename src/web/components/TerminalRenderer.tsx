@@ -36,22 +36,8 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
     const prevData = (prevProps as any).rawOutput || ''
     const newData = currentData.slice(prevData.length)
 
-    console.log(
-      '🔍 TERMINAL RENDER:',
-      'current length:',
-      currentData.length,
-      'prev length:',
-      prevData.length,
-      'new length:',
-      newData.length,
-      'new data:',
-      JSON.stringify(newData.substring(0, 50))
-    )
     if (this.xtermInstance && newData) {
-      console.log('🔍 TERMINAL WRITE:', 'writing new data to xterm')
       this.xtermInstance.write(newData)
-    } else {
-      console.log('🔍 TERMINAL RENDER:', 'no new data or no xterm instance')
     }
   }
 
@@ -91,7 +77,6 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
     this.xtermInstance = term
 
     // Expose terminal and serialize addon for testing purposes
-    console.log('TerminalRenderer: Exposing terminal instance and serialize addon for testing')
     ;(window as any).xtermTerminal = term
     ;(window as any).xtermSerializeAddon = this.serializeAddon
 
@@ -111,16 +96,10 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
     if (disabled) return
 
     const handleData = (data: string) => {
-      console.log('🔄 TERMINAL handleData called:', {
-        input: JSON.stringify(data),
-        isEnter: data === '\r',
-      })
-
       if (data === '\u0003') {
         // Ctrl+C
         onInterrupt?.()
       } else {
-        console.log('🔄 REGULAR INPUT: Sending to PTY, no local echo')
         // Regular character input - let PTY handle echo, no local echo
         onSendInput?.(data)
       }

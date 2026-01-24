@@ -154,16 +154,9 @@ export async function handleAPISessions(
   const rawBufferMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/buffer\/raw$/)
   if (rawBufferMatch && req.method === 'GET') {
     const sessionId = rawBufferMatch[1]
-    console.log('🔍 API RAW BUFFER REQUEST:', sessionId)
     if (!sessionId) return new Response('Invalid session ID', { status: 400 })
 
     const bufferData = manager.getRawBuffer(sessionId)
-    console.log(
-      '🔍 API RAW BUFFER RESPONSE:',
-      bufferData ? 'found' : 'not found',
-      bufferData?.raw.length || 0,
-      'chars'
-    )
     if (!bufferData) {
       return new Response('Session not found', { status: 404 })
     }

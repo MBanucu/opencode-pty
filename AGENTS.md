@@ -1,286 +1,177 @@
 # AGENTS.md
 
-This file contains essential information for agentic coding assistants working in this repository.
+This document provides essential instructions for agentic coding assistants and developers working with this repository. It contains codebase conventions, installation paths, PTY lifecycle, permission caveats, troubleshooting, and guidelines specific to plugin and agent workflow.
 
 ## Project Overview
 
-**opencode-pty** is an OpenCode plugin that provides interactive PTY (pseudo-terminal) management. It enables AI agents to run background processes, send interactive input, and read output on demand. The plugin supports multiple concurrent PTY sessions with features like output buffering, regex filtering, and permission integration.
+**opencode-pty** is an OpenCode/Bun plugin for interactive PTY (pseudo-terminal) management. It enables multiple concurrent shell sessions, sending/receiving input/output, regex filtering, output buffering, exit code/status monitoring, and permission-aware process handling. The system supports direct programmatic (API/tool) access and a modern React-based web UI with real-time streaming and interaction.
+
+---
+
+## Installation / Loading
+
+### NPM Installation
+
+- For production or standard user installs, add to the OpenCode config’s `plugin` array:
+  ```json
+  {
+    "$schema": "https://opencode.ai/config.json",
+    "plugin": ["opencode-pty"]
+  }
+  ```
+- OpenCode will install/update the plugin on next run. **Note:** OpenCode does NOT auto-update plugins—clear cache (`rm -rf ~/.cache/opencode/node_modules/opencode-pty`) and rerun as needed to fetch new versions.
+
+### Local Plugin Development
+
+- For development and agent authoring, modify `.opencode/plugins/` directly:
+  - Place TypeScript or JavaScript files in `.opencode/plugins/`.
+  - Include a minimal `.opencode/package.json` for local dependencies:
+    ```json
+    {
+      "name": "my-opencode-plugins",
+      "private": true,
+      "dependencies": { "@opencode-ai/plugin": "^1.x" }
+    }
+    ```
+  - No config entry is required for local plugins—they are loaded automatically by placement.
+  - After editing local plugins, **restart OpenCode** to see changes. Use `bun install` in the .opencode directory for new dependencies.
+  - For multi-file or build-step plugins, output built files to `.opencode/plugins/`.
+
+---
+
+## Core Commands: Build, Lint, Test
+
+- **Typecheck TypeScript:** `bun run typecheck` (strict, no emit)
+- **Unit testing:** `bun test` (Bun’s test runner, excludes e2e/web)
+- **Single test:** `bun test --match "<pattern>"`
+- **E2E web UI tests:** `bun run test:e2e` (Playwright; validates session creation, streaming, web interaction)
+- **Linting:** `bun run lint` (ESLint with Prettier integration; `lint:fix` for auto-fixes)
+- **Formatting:** `bun run format`, check with `format:check`
+- **Aggregate checks:** `bun run quality` (lint, format check, typecheck), `bun run ci` (quality + all tests)
+
+---
+
+## Project Structure & Style
+
+- **Source Layout:**
+  - `src/plugin/pty/{types, manager, buffer, permissions, wildcard, tools/}` — core code, types, and PTY management tools
+  - `src/web/` — React UI components, server, session listing/interactivity
+  - Test files in `test/` and `e2e/`
+- **File and Code Style:**
+  - TypeScript 5.x (strict mode; all strict flags enabled)
+  - Use ESNext, explicit `.ts` extensions, relative imports, and verbatim module syntax
+  - Prefer camelCase for vars/functions, PascalCase for types/classes/enums, UPPER_CASE for constants
+  - Kebab-case for directories, camelCase for most files
+  - Organize imports: external first, then internal; types explicit: `import type ...`
+  - Always use arrow functions for tools, regular for general utilities; all async I/O should use async/await
+  - Use `createLogger` (`src/plugin/logger.ts`) for logging, not ad-hoc prints
+- **ESLint + Prettier enforced** at error-level; use Prettier for formatting. Key TS/ES rules:
+  - No wildcard imports, no untyped functions, descriptive variables over abbreviations
+
+---
+
+## Plugin/Agent Tool Usage
+
+| Tool        | Description                                     |
+| ----------- | ----------------------------------------------- |
+| `pty_spawn` | Start PTY (command, args, workdir, env, title)  |
+| `pty_write` | Send input (text or escape sequences e.g. \x03) |
+| `pty_read`  | Read output buffer, with optional regex filter  |
+| `pty_list`  | List all PTY sessions, status, PIDs, line count |
+| `pty_kill`  | End session and optionally clean output buffer  |
+
+- Use each tool as a pure function (side effects handled by manager singleton).
+- PTY session IDs are unique (crypto-generated) and must be used for all follow-up tool calls.
+- **Exiting or killing a session does NOT remove it from the listing/buffer unless `cleanup=true` is passed to `pty_kill`.**
+- The buffer stores **up to PTY_MAX_BUFFER_LINES (default 50,000 lines)**, oldest lines are dropped when full.
+- To poll/tail, use `limit` and `offset` with `pty_read`.
+
+---
+
+## Web UI & REST/WebSocket API
+
+- **Run web UI:** `bun run test-web-server.ts`
+  - Opens test UI at `http://localhost:8766`
+  - Demonstrates session management, input capture, real-time streaming
+- **Endpoints:**
+  - REST: `/api/sessions`, `/api/sessions/:id`, `/api/sessions/:id/output`, `/health`
+  - WebSocket: `/ws` for updates and streaming
+- **Web UI features:** Session list, live output, interactive input, session kill, connection indicator
+  - Real xterm.js for accurate ANSI emulation/interaction
+
+---
+
+## Permissions & Security
+
+- **Permission integration:** All PTY commands are checked via OpenCode’s `permission.bash` config
+- **Critical edge cases:**
+  - "ask" permission entries are **treated as deny** (plugin/agent cannot prompt)
+  - For working directories outside the project, `permission.external_directory` set to "ask" is **treated as allow**
+    - To block PTY access to external dirs, set permission explicitly to deny
+  - Commands/dirs not covered are denied by default; all denials surface as logs/warnings
+  - Always validate/escape user input, especially regex in tool calls
+- **Secrets:** Never log sensitive info (refer to `.env` usage only as needed); default environment uses `.envrc` for Nix flakes if present
 
-The plugin includes both API tools for programmatic access and a web-based UI with xterm.js terminal emulation for direct interactive sessions. Users can spawn, manage, and interact with PTY sessions through a modern web interface with real-time output streaming and keyboard input handling.
+---
 
-## Interactive Terminal Features
+## Buffer & Session Lifecycle
 
-### Web-Based Terminal UI
+- **Sessions remain after exit** for agent log review; explicitly call `pty_kill` with cleanup to remove
+- **Session lifecycle:**
+  - `spawn` → `running` → [`exited` | `killed`] (remains listed until cleaned)
+  - Check exit code and output buffer after exit; compare logs across multiple runs using persistent session IDs
+- **Buffer management:** 2k character limit per line, up to 50k lines (see env var `PTY_MAX_BUFFER_LINES`)
 
-- **xterm.js Integration**: Full-featured terminal emulator with ANSI sequence support, cursor handling, and proper text rendering
-- **Real-time Input Handling**: Direct keyboard input capture including letters, numbers, spaces, Enter, Backspace, and Ctrl+C
-- **Live Output Streaming**: WebSocket-based real-time output updates from PTY sessions
-- **Session Management**: Visual sidebar showing all active sessions with status indicators, PIDs, and line counts
-- **Auto-selection**: Automatically selects running sessions for immediate interaction
+---
 
-### Input Capture
+## Plugin Authoring & Contributing
 
-- **Printable Characters**: Letters, numbers, symbols captured via xterm.js onData events
-- **Special Keys**: Enter (sends '\r'), Space, Backspace handled via onKey events
-- **Control Sequences**: Ctrl+C triggers session interruption and kill functionality
-- **Input Validation**: Only sends input when active session exists and input is non-empty
+- Use plain .ts or .js in `.opencode/plugins/` for quick plugins; use build and outDir for complex plugins
+- Always export a valid `plugin` object; see plugin API docs for all hooks/tools
+- **Common mistakes to avoid:**
+  - Missing `.opencode/package.json` (leads to dependency failures)
+  - Not exporting correct plugin shape (plugin ignored silently)
+  - Not restarting after file changes
+  - Using `import ... from "npm:..."` without `.opencode/package.json`
 
-### Session Interaction
+---
 
-- **Click to Select**: Click any session in the sidebar to switch active terminal
-- **Kill Sessions**: Button to terminate running sessions with confirmation
-- **Connection Status**: Real-time WebSocket connection indicator
-- **Output History**: Loads and displays historical output when selecting sessions
+## Testing & Quality
 
-## Build/Lint/Test Commands
+- Write tests for all public agent-facing APIs (unit and e2e)
+- Test error conditions and edge cases (invalid regex, permissions, session not found, denied commands)
+- Use Bun's test framework for unit, Playwright for e2e; run all with `bun run ci`
+- Mock external dependencies if needed for agent test stability
 
-### Type Checking
+---
 
-```bash
-bun run typecheck
-```
+## Troubleshooting & Edge Cases
 
-Runs TypeScript compiler in no-emit mode to check for type errors.
+- **Permission denied:** Check your `permission.bash` config
+- **Session not found:** Use `pty_list` to discover session IDs
+- **Invalid regex in read:** Pre-test regexes, use user-friendly errors/explanations
+- **Web UI not launching:** Ensure you ran the correct dev command; see port/URL above
+- **Plugin not loading:** Check export signatures, restarts, presence of `.opencode/package.json`, and logs for errors
+- **Type errors:** Fix using `bun run typecheck`
+- **Test fails:** Diagnose by running test directly with `--match` and reading error/log output
 
-### Testing
+---
 
-```bash
-bun test
-```
+## Commit/Branch Workflow
 
-Runs all tests using Bun's test runner.
+- Use feature branches for changes
+- Typecheck and test before committing
+- Follow conventional commit format (`feat:`, `fix:`, `refactor:`, etc.)
+- DO NOT commit secrets (env files, credentials, etc.)
 
-### Running a Single Test
+---
 
-```bash
-bun test --match "test name pattern"
-```
+## Update Policy
 
-Use the `--match` flag with a regex pattern to run specific tests. For example:
+Keep this document up to date with all new features, conventions, troubleshooting edge cases, and project structure changes affecting agent or plugin development.
 
-```bash
-bun test --match "spawn"
-```
+For advanced plugin/API reference and hook/tool extension documentation, see:
 
-### Linting
-
-No dedicated linter configured. TypeScript strict mode serves as the primary code quality gate.
-
-### Web UI Testing
-
-```bash
-bun run test:e2e
-```
-
-Runs end-to-end tests using Playwright to validate the web interface functionality, including input capture, session management, and real-time output streaming.
-
-## Code Style Guidelines
-
-### Language and Environment
-
-- **Language**: TypeScript 5.x with ESNext target
-- **Runtime**: Bun (supports TypeScript directly)
-- **Module System**: ES modules with explicit `.ts` extensions in imports
-- **JSX**: React JSX syntax (if needed, though this project is primarily backend)
-
-### TypeScript Configuration
-
-- Strict mode enabled (`strict: true`)
-- Additional strict flags: `noFallthroughCasesInSwitch`, `noUncheckedIndexedAccess`, `noImplicitOverride`
-- Module resolution: bundler mode
-- Verbatim module syntax (no semicolons required)
-
-### Imports and Dependencies
-
-- Use relative imports with `.ts` extensions: `import { foo } from "../foo.ts"`
-- Import types explicitly: `import type { Foo } from "./types.ts"`
-- Group imports: external dependencies first, then internal
-- Avoid wildcard imports (`import * as foo`)
-
-### Naming Conventions
-
-- **Variables/Functions**: camelCase (`processData`, `spawnSession`)
-- **Constants**: UPPER_CASE (`DEFAULT_LIMIT`, `MAX_LINE_LENGTH`)
-- **Types/Interfaces**: PascalCase (`PTYSession`, `SpawnOptions`)
-- **Classes**: PascalCase (`PTYManager`, `RingBuffer`)
-- **Enums**: PascalCase (`PTYStatus`)
-- **Files**: kebab-case for directories, camelCase for files (`spawn.ts`, `manager.ts`)
-
-### Code Structure
-
-- **Functions**: Prefer arrow functions for tools, regular functions for utilities
-- **Async/Await**: Use throughout for all async operations
-- **Error Handling**: Throw descriptive Error objects, use try/catch for expected failures
-- **Logging**: Use `createLogger` from `../logger.ts` for consistent logging
-- **Tool Functions**: Use `tool()` wrapper with schema validation for all exported tools
-
-### Schema Validation
-
-All tool functions must use schema validation:
-
-```typescript
-export const myTool = tool({
-  description: 'Brief description',
-  args: {
-    param: tool.schema.string().describe('Parameter description'),
-    optionalParam: tool.schema.boolean().optional().describe('Optional param'),
-  },
-  async execute(args, ctx) {
-    // Implementation
-  },
-})
-```
-
-### Error Messages
-
-- Be descriptive and actionable
-- Include context like session IDs or parameter values
-- Suggest alternatives when possible (e.g., "Use pty_list to see active sessions")
-
-### File Organization
-
-```
-src/
-├── plugin.ts           # Main plugin entry point
-├── types.ts            # Plugin-level types
-├── plugin/             # Plugin-specific code
-│   ├── logger.ts       # Logging utilities
-│   ├── pty/            # PTY-specific code
-│   │   ├── types.ts    # PTY types and interfaces
-│   │   ├── manager.ts  # PTY session management
-│   │   ├── buffer.ts   # Output buffering (RingBuffer)
-│   │   ├── permissions.ts # Permission checking
-│   │   ├── wildcard.ts # Wildcard matching utilities
-│   │   └── tools/      # Tool implementations
-│   │       ├── spawn.ts # pty_spawn tool
-│   │       ├── write.ts # pty_write tool
-│   │       ├── read.ts  # pty_read tool
-│   │       ├── list.ts  # pty_list tool
-│   │       ├── kill.ts  # pty_kill tool
-│   │       └── *.txt    # Tool descriptions
-│   └── types.ts         # Plugin types
-└── web/                # Web UI components and server
-    ├── components/     # React components
-    ├── types.ts        # Web UI types
-    ├── server.ts       # Web server
-    └── index.html      # HTML entry point
-```
-
-### Constants and Magic Numbers
-
-- Define constants at the top of files: `const DEFAULT_LIMIT = 500;`
-- Use meaningful names instead of magic numbers
-- Group related constants together
-
-### Buffer Management
-
-- Use RingBuffer for output storage (max 50,000 lines by default via `PTY_MAX_BUFFER_LINES`)
-- Handle line truncation at 2000 characters
-- Implement pagination with offset/limit for large outputs
-
-### Session Management
-
-- Generate unique IDs using crypto: `pty_${hex}`
-- Track session lifecycle: running → exited/killed
-- Support cleanup on session deletion events
-- Include parent session ID for proper isolation
-
-### Permission Integration
-
-- Always check command permissions before spawning
-- Validate working directory permissions
-- Use wildcard matching for flexible permission rules
-
-### Testing
-
-- Write tests for all public APIs
-- Test error conditions and edge cases
-- Use Bun's test framework
-- Mock external dependencies when necessary
-
-### Documentation
-
-- Include `.txt` description files for each tool in `tools/` directory
-- Use JSDoc sparingly, prefer `describe()` in schemas
-- Keep README.md updated with usage examples
-
-### Security Considerations
-
-- Never log sensitive information (passwords, tokens)
-- Validate all user inputs, especially regex patterns
-- Respect permission boundaries set by OpenCode
-- Use secure random generation for session IDs
-
-### Performance
-
-- Use efficient data structures (RingBuffer, Map for sessions)
-- Avoid blocking operations in main thread
-- Implement pagination for large outputs
-- Clean up resources promptly
-
-### Commit Messages
-
-Follow conventional commit format:
-
-- `feat:` for new features
-- `fix:` for bug fixes
-- `refactor:` for code restructuring
-- `test:` for test additions
-- `docs:` for documentation changes
-
-### Git Workflow
-
-- Use feature branches for development
-- Run typecheck and tests before committing
-- Use GitHub Actions for automated releases on main branch
-- Follow semantic versioning with `v` prefixed tags
-
-### Dependencies
-
-- **@opencode-ai/plugin**: ^1.1.31 (Core plugin framework)
-- **@opencode-ai/sdk**: ^1.1.31 (SDK for client interactions)
-- **bun-pty**: ^0.4.2 (PTY implementation)
-- **@types/bun**: 1.3.1 (TypeScript definitions for Bun)
-- **typescript**: ^5 (peer dependency)
-
-### Development Setup
-
-- Install Bun: `curl -fsSL https://bun.sh/install | bash`
-- Install dependencies: `bun install`
-- Run development commands: `bun run <script>`
-
-### Nix Development (Alternative)
-
-- Install Nix: `curl -L https://nixos.org/nix/install | sh`
-- Enter dev shell: `nix develop`
-- Build with bun2nix: `nix run github:nix-community/bun2nix -- -o nix/bun.nix`
-- Update flake: `nix flake update`
-
-### Common Patterns
-
-- Use `manager` singleton for PTY operations
-- Implement tools as pure functions with side effects through manager
-- Handle async operations with proper error propagation
-- Use descriptive variable names over abbreviations
-- Prefer functional programming where appropriate
-
-### Code Review Checklist
-
-- [ ] TypeScript types are correct and complete
-- [ ] Error handling covers expected failure modes
-- [ ] Logging is appropriate and not verbose
-- [ ] Permission checks are in place
-- [ ] Tests exist for new functionality
-- [ ] Code follows naming conventions
-- [ ] No sensitive data in logs or comments
-- [ ] Documentation updated if public API changed
-
-### Troubleshooting
-
-- **Type errors**: Run `bun run typecheck` and fix reported issues
-- **Test failures**: Check test output and fix assertions
-- **Permission denied**: Verify OpenCode configuration allows the command/directory
-- **Session not found**: Use `pty_list` to check active sessions
-- **Invalid regex**: Test patterns separately and provide user-friendly error messages
-
-This guide should be updated as the codebase evolves. When adding new features or changing conventions, update this document accordingly.
+- https://opencode.ai/docs/plugins
+- https://opencode.ai/docs/permissions
+- https://github.com/shekohex/opencode-pty/

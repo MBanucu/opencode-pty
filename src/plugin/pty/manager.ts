@@ -4,6 +4,7 @@ import type { OpencodeClient } from '@opencode-ai/sdk'
 import { SessionLifecycleManager } from './SessionLifecycle.ts'
 import { OutputManager } from './OutputManager.ts'
 import { NotificationManager } from './NotificationManager.ts'
+import { withSession } from './utils.ts'
 
 let onSessionUpdate: (() => void) | undefined
 
@@ -61,27 +62,30 @@ class PTYManager {
   }
 
   write(id: string, data: string): boolean {
-    const session = this.lifecycleManager.getSession(id)
-    if (!session) {
-      return false
-    }
-    return this.outputManager.write(session, data)
+    return withSession(
+      this.lifecycleManager,
+      id,
+      (session) => this.outputManager.write(session, data),
+      false
+    )
   }
 
   read(id: string, offset: number = 0, limit?: number): ReadResult | null {
-    const session = this.lifecycleManager.getSession(id)
-    if (!session) {
-      return null
-    }
-    return this.outputManager.read(session, offset, limit)
+    return withSession(
+      this.lifecycleManager,
+      id,
+      (session) => this.outputManager.read(session, offset, limit),
+      null
+    )
   }
 
   search(id: string, pattern: RegExp, offset: number = 0, limit?: number): SearchResult | null {
-    const session = this.lifecycleManager.getSession(id)
-    if (!session) {
-      return null
-    }
-    return this.outputManager.search(session, pattern, offset, limit)
+    return withSession(
+      this.lifecycleManager,
+      id,
+      (session) => this.outputManager.search(session, pattern, offset, limit),
+      null
+    )
   }
 
   list(): PTYSessionInfo[] {
@@ -89,18 +93,24 @@ class PTYManager {
   }
 
   get(id: string): PTYSessionInfo | null {
-    const session = this.lifecycleManager.getSession(id)
-    if (!session) return null
-    return this.lifecycleManager.toInfo(session)
+    return withSession(
+      this.lifecycleManager,
+      id,
+      (session) => this.lifecycleManager.toInfo(session),
+      null
+    )
   }
 
   getRawBuffer(id: string): { raw: string; byteLength: number } | null {
-    const session = this.lifecycleManager.getSession(id)
-    if (!session) return null
-    return {
-      raw: session.buffer.readRaw(),
-      byteLength: session.buffer.byteLength,
-    }
+    return withSession(
+      this.lifecycleManager,
+      id,
+      (session) => ({
+        raw: session.buffer.readRaw(),
+        byteLength: session.buffer.byteLength,
+      }),
+      null
+    )
   }
 
   kill(id: string, cleanup: boolean = false): boolean {

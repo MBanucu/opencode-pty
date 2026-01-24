@@ -128,13 +128,7 @@ extendedTest.describe('PTY Input Capture', () => {
     })
 
     // Add extra debug: log all outbound network requests
-    page.on('request', (req) => {
-      console.log('[REQUEST]', req.method(), req.url())
-    })
-    // Add extra debug: log all browser console output in Playwright runner
-    page.on('console', (msg) => {
-      console.log('[BROWSER LOG]', msg.type(), msg.text())
-    })
+    // Remove noisy output: no test runner logging of requests or browser console events
 
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('ls')

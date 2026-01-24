@@ -116,20 +116,9 @@ extendedTest.describe('Xterm Newline Handling', () => {
       // console.log('🔍 Final last non-empty line index:', finalLastNonEmpty)
       // logLinesUpToIndex(finalLines, finalLastNonEmpty, 'Final content')
 
-      // Analyze the indices
-      const expectedFinalIndex = 2 // Based on user specification
-      const actualIncrease = finalLastNonEmpty - initialLastNonEmpty
-      console.log('🔍 Expected final last non-empty index:', expectedFinalIndex)
-      console.log('🔍 Actual index increase:', actualIncrease)
-
-      // Check for the bug
+      // Analyze and assert bug presence inline (formerly had log output)
       const trailingEmptyLines = finalLines.length - 1 - finalLastNonEmpty
-      console.log('🔍 Trailing empty lines:', trailingEmptyLines)
-
-      // The bug manifests as excessive increase or trailing empties
-      const hasBug = actualIncrease > 3 || trailingEmptyLines > 2
-      console.log('🔍 Bug detected:', hasBug)
-      expect(hasBug).toBe(true) // Demonstrates the newline duplication bug
+      expect(finalLastNonEmpty - initialLastNonEmpty > 3 || trailingEmptyLines > 2).toBe(true) // Demonstrates the newline duplication bug
 
       // Verify content structure (accept any non-negative initial prompt line)
       expect(initialLastNonEmpty).toBeGreaterThanOrEqual(0) // Accept any line with prompt

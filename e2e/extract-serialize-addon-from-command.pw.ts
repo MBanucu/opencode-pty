@@ -25,8 +25,10 @@ extendedTest.describe('Xterm Content Extraction', () => {
       await page.waitForSelector('.output-container', { timeout: 5000 })
       await page.waitForSelector('.xterm', { timeout: 5000 })
 
-      // Wait for the command to complete and output to appear
-      await page.waitForTimeout(2000)
+      // Wait for command output to appear
+      await page.waitForSelector('.xterm:has-text("Hello from manual buffer test")', {
+        timeout: 10000,
+      })
 
       // Extract content directly from xterm.js Terminal buffer using manual reading
       const extractedContent = await page.evaluate(() => {

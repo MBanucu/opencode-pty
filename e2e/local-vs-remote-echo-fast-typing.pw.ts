@@ -29,8 +29,8 @@ extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typ
       await page.waitForSelector('.output-container', { timeout: 5000 })
       await page.waitForSelector('.xterm', { timeout: 5000 })
 
-      // Wait for session to initialize
-      await page.waitForTimeout(2000)
+      // Wait for session prompt to appear, indicating readiness
+      await page.waitForSelector('.xterm:has-text("$")', { timeout: 10000 })
 
       // Fast typing - no delays to trigger local echo interference
       await page.locator('.terminal.xterm').click()

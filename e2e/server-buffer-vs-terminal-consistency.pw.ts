@@ -32,8 +32,10 @@ extendedTest.describe('Xterm Content Extraction', () => {
       await page.waitForSelector('.output-container', { timeout: 5000 })
       await page.waitForSelector('.xterm', { timeout: 5000 })
 
-      // Wait for the session to complete and historical output to be loaded
-      await page.waitForTimeout(3000)
+      // Wait for the expected output to be present in the terminal
+      await page.waitForSelector('.xterm:has-text("Hello from consistency test")', {
+        timeout: 10000,
+      })
 
       // Extract content using SerializeAddon
       const serializeAddonOutput = await page.evaluate(() => {

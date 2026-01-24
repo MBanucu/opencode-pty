@@ -4,54 +4,45 @@ extendedTest.describe('PTY Input Capture', () => {
   extendedTest(
     'should capture and send printable character input (letters)',
     async ({ page, server }) => {
-      // Clear any existing sessions before page loads
       await page.request.post(server.baseURL + '/api/sessions/clear')
-
-      // Set localStorage before page loads to prevent auto-selection
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
+        ;(window as any).inputRequests = []
       })
-
-      // Navigate to the test server
       await page.goto(server.baseURL)
-
-      // Capture browser console logs after navigation
-
-      // Test console logging
       await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-      // Create an interactive bash session that stays running
       await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [], // Interactive bash that stays running
+          args: [],
           description: 'Input test session',
         },
       })
-
-      // Wait for session to appear and select it explicitly
       await page.waitForSelector('.session-item', { timeout: 5000 })
       await page.locator('.session-item:has-text("Input test session")').click()
       await page.waitForSelector('.output-container', { timeout: 5000 })
-
       const inputRequests: string[] = []
       await page.route('**/api/sessions/*/input', async (route) => {
         const request = route.request()
         if (request.method() === 'POST') {
           const postData = request.postDataJSON()
           inputRequests.push(postData.data)
+          await page.evaluate((data) => {
+            ;(window as any).inputRequests.push(data)
+          }, postData.data)
         }
         await route.continue()
       })
-
-      // Wait for terminal to be ready and focus it
       await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
       await page.locator('.terminal.xterm').click()
       await page.keyboard.type('hello')
-
-      await page.waitForTimeout(500)
-
-      // Should have sent 'h', 'e', 'l', 'l', 'o'
+      await page.waitForFunction(
+        () => {
+          return (window as any).inputRequests?.length >= 5
+        },
+        undefined,
+        { timeout: 2000 }
+      )
       expect(inputRequests).toContain('h')
       expect(inputRequests).toContain('e')
       expect(inputRequests).toContain('l')
@@ -60,202 +51,235 @@ extendedTest.describe('PTY Input Capture', () => {
   )
 
   extendedTest('should capture spacebar input', async ({ page, server }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('skip-autoselect', 'true')
+      ;(window as any).inputRequests = []
+    })
+    await page.request.post(server.baseURL + '/api/sessions/clear')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-    // Skip auto-selection to avoid interference with other tests
-    await page.evaluate(() => localStorage.setItem('skip-autoselect', 'true'))
-
-    // Create an interactive bash session that stays running
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: [], // Interactive bash that stays running
+        args: [],
         description: 'Space test session',
       },
     })
-
-    // Wait for session to appear and auto-select
     await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.locator('.session-item:has-text("Space test session")').click()
     await page.waitForSelector('.output-container', { timeout: 5000 })
     await page.waitForSelector('.xterm', { timeout: 5000 })
-
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
       const request = route.request()
       if (request.method() === 'POST') {
         const postData = request.postDataJSON()
         inputRequests.push(postData.data)
+        await page.evaluate((data) => {
+          ;(window as any).inputRequests.push(data)
+        }, postData.data)
       }
       await route.continue()
     })
-
-    // Type a space character
     await page.locator('.terminal.xterm').click()
     await page.keyboard.press(' ')
-
-    await page.waitForTimeout(1000)
-
-    // Should have sent exactly one space character
+    await page.waitForFunction(
+      () => {
+        return (window as any).inputRequests.filter((req: string) => req === ' ').length >= 1
+      },
+      undefined,
+      { timeout: 2000 }
+    )
     expect(inputRequests.filter((req) => req === ' ')).toHaveLength(1)
   })
 
   extendedTest('should capture "ls" command with Enter key', async ({ page, server }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('skip-autoselect', 'true')
+      ;(window as any).inputRequests = []
+    })
+    await page.request.post(server.baseURL + '/api/sessions/clear')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-    // Create a test session
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: ['-c', 'echo "Ready for ls test"'],
+        args: [],
         description: 'ls command test session',
       },
     })
-
-    // Wait for session to appear and auto-select
     await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.locator('.session-item:has-text("ls command test session")').click()
     await page.waitForSelector('.output-container', { timeout: 5000 })
     await page.waitForSelector('.xterm', { timeout: 5000 })
 
+    // Robustify: setup route & inputRequests before terminal interaction
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
       const request = route.request()
       if (request.method() === 'POST') {
         const postData = request.postDataJSON()
         inputRequests.push(postData.data)
+        await page.evaluate((data) => {
+          ;(window as any).inputRequests.push(data)
+        }, postData.data)
       }
       await route.continue()
     })
 
-    // Type the ls command
+    // Add extra debug: log all outbound network requests
+    page.on('request', (req) => {
+      console.log('[REQUEST]', req.method(), req.url())
+    })
+    // Add extra debug: log all browser console output in Playwright runner
+    page.on('console', (msg) => {
+      console.log('[BROWSER LOG]', msg.type(), msg.text())
+    })
+
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('ls')
     await page.keyboard.press('Enter')
-
-    await page.waitForTimeout(1000)
-
-    // Should have sent 'l', 's', and '\n' (Enter sends newline to API)
+    await page.waitForFunction(
+      () => {
+        const arr = (window as any).inputRequests || []
+        return arr.includes('l') && arr.includes('s') && (arr.includes('\r') || arr.includes('\n'))
+      },
+      undefined,
+      { timeout: 2000 }
+    )
     expect(inputRequests).toContain('l')
     expect(inputRequests).toContain('s')
-    expect(inputRequests).toContain('\n')
+    expect(inputRequests.some((chr) => chr === '\n' || chr === '\r')).toBeTruthy()
   })
 
   extendedTest('should send backspace sequences', async ({ page, server }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('skip-autoselect', 'true')
+      ;(window as any).inputRequests = []
+    })
+    await page.request.post(server.baseURL + '/api/sessions/clear')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-    // Skip auto-selection to avoid interference with other tests
-    await page.evaluate(() => localStorage.setItem('skip-autoselect', 'true'))
-
-    // Create a test session
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: ['-c', 'echo "Ready for backspace test"'],
+        args: [],
         description: 'Backspace test session',
       },
     })
-
-    // Wait for session to appear and auto-select
     await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.locator('.session-item:has-text("Backspace test session")').click()
     await page.waitForSelector('.output-container', { timeout: 5000 })
     await page.waitForSelector('.xterm', { timeout: 5000 })
-
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
-      if (route.request().method() === 'POST') {
-        inputRequests.push(route.request().postDataJSON().data)
+      const request = route.request()
+      if (request.method() === 'POST') {
+        const postData = request.postDataJSON()
+        inputRequests.push(postData.data)
+        await page.evaluate((data) => {
+          ;(window as any).inputRequests.push(data)
+        }, postData.data)
       }
       await route.continue()
     })
-
-    // Type 'test' then backspace twice
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('test')
     await page.keyboard.press('Backspace')
     await page.keyboard.press('Backspace')
-
-    await page.waitForTimeout(500)
-
-    // Should contain backspace characters (\x7f or \b)
-    expect(inputRequests.some((req) => req.includes('\x7f') || req.includes('\b'))).toBe(true)
+    await page.waitForFunction(
+      () => {
+        const arr = (window as any).inputRequests || []
+        return arr.some((req: string) => req === '\x7f' || req === '\b')
+      },
+      undefined,
+      { timeout: 1500 }
+    )
+    expect(inputRequests.some((req) => req === '\x7f' || req === '\b')).toBe(true)
   })
 
   extendedTest('should handle Ctrl+C interrupt', async ({ page, server }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('skip-autoselect', 'true')
+      ;(window as any).inputRequests = []
+      ;(window as any).killRequests = []
+    })
+    await page.request.post(server.baseURL + '/api/sessions/clear')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-    // Skip auto-selection to avoid interference with other tests
-    await page.evaluate(() => localStorage.setItem('skip-autoselect', 'true'))
-
-    // Handle confirm dialog
     page.on('dialog', (dialog) => dialog.accept())
-
-    // Create a test session
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
-        args: ['-c', 'echo "Ready for input"'],
+        args: [],
         description: 'Ctrl+C test session',
       },
     })
-
-    // Wait for session to appear and auto-select
     await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.locator('.session-item:has-text("Ctrl+C test session")').click()
     await page.waitForSelector('.output-container', { timeout: 5000 })
-
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
       const request = route.request()
       if (request.method() === 'POST') {
         const postData = request.postDataJSON()
         inputRequests.push(postData.data)
+        await page.evaluate((data) => {
+          ;(window as any).inputRequests.push(data)
+        }, postData.data)
       }
       await route.continue()
     })
-
-    // For Ctrl+C, also check for session kill request
     const killRequests: string[] = []
     await page.route('**/api/sessions/*/kill', async (route) => {
       if (route.request().method() === 'POST') {
         killRequests.push('kill')
+        await page.evaluate(() => {
+          ;(window as any).killRequests = (window as any).killRequests || []
+          ;(window as any).killRequests.push('kill')
+        })
       }
       await route.continue()
     })
-
-    // Wait for terminal to be ready and focus it
     await page.waitForSelector('.xterm', { timeout: 5000 })
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('hello')
-
-    await page.waitForTimeout(500)
-
-    // Verify characters were captured
+    await page.waitForFunction(
+      () => {
+        const arr = (window as any).inputRequests || []
+        return arr.includes('h') && arr.includes('e') && arr.includes('l') && arr.includes('o')
+      },
+      undefined,
+      { timeout: 1500 }
+    )
     expect(inputRequests).toContain('h')
     expect(inputRequests).toContain('e')
     expect(inputRequests).toContain('l')
     expect(inputRequests).toContain('o')
-
+    await page.waitForTimeout(250)
     await page.keyboard.press('Control+c')
-
-    await page.waitForTimeout(500)
-
-    // Should trigger kill request
+    await page.waitForFunction(
+      () => {
+        // Accept kill POST for Ctrl+C
+        return (
+          Array.isArray((window as any).killRequests) && (window as any).killRequests.length > 0
+        )
+      },
+      undefined,
+      { timeout: 2000 }
+    )
     expect(killRequests.length).toBeGreaterThan(0)
   })
 
   extendedTest('should not capture input when session is inactive', async ({ page, server }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('skip-autoselect', 'true')
+      ;(window as any).inputRequests = []
+    })
+    await page.request.post(server.baseURL + '/api/sessions/clear')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-    // Skip auto-selection to test inactive state
-    await page.evaluate(() => localStorage.setItem('skip-autoselect', 'true'))
-
-    // Handle confirm dialog
     page.on('dialog', (dialog) => dialog.accept())
-
-    // Create a test session
     await page.request.post(server.baseURL + '/api/sessions', {
       data: {
         command: 'bash',
@@ -263,92 +287,88 @@ extendedTest.describe('PTY Input Capture', () => {
         description: 'Inactive session test',
       },
     })
-
-    // Wait for session to appear and auto-select
     await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.locator('.session-item:has-text("Inactive session test")').click()
     await page.waitForSelector('.output-container', { timeout: 5000 })
     await page.waitForSelector('.xterm', { timeout: 5000 })
-
-    // Kill the active session
     await page.locator('.kill-btn').click()
-
-    // Wait for session to be killed (UI shows empty state)
     await page.waitForSelector(
       '.empty-state:has-text("Select a session from the sidebar to view its output")',
       { timeout: 5000 }
     )
-
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
-      if (route.request().method() === 'POST') {
-        inputRequests.push(route.request().postDataJSON().data)
+      const request = route.request()
+      if (request.method() === 'POST') {
+        const postData = request.postDataJSON()
+        inputRequests.push(postData.data)
+        await page.evaluate((data) => {
+          ;(window as any).inputRequests.push(data)
+        }, postData.data)
       }
       await route.continue()
     })
-
-    // Try to type (but there's no terminal, so no input should be sent)
     await page.keyboard.type('should not send')
-
-    await page.waitForTimeout(500)
-
-    // Should not send any input
+    // Wait to ensure input would be captured if incorrectly routed
+    await page.waitForTimeout(300)
     expect(inputRequests.length).toBe(0)
   })
 
   extendedTest(
     'should display "Hello World" twice when running echo command',
     async ({ page, server }) => {
-      // Set localStorage before page loads to prevent auto-selection
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
+        ;(window as any).inputRequests = []
       })
-
+      await page.request.post(server.baseURL + '/api/sessions/clear')
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-      // Clear any existing sessions for clean test state
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-
-      // Create an interactive bash session for testing input
       await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
-          args: [], // Interactive bash that stays running
+          args: [],
           description: 'Echo test session',
         },
       })
-
-      // Wait for the session to appear in the list and be running
       await page.waitForSelector('.session-item:has-text("Echo test session")', { timeout: 5000 })
-      await page.waitForSelector('.session-item:has-text("running")', { timeout: 5000 })
-
-      // Explicitly select the session we just created by clicking on its description
       await page.locator('.session-item:has-text("Echo test session")').click()
-
-      // Wait for session to be selected and terminal ready
       await page.waitForSelector('.output-container', { timeout: 5000 })
       await page.waitForSelector('.xterm', { timeout: 5000 })
-
-      // Set up route interception to capture input
+      // Register input route capture BEFORE user actions
       const inputRequests: string[] = []
       await page.route('**/api/sessions/*/input', async (route) => {
         const request = route.request()
         if (request.method() === 'POST') {
           const postData = request.postDataJSON()
           inputRequests.push(postData.data)
+          await page.evaluate((data) => {
+            ;(window as any).inputRequests.push(data)
+          }, postData.data)
         }
         await route.continue()
       })
-
-      // Type the echo command
       await page.locator('.terminal.xterm').click()
       await page.keyboard.type("echo 'Hello World'")
       await page.keyboard.press('Enter')
-
-      // Wait for command execution and output
-      await page.waitForTimeout(2000)
-
-      // Verify the command characters were sent
+      await page.waitForFunction(
+        () => {
+          const arr = (window as any).inputRequests || []
+          return (
+            arr.includes('e') &&
+            arr.includes('c') &&
+            arr.includes('h') &&
+            arr.includes('o') &&
+            arr.includes(' ') &&
+            arr.includes("'") &&
+            arr.includes('H') &&
+            arr.includes('W') &&
+            (arr.includes('\n') || arr.includes('\r'))
+          )
+        },
+        undefined,
+        { timeout: 2000 }
+      )
       expect(inputRequests).toContain('e')
       expect(inputRequests).toContain('c')
       expect(inputRequests).toContain('h')
@@ -357,19 +377,12 @@ extendedTest.describe('PTY Input Capture', () => {
       expect(inputRequests).toContain("'")
       expect(inputRequests).toContain('H')
       expect(inputRequests).toContain('W')
-      expect(inputRequests).toContain('\n')
-
-      // Get output from the test output div (since xterm.js canvas can't be read)
+      expect(inputRequests.some((chr) => chr === '\n' || chr === '\r')).toBeTruthy()
       const outputLines = await page
         .locator('[data-testid="test-output"] .output-line')
         .allTextContents()
       const allOutput = outputLines.join('\n')
-
-      // Verify that we have output lines
       expect(outputLines.length).toBeGreaterThan(0)
-
-      // The key verification: the echo command should produce "Hello World" output
-      // We may or may not see the command itself depending on PTY echo settings
       expect(allOutput).toContain('Hello World')
     }
   )

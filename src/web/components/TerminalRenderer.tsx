@@ -31,14 +31,26 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
     }
   }
 
+  // Safely writes only new output, or clears and rewrites if session/buffer changed
+  private diffAndWriteTerminalOutput(term: Terminal, prev: string, next: string) {
+    if (next.startsWith(prev)) {
+      // Normal append case
+      const newData = next.slice(prev.length)
+      if (newData) {
+        term.write(newData)
+      }
+    } else {
+      // Session switch/truncate/etc
+      term.clear()
+      term.write(next)
+    }
+  }
+
   override componentDidUpdate(prevProps: BaseTerminalRendererProps) {
+    if (!this.xtermInstance) return
     const currentData = this.getDisplayData()
     const prevData = (prevProps as any).rawOutput || ''
-    const newData = currentData.slice(prevData.length)
-
-    if (this.xtermInstance && newData) {
-      this.xtermInstance.write(newData)
-    }
+    this.diffAndWriteTerminalOutput(this.xtermInstance, prevData, currentData)
   }
 
   override componentWillUnmount() {

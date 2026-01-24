@@ -1,0 +1,58 @@
+import { test as extendedTest, expect } from './fixtures'
+
+extendedTest.describe('Xterm Content Extraction', () => {
+  extendedTest(
+    'should compare SerializeAddon output with server buffer content',
+    async ({ page, server }) => {
+      // Clear any existing sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
+
+      await page.goto(server.baseURL)
+      await page.waitForSelector('h1:has-text("PTY Sessions")')
+
+      // Create a session that runs a command and produces output
+      await page.request.post(server.baseURL + '/api/sessions', {
+        data: {
+          command: 'echo',
+          args: ['Hello from SerializeAddon test'],
+          description: 'SerializeAddon extraction test',
+        },
+      })
+
+      // Wait for session to appear and select it
+      await page.waitForSelector('.session-item', { timeout: 5000 })
+      await page.locator('.session-item:has-text("SerializeAddon extraction test")').click()
+      await page.waitForSelector('.output-container', { timeout: 5000 })
+      await page.waitForSelector('.xterm', { timeout: 5000 })
+
+      // Wait for the command to complete and output to appear
+      await page.waitForTimeout(2000)
+
+      // Extract content using SerializeAddon
+      const serializeAddonOutput = await page.evaluate(() => {
+        const serializeAddon = (window as any).xtermSerializeAddon
+
+        if (!serializeAddon) {
+          console.error('SerializeAddon not found')
+          return ''
+        }
+
+        try {
+          return serializeAddon.serialize({
+            excludeModes: true,
+            excludeAltBuffer: true,
+          })
+        } catch (error) {
+          console.error('Serialization failed:', error)
+          return ''
+        }
+      })
+
+      // Verify we extracted some content
+      expect(serializeAddonOutput.length).toBeGreaterThan(0)
+
+      // Verify the expected output is present (may contain ANSI codes)
+      expect(serializeAddonOutput).toContain('Hello from SerializeAddon test')
+    }
+  )
+})

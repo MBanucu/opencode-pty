@@ -1,53 +1,74 @@
 import { test as extendedTest, expect } from './fixtures'
 
+async function clearAllSessions(page: any, server: any) {
+  await page.request.post(server.baseURL + '/api/sessions/clear')
+}
+
+async function createSession(
+  page: any,
+  server: any,
+  {
+    command,
+    args,
+    description,
+    env,
+  }: { command: string; args: string[]; description: string; env?: Record<string, string> }
+) {
+  const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
+    data: { command, args, description, ...(env && { env }) },
+  })
+  expect(createResponse.status()).toBe(200)
+  const data = await createResponse.json()
+  return data.id
+}
+
+async function gotoAndSelectSession(page: any, server: any, description: string, timeout = 10000) {
+  await page.goto(server.baseURL + '/')
+  await page.waitForSelector('.session-item', { timeout })
+  await page.locator(`.session-item:has-text(\"${description}\")`).click()
+  await page.waitForSelector('.output-container', { timeout })
+  await page.waitForSelector('.xterm', { timeout })
+}
+
+async function waitForCommandComplete(page: any, ms = 2000) {
+  await page.waitForTimeout(ms)
+}
+
+async function fetchBufferApi(page: any, server: any, sessionId: string, bufferType = 'raw') {
+  const res = await page.request.get(
+    `${server.baseURL}/api/sessions/${sessionId}/buffer/${bufferType}`
+  )
+  expect(res.status()).toBe(200)
+  return res.json()
+}
+
+async function getTerminalContent(page: any) {
+  return await page.evaluate(() => {
+    const serializeAddon = (window as any).xtermSerializeAddon
+    return serializeAddon
+      ? serializeAddon.serialize({ excludeModes: true, excludeAltBuffer: true })
+      : ''
+  })
+}
+
 extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should verify buffer preserves newline characters in PTY output',
     async ({ page, server }) => {
-      // Clear any existing sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-
-      await page.goto(server.baseURL)
-      await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-      // Create a session with multi-line output
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'printf "line1\nline2\nline3\n"'],
-          description: 'newline preservation test',
-        },
+      await clearAllSessions(page, server)
+      const sessionId = await createSession(page, server, {
+        command: 'bash',
+        args: ['-c', 'printf "line1\nline2\nline3\n"'],
+        description: 'newline preservation test',
       })
-      expect(createResponse.status()).toBe(200)
-
-      const createData = await createResponse.json()
-      const sessionId = createData.id
-
-      // Wait for session to appear and select it
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-      await page.locator('.session-item:has-text("newline preservation test")').click()
-      await page.waitForSelector('.output-container', { timeout: 5000 })
-      await page.waitForSelector('.xterm', { timeout: 5000 })
-
-      // Wait for the command to complete
-      await page.waitForTimeout(2000)
-
-      // Get raw buffer content via API
-      const bufferResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/raw`
-      )
-      expect(bufferResponse.status()).toBe(200)
-      const bufferData = await bufferResponse.json()
-
-      // Verify the buffer contains the expected content
+      await gotoAndSelectSession(page, server, 'newline preservation test', 5000)
+      await waitForCommandComplete(page, 2000)
+      const bufferData = await fetchBufferApi(page, server, sessionId, 'raw')
       expect(bufferData.raw.length).toBeGreaterThan(0)
       expect(bufferData.raw).toContain('line1')
       expect(bufferData.raw).toContain('line2')
       expect(bufferData.raw).toContain('line3')
-
-      // Check that newlines are preserved
       expect(bufferData.raw).toContain('\n')
-
       // The key insight: PTY output contained \n characters that were properly processed
       // The buffer now stores complete lines instead of individual characters
       // This verifies that the RingBuffer correctly handles newline-delimited data
@@ -60,66 +81,28 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // This test documents the readRaw() capability
       // In a real implementation, readRaw() would return: "line1\nline2\nline3\n"
       // While read() returns: ["line1", "line2", "line3", ""]
-
-      // For this test, we verify the conceptual difference
       const expectedRawContent = 'line1\nline2\nline3\n'
       const expectedParsedLines = ['line1', 'line2', 'line3', '']
-
-      // Verify the relationship between raw and parsed content
       expect(expectedRawContent.split('\n')).toEqual(expectedParsedLines)
     }
   )
 
   extendedTest('should expose raw buffer data via API endpoint', async ({ page, server }) => {
-    // Clear any existing sessions
-    await page.request.post(server.baseURL + '/api/sessions/clear')
-
-    await page.goto(server.baseURL)
-    await page.waitForSelector('h1:has-text("PTY Sessions")')
-
-    // Create a session with multi-line output
-    const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'bash',
-        args: ['-c', 'printf "api\ntest\ndata\n"'],
-        description: 'API raw buffer test',
-      },
+    await clearAllSessions(page, server)
+    const sessionId = await createSession(page, server, {
+      command: 'bash',
+      args: ['-c', 'printf "api\ntest\ndata\n"'],
+      description: 'API raw buffer test',
     })
-    expect(createResponse.status()).toBe(200)
-
-    const createData = await createResponse.json()
-    const sessionId = createData.id
-
-    // Wait for session to appear and select it
-    await page.waitForSelector('.session-item', { timeout: 5000 })
-    await page.locator('.session-item:has-text("API raw buffer test")').click()
-    await page.waitForSelector('.output-container', { timeout: 5000 })
-    await page.waitForSelector('.xterm', { timeout: 5000 })
-
-    // Wait for the command to complete
-    await page.waitForTimeout(2000)
-
-    // Test the new raw buffer API endpoint
-    const rawResponse = await page.request.get(
-      server.baseURL + `/api/sessions/${sessionId}/buffer/raw`
-    )
-    expect(rawResponse.status()).toBe(200)
-    const rawData = await rawResponse.json()
-
-    // Verify the response structure
+    await gotoAndSelectSession(page, server, 'API raw buffer test', 5000)
+    await waitForCommandComplete(page, 2000)
+    const rawData = await fetchBufferApi(page, server, sessionId, 'raw')
     expect(rawData).toHaveProperty('raw')
     expect(rawData).toHaveProperty('byteLength')
     expect(typeof rawData.raw).toBe('string')
     expect(typeof rawData.byteLength).toBe('number')
-
-    // Verify the raw data contains the expected content with newlines
-    // The output may contain carriage returns (\r) from printf
     expect(rawData.raw).toMatch(/api[\r\n]+test[\r\n]+data/)
-
-    // Verify byteLength matches the raw string length
     expect(rawData.byteLength).toBe(rawData.raw.length)
-
-    // Verify raw data structure
     expect(typeof rawData.raw).toBe('string')
     expect(typeof rawData.byteLength).toBe('number')
   })
@@ -127,50 +110,22 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should expose plain text buffer data via API endpoint',
     async ({ page, server }) => {
-      // Ensure test isolation by clearing all sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-      // Create a session that produces output with ANSI escape codes
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'echo -e "\x1b[31mRed text\x1b[0m and \x1b[32mgreen text\x1b[0m"'],
-          description: 'ANSI test session for plain buffer endpoint',
-        },
+      await clearAllSessions(page, server)
+      const sessionId = await createSession(page, server, {
+        command: 'bash',
+        args: ['-c', 'echo -e "\x1b[31mRed text\x1b[0m and \x1b[32mgreen text\x1b[0m"'],
+        description: 'ANSI test session for plain buffer endpoint',
       })
-      expect(createResponse.status()).toBe(200)
-      const sessionData = await createResponse.json()
-      const sessionId = sessionData.id
-
-      // Wait for the session to complete and capture output
-      await page.waitForTimeout(2000)
-
-      // Test the new plain buffer API endpoint
-      const plainResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
-      )
-      expect(plainResponse.status()).toBe(200)
-      const plainData = await plainResponse.json()
-
-      // Verify the response structure
+      await waitForCommandComplete(page, 2000)
+      const plainData = await fetchBufferApi(page, server, sessionId, 'plain')
       expect(plainData).toHaveProperty('plain')
       expect(plainData).toHaveProperty('byteLength')
       expect(typeof plainData.plain).toBe('string')
       expect(typeof plainData.byteLength).toBe('number')
-
-      // Verify ANSI codes are stripped
       expect(plainData.plain).toContain('Red text and green text')
-      expect(plainData.plain).not.toContain('\x1b[') // No ANSI escape sequences
-
-      // Compare with raw endpoint to ensure ANSI codes were present originally
-      const rawResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/raw`
-      )
-      expect(rawResponse.status()).toBe(200)
-      const rawData = await rawResponse.json()
-
-      // Raw data should contain ANSI codes
+      expect(plainData.plain).not.toContain('\x1b[')
+      const rawData = await fetchBufferApi(page, server, sessionId, 'raw')
       expect(rawData.raw).toContain('\x1b[')
-      // Plain data should be different from raw data
       expect(plainData.plain).not.toBe(rawData.raw)
     }
   )
@@ -178,55 +133,22 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should extract plain text content using SerializeAddon',
     async ({ page, server }) => {
-      // Ensure test isolation by clearing all sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-      // Create a session with a simple echo command
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'echo',
-          args: ['Hello World'],
-          description: 'Simple echo test for SerializeAddon extraction',
-        },
+      await clearAllSessions(page, server)
+      await createSession(page, server, {
+        command: 'echo',
+        args: ['Hello World'],
+        description: 'Simple echo test for SerializeAddon extraction',
       })
-      expect(createResponse.status()).toBe(200)
-      await createResponse.json()
-
-      // Navigate to the page and select the session so terminal renders
-      await page.goto(server.baseURL + '/')
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-      await page.locator('.session-item').first().click()
-
-      // Wait for terminal to be ready and session to complete
-      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
-      await page.waitForTimeout(3000)
-
-      // Extract content using SerializeAddon
-      const serializeAddonOutput = await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
-
-        if (!serializeAddon) {
-          console.error('SerializeAddon not found')
-          return ''
-        }
-
-        try {
-          return serializeAddon.serialize({
-            excludeModes: true,
-            excludeAltBuffer: true,
-          })
-        } catch (error) {
-          console.error('Serialization failed:', error)
-          return ''
-        }
-      })
-
-      // Verify SerializeAddon extracted some content
+      await gotoAndSelectSession(
+        page,
+        server,
+        'Simple echo test for SerializeAddon extraction',
+        5000
+      )
+      await waitForCommandComplete(page, 3000)
+      const serializeAddonOutput = await getTerminalContent(page)
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
       expect(typeof serializeAddonOutput).toBe('string')
-
-      // Verify SerializeAddon extracted some terminal content
-      // The content may vary depending on terminal state, but it should exist
       expect(serializeAddonOutput.length).toBeGreaterThan(10)
     }
   )
@@ -234,139 +156,61 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should match API plain buffer with SerializeAddon for interactive input',
     async ({ page, server }) => {
-      // Ensure test isolation by clearing all sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-      // Create an interactive bash session with unique description
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-i'],
-          description: 'Double Echo Test Session',
-          env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
-        },
+      await clearAllSessions(page, server)
+      await createSession(page, server, {
+        command: 'bash',
+        args: ['-i'],
+        description: 'Double Echo Test Session B',
+        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       })
-      expect(createResponse.status()).toBe(200)
-      const sessionData = await createResponse.json()
-      const sessionId = sessionData.id
-
-      // Navigate to the page and select the specific session
-      await page.goto(server.baseURL + '/')
-      await page.waitForSelector('.session-item', { timeout: 10000 })
-
-      // Wait for the session to appear and select it specifically
-      await page.waitForTimeout(2000)
-      await page.locator('.session-item').filter({ hasText: 'Double Echo Test Session' }).click()
-
-      // Wait for terminal to be ready and session content to load
-      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
-      await page.waitForTimeout(4000) // Longer wait for session content
-
-      // Simulate typing "1" without Enter (no newline)
+      await gotoAndSelectSession(page, server, 'Double Echo Test Session B', 10000)
+      await waitForCommandComplete(page, 4000)
       await page.locator('.terminal.xterm').click()
       await page.keyboard.type('1')
-      await page.waitForTimeout(1000) // Allow PTY echo to complete
-
-      // Get plain text via API endpoint
-      const apiResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
-      )
-      expect(apiResponse.status()).toBe(200)
-      const apiData = await apiResponse.json()
-      const apiPlainText = apiData.plain
-
-      // Extract content using SerializeAddon
-      const serializeAddonOutput = await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
-
-        if (!serializeAddon) {
-          console.error('SerializeAddon not found')
-          return ''
-        }
-
-        try {
-          return serializeAddon.serialize({
-            excludeModes: true,
-            excludeAltBuffer: true,
-          })
-        } catch (error) {
-          console.error('Serialization failed:', error)
-          return ''
-        }
+      await waitForCommandComplete(page, 1000)
+      const sessionId = await createSession(page, server, {
+        command: 'bash',
+        args: ['-i'],
+        description: 'Double Echo Test Session C',
+        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       })
-
-      // Both should contain some terminal content (bash prompt, etc.)
+      await gotoAndSelectSession(page, server, 'Double Echo Test Session C', 10000)
+      await waitForCommandComplete(page, 4000)
+      await page.locator('.terminal.xterm').click()
+      await page.keyboard.type('1')
+      await waitForCommandComplete(page, 1000)
+      const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
+      const apiPlainText = apiData.plain
+      const serializeAddonOutput = await getTerminalContent(page)
       expect(apiPlainText.length).toBeGreaterThan(0)
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
-      // Both should contain shell prompt elements
       expect(apiPlainText).toContain('$')
       expect(serializeAddonOutput).toContain('$')
     }
   )
 
-  // Restore: Should compare API plain text with SerializeAddon for initial bash state
   extendedTest(
     'should compare API plain text with SerializeAddon for initial bash state',
     async ({ page, server }) => {
-      // Ensure test isolation by clearing existing sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-
-      // Create an interactive bash session
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-i'],
-          description: 'Initial bash state test for plain text comparison',
-          env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
-        },
+      await clearAllSessions(page, server)
+      const sessionId = await createSession(page, server, {
+        command: 'bash',
+        args: ['-i'],
+        description: 'Initial bash state test for plain text comparison',
+        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       })
-      expect(createResponse.status()).toBe(200)
-      const sessionData = await createResponse.json()
-      const sessionId = sessionData.id
-
-      // Navigate to the page and select session by unique description
-      await page.goto(server.baseURL + '/')
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-      await page
-        .locator('.session-item')
-        .filter({ hasText: 'Initial bash state test for plain text comparison' })
-        .click()
-
-      // Wait for terminal to be ready (no input sent)
-      await page.waitForSelector('.terminal.xterm', { timeout: 7000 })
-      await page.waitForTimeout(3500)
-
-      // Get plain text via API endpoint
-      const apiResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
+      await gotoAndSelectSession(
+        page,
+        server,
+        'Initial bash state test for plain text comparison',
+        5000
       )
-      expect(apiResponse.status()).toBe(200)
-      const apiData = await apiResponse.json()
+      await waitForCommandComplete(page, 3500)
+      const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
       const apiPlainText = apiData.plain
-
-      // Extract content using SerializeAddon
-      const serializeAddonOutput = await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
-
-        if (!serializeAddon) {
-          console.error('SerializeAddon not found')
-          return ''
-        }
-
-        try {
-          return serializeAddon.serialize({
-            excludeModes: true,
-            excludeAltBuffer: true,
-          })
-        } catch (error) {
-          console.error('Serialization failed:', error)
-          return ''
-        }
-      })
-
-      // Both should contain some terminal content (bash prompt, etc.)
+      const serializeAddonOutput = await getTerminalContent(page)
       expect(apiPlainText.length).toBeGreaterThan(0)
       expect(serializeAddonOutput.length).toBeGreaterThan(0)
-      // Both should contain shell prompt elements
       expect(apiPlainText).toContain('$')
       expect(serializeAddonOutput).toContain('$')
     }
@@ -375,59 +219,17 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should compare API plain text with SerializeAddon for cat command',
     async ({ page, server }) => {
-      // Ensure test isolation by clearing all sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-      // Create a session with cat command (no arguments - waits for input)
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'cat',
-          args: ['-i'],
-          description: 'Cat command test for plain text comparison',
-        },
+      await clearAllSessions(page, server)
+      const sessionId = await createSession(page, server, {
+        command: 'cat',
+        args: ['-i'],
+        description: 'Cat command test for plain text comparison',
       })
-      expect(createResponse.status()).toBe(200)
-      const sessionData = await createResponse.json()
-      const sessionId = sessionData.id
-
-      // Navigate to the page and select the session
-      await page.goto(server.baseURL + '/')
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-      await page.locator('.session-item').first().click()
-
-      // Wait for terminal to be ready (cat is waiting for input)
-      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
-      await page.waitForTimeout(3000)
-
-      // Get plain text via API endpoint
-      const apiResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
-      )
-      expect(apiResponse.status()).toBe(200)
-      const apiData = await apiResponse.json()
+      await gotoAndSelectSession(page, server, 'Cat command test for plain text comparison', 5000)
+      await waitForCommandComplete(page, 3000)
+      const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
       const apiPlainText = apiData.plain
-
-      // Extract content using SerializeAddon
-      const serializeAddonOutput = await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
-
-        if (!serializeAddon) {
-          console.error('SerializeAddon not found')
-          return ''
-        }
-
-        try {
-          return serializeAddon.serialize({
-            excludeModes: true,
-            excludeAltBuffer: true,
-          })
-        } catch (error) {
-          console.error('Serialization failed:', error)
-          return ''
-        }
-      })
-
-      // Cat command waits for input, so may have minimal output
-      // Just verify both methods return valid strings
+      const serializeAddonOutput = await getTerminalContent(page)
       expect(typeof apiPlainText).toBe('string')
       expect(typeof serializeAddonOutput).toBe('string')
     }
@@ -436,44 +238,19 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should prevent double-echo by comparing terminal content before and after input',
     async ({ page, server }) => {
-      // Ensure test isolation by clearing all sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-      // Create an interactive bash session
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-i'],
-          description: 'Double-echo prevention test',
-          env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
-        },
+      await clearAllSessions(page, server)
+      await createSession(page, server, {
+        command: 'bash',
+        args: ['-i'],
+        description: 'Double-echo prevention test',
+        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       })
-      expect(createResponse.status()).toBe(200)
-      const sessionData = await createResponse.json()
-      const sessionId = sessionData.id
-
-      // Navigate to the page and select the newly created session
-      await page.goto(server.baseURL + '/')
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-
-      // Give time for session to appear, then select the first (most recent) session
-      await page.waitForTimeout(2000)
-      await page.locator('.session-item').first().click()
-
-      // Wait for terminal to be ready
-      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
-      await page.waitForTimeout(2000)
-
-      // Clear terminal for clean state and capture initial content
+      await gotoAndSelectSession(page, server, 'Double-echo prevention test', 5000)
+      await waitForCommandComplete(page, 2000)
       const initialContent = await page.evaluate(() => {
         const xtermTerminal = (window as any).xtermTerminal
         const serializeAddon = (window as any).xtermSerializeAddon
-
-        // Clear terminal
-        if (xtermTerminal) {
-          xtermTerminal.clear()
-        }
-
-        // Capture initial content after clear
+        if (xtermTerminal) xtermTerminal.clear()
         if (!serializeAddon) return ''
         const content = serializeAddon.serialize({
           excludeModes: true,
@@ -481,28 +258,10 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         })
         return content
       })
-
-      // Type "1" with debug logging
       await page.locator('.terminal.xterm').click()
       await page.keyboard.type('1')
-      await page.waitForTimeout(500) // Allow PTY echo to complete
-
-      // Get API buffer content to see what PTY echoed
-      const apiResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
-      )
-      expect(apiResponse.status()).toBe(200)
-      const apiData = await apiResponse.json()
-      const apiBufferContent = apiData.plain
-
-      console.log(
-        'ℹ️  API buffer content (session',
-        sessionId,
-        '):',
-        JSON.stringify(apiBufferContent)
-      )
-
-      // Capture content after input
+      await waitForCommandComplete(page, 500)
+      // const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
       const afterContent = await page.evaluate(() => {
         const serializeAddon = (window as any).xtermSerializeAddon
         if (!serializeAddon) return ''
@@ -512,20 +271,12 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         })
         return content
       })
-
-      // Strip ANSI codes and count actual "1" characters (not in escape sequences)
       const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
-
       const cleanInitial = stripAnsi(initialContent)
       const cleanAfter = stripAnsi(afterContent)
-
       const initialCount = (cleanInitial.match(/1/g) || []).length
       const afterCount = (cleanAfter.match(/1/g) || []).length
-
-      // Terminal display should contain exactly one "1" (no double-echo)
-      // This verifies that local echo was successfully removed
       expect(afterCount - initialCount).toBe(1)
-
       // API buffer issue is separate - PTY output not reaching buffer (known issue)
     }
   )
@@ -533,39 +284,21 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should clear terminal content when switching sessions',
     async ({ page, server }) => {
-      // Ensure test isolation by clearing all sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
-      // Create first session with unique output
-      const session1Response = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'echo',
-          args: ['SESSION_ONE_CONTENT'],
-          description: 'Session One',
-        },
+      await clearAllSessions(page, server)
+      await createSession(page, server, {
+        command: 'echo',
+        args: ['SESSION_ONE_CONTENT'],
+        description: 'Session One',
       })
-      expect(session1Response.status()).toBe(200)
-      await session1Response.json()
-
-      // Create second session with different unique output
-      const session2Response = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'echo',
-          args: ['SESSION_TWO_CONTENT'],
-          description: 'Session Two',
-        },
+      await createSession(page, server, {
+        command: 'echo',
+        args: ['SESSION_TWO_CONTENT'],
+        description: 'Session Two',
       })
-      expect(session2Response.status()).toBe(200)
-      await session2Response.json()
-
-      // Navigate to the page
       await page.goto(server.baseURL + '/')
       await page.waitForSelector('.session-item', { timeout: 10000 })
-
-      // Switch to first session
       await page.locator('.session-item').filter({ hasText: 'Session One' }).click()
-      await page.waitForTimeout(3000) // Allow session switch and content load
-
-      // Wait for terminal to contain the expected output before capturing
+      await waitForCommandComplete(page, 3000)
       await page.waitForFunction(
         () => {
           const serializeAddon = (window as any).xtermSerializeAddon
@@ -578,37 +311,13 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         },
         { timeout: 7000 }
       )
-
-      // Capture content for session 1
-      const session1Content = await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
-        if (!serializeAddon) return ''
-        return serializeAddon.serialize({
-          excludeModes: true,
-          excludeAltBuffer: true,
-        })
-      })
-
-      // Verify session 1 content is shown
+      const session1Content = await getTerminalContent(page)
       expect(session1Content).toContain('SESSION_ONE_CONTENT')
-
-      // Switch to second session
       await page.locator('.session-item').filter({ hasText: 'Session Two' }).click()
-      await page.waitForTimeout(3000) // Allow session switch and content load
-
-      // Capture content for session 2
-      const session2Content = await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
-        if (!serializeAddon) return ''
-        return serializeAddon.serialize({
-          excludeModes: true,
-          excludeAltBuffer: true,
-        })
-      })
-
-      // Verify session 2 content is shown and session 1 content is cleared
+      await waitForCommandComplete(page, 3000)
+      const session2Content = await getTerminalContent(page)
       expect(session2Content).toContain('SESSION_TWO_CONTENT')
-      expect(session2Content).not.toContain('SESSION_ONE_CONTENT') // No content mixing
+      expect(session2Content).not.toContain('SESSION_ONE_CONTENT')
     }
   )
 })

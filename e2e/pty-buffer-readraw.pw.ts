@@ -144,6 +144,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should expose plain text buffer data via API endpoint',
     async ({ page, server }) => {
+      // Ensure test isolation by clearing all sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
       // Create a session that produces output with ANSI escape codes
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
@@ -196,6 +198,10 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should extract plain text content using SerializeAddon',
     async ({ page, server }) => {
+      // Ensure test isolation by clearing all sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
+      // Ensure test isolation by clearing all sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
       // Create a session with a simple echo command
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
@@ -253,6 +259,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should match API plain buffer with SerializeAddon for interactive input',
     async ({ page, server }) => {
+      // Ensure test isolation by clearing all sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
       // Create an interactive bash session with unique description
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
@@ -320,6 +328,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should compare API plain text with SerializeAddon for initial bash state',
     async ({ page, server }) => {
+      // Ensure test isolation by clearing existing sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
+
       // Create an interactive bash session
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
@@ -332,14 +343,17 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       const sessionData = await createResponse.json()
       const sessionId = sessionData.id
 
-      // Navigate to the page and select the session
+      // Navigate to the page and select session by unique description
       await page.goto(server.baseURL + '/')
       await page.waitForSelector('.session-item', { timeout: 5000 })
-      await page.locator('.session-item').first().click()
+      await page
+        .locator('.session-item')
+        .filter({ hasText: 'Initial bash state test for plain text comparison' })
+        .click()
 
       // Wait for terminal to be ready (no input sent)
-      await page.waitForSelector('.terminal.xterm', { timeout: 5000 })
-      await page.waitForTimeout(3000)
+      await page.waitForSelector('.terminal.xterm', { timeout: 7000 })
+      await page.waitForTimeout(3500)
 
       // Get plain text via API endpoint
       const apiResponse = await page.request.get(
@@ -382,6 +396,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should compare API plain text with SerializeAddon for cat command',
     async ({ page, server }) => {
+      // Ensure test isolation by clearing all sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
       // Create a session with cat command (no arguments - waits for input)
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
@@ -441,6 +457,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should prevent double-echo by comparing terminal content before and after input',
     async ({ page, server }) => {
+      // Ensure test isolation by clearing all sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
       // Create an interactive bash session
       const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
@@ -556,6 +574,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should clear terminal content when switching sessions',
     async ({ page, server }) => {
+      // Ensure test isolation by clearing all sessions
+      await page.request.post(server.baseURL + '/api/sessions/clear')
       // Create first session with unique output
       const session1Response = await page.request.post(server.baseURL + '/api/sessions', {
         data: {

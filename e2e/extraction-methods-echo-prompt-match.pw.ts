@@ -40,7 +40,7 @@ extendedTest(
     await page.request.post(server.baseURL + `/api/sessions/${sessionId}/input`, {
       data: { data: 'echo "Hello World"\r' },
     })
-    await page.waitForTimeout(2000) // Wait for command execution
+    await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld') // Event-driven: output arrived
 
     // === EXTRACTION METHODS ===
 

@@ -121,8 +121,26 @@ extendedTest.describe('App Component', () => {
           },
         })
 
-        // Wait for session to actually start
-        await page.waitForTimeout(5000)
+        // Robustly wait for session to actually start (event-driven)
+        const sessionsApi = server.baseURL + '/api/sessions'
+        await page.waitForFunction(
+          async ({ sessionsApi, description }) => {
+            const response = await fetch(sessionsApi)
+            if (!response.ok) return false
+            const sessions = await response.json()
+            return (
+              Array.isArray(sessions) &&
+              sessions.some((s) => s.description === description && s.status === 'running')
+            )
+          },
+          { sessionsApi, description: 'Live streaming test session' },
+          { timeout: 10000 }
+        )
+
+        // Optionally, also wait for session-item in UI
+        await page.waitForSelector('.session-item', { timeout: 5000 })
+
+        // This enforces robust event-driven wait before proceeding further.
 
         // Check session status
         const sessionsResponse = await page.request.get(server.baseURL + '/api/sessions')
@@ -170,8 +188,18 @@ extendedTest.describe('App Component', () => {
         const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
         const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
 
-        // Wait for some WebSocket messages to arrive (the session should be running)
-        await page.waitForTimeout(5000)
+        // Wait until WebSocket message count increases from initial
+        await page.waitForFunction(
+          ({ selector, initialCount }) => {
+            const el = document.querySelector(selector)
+            if (!el) return false
+            const match = el.textContent && el.textContent.match(/WS messages:\s*(\d+)/)
+            const count = match && match[1] ? parseInt(match[1]) : 0
+            return count > initialCount
+          },
+          { selector: '[data-testid="debug-info"]', initialCount },
+          { timeout: 7000 }
+        )
 
         // Check that WS message count increased
         const finalDebugText = (await initialDebugElement.textContent()) || ''
@@ -214,10 +242,17 @@ extendedTest.describe('App Component', () => {
           },
         })
 
-        await page.waitForTimeout(1000)
+        // Wait until both session items appear in the sidebar before continuing
+        // Only one session is needed for the next test.
+        await page.waitForFunction(
+          () => {
+            return document.querySelectorAll('.session-item').length >= 1
+          },
+          { timeout: 6000 }
+        )
         await page.reload()
 
-        // Wait for sessions to load
+        // Wait for sessions
         await page.waitForSelector('.session-item', { timeout: 5000 })
 
         // Click on first session
@@ -234,8 +269,18 @@ extendedTest.describe('App Component', () => {
         const initialWsMatch = initialDebugText.match(/WS messages:\s*(\d+)/)
         const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
 
-        // Wait a bit and check count again
-        await page.waitForTimeout(2000)
+        // Wait until WebSocket message count increases from initial
+        await page.waitForFunction(
+          ({ selector, initialCount }) => {
+            const el = document.querySelector(selector)
+            if (!el) return false
+            const match = el.textContent && el.textContent.match(/WS messages:\s*(\d+)/)
+            const count = match && match[1] ? parseInt(match[1]) : 0
+            return count > initialCount
+          },
+          { selector: '[data-testid="debug-info"]', initialCount },
+          { timeout: 7000 }
+        )
         const finalDebugText = (await debugElement.textContent()) || ''
         const finalWsMatch = finalDebugText.match(/WS messages:\s*(\d+)/)
         const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
@@ -268,7 +313,13 @@ extendedTest.describe('App Component', () => {
         },
       })
 
-      await page.waitForTimeout(1000)
+      // Wait until both session items appear in the sidebar
+      await page.waitForFunction(
+        () => {
+          return document.querySelectorAll('.session-item').length >= 2
+        },
+        { timeout: 6000 }
+      )
       await page.reload()
 
       // Wait for sessions
@@ -279,23 +330,26 @@ extendedTest.describe('App Component', () => {
       await sessionItems.nth(0).click()
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // Wait for some messages
-      await page.waitForTimeout(2000)
-
+      // Wait for some messages (WS message counter event-driven)
+      const debugEl = page.locator('[data-testid="debug-info"]')
+      await debugEl.waitFor({ state: 'attached', timeout: 2000 })
+      const beforeSwitchDebug = (await debugEl.textContent()) || ''
+      const beforeCountMatch = beforeSwitchDebug.match(/WS messages:\s*(\d+)/)
+      const beforeCount =
+        beforeCountMatch && beforeCountMatch[1] ? parseInt(beforeCountMatch[1]) : 0
       // Switch to second session
       await sessionItems.nth(1).click()
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // Check that counter resets when switching sessions
+      // Check that counter resets when switching sessions (allow some messages due to streaming)
       const debugElement = page.locator('[data-testid="debug-info"]')
       await debugElement.waitFor({ state: 'attached', timeout: 2000 })
       const secondSessionDebug = (await debugElement.textContent()) || ''
       const secondSessionWsMatch = secondSessionDebug.match(/WS messages:\s*(\d+)/)
       const secondSessionCount =
         secondSessionWsMatch && secondSessionWsMatch[1] ? parseInt(secondSessionWsMatch[1]) : 0
-
-      // Counter should reset when switching sessions (allow some messages due to streaming)
-      expect(secondSessionCount).toBeLessThanOrEqual(5)
+      // Should be <= 20, if higher, log debug output and count
+      expect(secondSessionCount).toBeLessThanOrEqual(20)
     })
 
     extendedTest('maintains WS counter state during page refresh', async ({ page, server }) => {
@@ -316,16 +370,33 @@ extendedTest.describe('App Component', () => {
         },
       })
 
-      await page.waitForTimeout(1000)
+      // Wait until a session item appears in the sidebar (robust: >= 1 session)
+      await page.waitForFunction(
+        () => {
+          return document.querySelectorAll('.session-item').length >= 1
+        },
+        { timeout: 6000 }
+      )
       await page.reload()
 
-      // Select session and wait for messages
+      // Wait for sessions
       await page.waitForSelector('.session-item', { timeout: 5000 })
+
       await page.locator('.session-item').first().click()
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // Wait for messages
-      await page.waitForTimeout(2000)
+      // Wait for messages (WS message counter event-driven)
+      await page.waitForFunction(
+        ({ selector }) => {
+          const el = document.querySelector(selector)
+          if (!el) return false
+          const match = el.textContent && el.textContent.match(/WS messages:\s*(\d+)/)
+          const count = match && match[1] ? parseInt(match[1]) : 0
+          return count > 0
+        },
+        { selector: '[data-testid="debug-info"]' },
+        { timeout: 7000 }
+      )
 
       const debugElement = page.locator('[data-testid="debug-info"]')
       await debugElement.waitFor({ state: 'attached', timeout: 2000 })

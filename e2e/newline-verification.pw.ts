@@ -1,4 +1,5 @@
 import { test as extendedTest, expect } from './fixtures'
+import { waitForTerminalRegex } from './xterm-test-helpers'
 import type { Page } from '@playwright/test'
 
 const getTerminalPlainText = async (page: Page): Promise<string[]> => {
@@ -50,12 +51,12 @@ extendedTest.describe('Xterm Newline Handling', () => {
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item').first().click()
     await page.waitForSelector('.xterm', { timeout: 5000 })
-    await page.waitForTimeout(2000)
+    await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitial')
 
     // Type single character
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('a')
-    await page.waitForTimeout(1000)
+    await waitForTerminalRegex(page, /a\s*$/, '__waitEchoA')
 
     // Capture after
     const afterLines = await getTerminalPlainText(page)
@@ -92,7 +93,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
       await page.waitForSelector('.session-item', { timeout: 5000 })
       await page.locator('.session-item').first().click()
       await page.waitForSelector('.xterm', { timeout: 5000 })
-      await page.waitForTimeout(2000)
+      await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitial2')
 
       // Capture initial
       const initialLines = await getTerminalPlainText(page)
@@ -107,7 +108,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
       await page.keyboard.press('Enter')
 
       // Wait for output
-      await page.waitForTimeout(2000)
+      await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld')
 
       // Get final displayed plain text content
       const finalLines = await getTerminalPlainText(page)

@@ -74,3 +74,70 @@ export const getSerializedContentByXtermSerializeAddon = async (
     { excludeModes, excludeAltBuffer }
   )
 }
+
+/**
+ * Robust, DRY event-driven terminal content waiter for Playwright E2E
+ * Waits for regex pattern to appear in xterm.js SerializeAddon buffer (optionally specify flagName).
+ * Usage: await waitForTerminalRegex(page, /pattern/, '__someCustomFlag')
+ */
+export const waitForTerminalRegex = async (
+  page: Page,
+  regex: RegExp,
+  flagName = '__terminalOutputReady',
+  serializeOptions: { excludeModes?: boolean; excludeAltBuffer?: boolean } = {
+    excludeModes: true,
+    excludeAltBuffer: true,
+  },
+  timeout: number = 5000
+) => {
+  const pattern = regex.source
+  await page.evaluate(
+    ({ pattern, flagName, opts }) => {
+      // Setup output watcher on window
+      const term =
+        (window as any).xtermSerializeAddon && (window as any).xtermSerializeAddon._terminal
+      const serializeAddon = (window as any).xtermSerializeAddon
+      function stripAnsi(str) {
+        return str.replace(
+          /[\u001B\u009B][[()#;?]*(?:(?:[a-zA-Z\d]*(?:;[a-zA-Z\d]*)*)?\u0007|(?:\d{1,4}(?:;\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~])/g,
+          ''
+        )
+      }
+      function checkMatch() {
+        if (serializeAddon && typeof serializeAddon.serialize === 'function') {
+          const c = serializeAddon.serialize({
+            excludeModes: opts.excludeModes,
+            excludeAltBuffer: opts.excludeAltBuffer,
+          })
+          try {
+            const plain = stripAnsi(c.replaceAll('\r', ''))
+            return new RegExp(pattern).test(plain)
+          } catch (e) {
+            return false
+          }
+        }
+        return false
+      }
+      if (term && typeof term.onWriteParsed === 'function') {
+        ;(window as any)[flagName] = false
+        const disposable = term.onWriteParsed(() => {
+          if (checkMatch()) {
+            ;(window as any)[flagName] = true
+            disposable.dispose()
+          }
+        })
+        // Check immediately (catch output that already arrived)
+        if (checkMatch()) {
+          ;(window as any)[flagName] = true
+          disposable.dispose()
+        }
+      } else {
+        ;(window as any)[flagName] = true // fallback, treat as ready
+      }
+    },
+    { pattern, flagName, opts: serializeOptions }
+  )
+  await page.waitForFunction((flagName) => (window as any)[flagName] === true, flagName, {
+    timeout,
+  })
+}

@@ -114,6 +114,14 @@ This document is the authoritative and up-to-date guide for both agentic coding 
   - If tests fail intermittently, check for process cleanup and unique session IDs per run.
   - Playwright E2E failures often relate to port conflicts, dev server not running, or TypeScript loader problems.
   - Use `bun run typecheck`, `bun run lint`, and ensure Playwright can launch browsers in your environment (see docs).
+  - **Debugging Interactive Input/Output in E2E xterm.js PTY tests:**
+    - When testing interactive Bash sessions, always use `.terminal.xterm` as the selector for simulation and output fetch.
+    - To verify PTY input/output round-trip:
+      - Use `.click()` and if needed, `.focus()` before `type()` or `press()` actions.
+      - Insert debug statements before and after typing using `getSerializedContentByXtermSerializeAddon(...)` with `console.log('DEBUG_BEFORE:', ...)` and `console.log('DEBUG_AFTER:', ...)`.
+      - Provide short waits (e.g. `waitForTimeout(400)`) after input to ensure the terminal buffer updates.
+      - See `e2e/pty-buffer-readraw.pw.ts` line 200+ for the pattern: output the buffer (`console.log`) before and after typing in the terminal, and check that inputs appear as expected.
+    - If output is missing or the test is flaky, confirm correct timing, selector, and input sequence by comparing to the robust minimal test (see isolation test, same file, line 54+).
 
 ---
 

@@ -250,7 +250,9 @@ extendedTest.describe('PTY Input Capture', () => {
     expect(inputRequests).toContain('e')
     expect(inputRequests).toContain('l')
     expect(inputRequests).toContain('o')
-    await page.waitForTimeout(250)
+    await page.waitForFunction(() => (window as any).inputRequests?.includes('o'), undefined, {
+      timeout: 500,
+    })
     await page.keyboard.press('Control+c')
     await page.waitForFunction(
       () => {

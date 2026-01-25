@@ -1,4 +1,5 @@
 import { test as extendedTest, expect } from './fixtures'
+import { waitForTerminalRegex } from './xterm-test-helpers'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
@@ -26,7 +27,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
       await page.waitForSelector('.xterm', { timeout: 5000 })
 
       // Wait for the command to complete
-      await page.waitForTimeout(2000)
+      await waitForTerminalRegex(page, /Line 3/, '__waitLine3')
 
       // Extract content using DOM scraping
       const domContent = await page.evaluate(() => {

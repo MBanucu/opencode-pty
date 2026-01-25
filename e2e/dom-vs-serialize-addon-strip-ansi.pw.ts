@@ -1,4 +1,5 @@
 import { test as extendedTest } from './fixtures'
+import { waitForTerminalRegex } from './xterm-test-helpers'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
@@ -27,16 +28,15 @@ extendedTest.describe('Xterm Content Extraction', () => {
       await page.waitForSelector('.xterm', { timeout: 5000 })
 
       // Wait for session to initialize
-      await page.waitForTimeout(2000)
+      await waitForTerminalRegex(page, /\$\s*$/, '__waitPrompt')
 
       // Send command to generate content
       await page.locator('.terminal.xterm').click()
       await page.keyboard.type('echo "Compare Methods"')
-      await page.waitForTimeout(500) // Delay between typing and pressing enter
       await page.keyboard.press('Enter')
 
       // Wait for command execution
-      await page.waitForTimeout(2000)
+      await waitForTerminalRegex(page, /Compare Methods/, '__waitCompareMethods')
 
       // Extract content using DOM scraping (output intentionally unused for silence)
       await page.evaluate(() => {

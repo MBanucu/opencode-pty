@@ -2,6 +2,7 @@ import {
   bunStripANSI,
   getTerminalPlainText,
   getSerializedContentByXtermSerializeAddon,
+  waitForTerminalRegex,
 } from './xterm-test-helpers'
 import { test as extendedTest, expect } from './fixtures'
 
@@ -35,7 +36,7 @@ extendedTest.describe(
         await page.waitForSelector('.session-item', { timeout: 5000 })
         await page.locator('.session-item:has-text("Visual verification test")').click()
         await page.waitForSelector('.xterm', { timeout: 5000 })
-        await page.waitForTimeout(3000) // Allow full command execution
+        await waitForTerminalRegex(page, /More text/, '__waitMoreText')
 
         // Extraction methods
         const domContent = await getTerminalPlainText(page)

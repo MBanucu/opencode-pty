@@ -76,8 +76,8 @@ extendedTest.describe('Xterm Newline Handling', () => {
       await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitial2')
 
       // Capture initial
-      const initialLines = await getTerminalPlainText(page)
-      const initialLastNonEmpty = findLastNonEmptyLineIndex(initialLines)
+      // const initialLines = await getTerminalPlainText(page)
+      // const initialLastNonEmpty = findLastNonEmptyLineIndex(initialLines)
       // console.log('🔍 Initial lines count:', initialLines.length)
       // console.log('🔍 Initial last non-empty line index:', initialLastNonEmpty)
       // logLinesUpToIndex(initialLines, initialLastNonEmpty, 'Initial content')
@@ -92,7 +92,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
 
       // Get final displayed plain text content
       const finalLines = await getTerminalPlainText(page)
-      const finalLastNonEmpty = findLastNonEmptyLineIndex(finalLines)
+      // const finalLastNonEmpty = findLastNonEmptyLineIndex(finalLines)
       // console.log('🔍 Final lines count:', finalLines.length)
       // console.log('🔍 Final last non-empty line index:', finalLastNonEmpty)
       // logLinesUpToIndex(finalLines, finalLastNonEmpty, 'Final content')

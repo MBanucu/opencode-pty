@@ -333,10 +333,10 @@ extendedTest.describe('App Component', () => {
       // Wait for some messages (WS message counter event-driven)
       const debugEl = page.locator('[data-testid="debug-info"]')
       await debugEl.waitFor({ state: 'attached', timeout: 2000 })
-      const beforeSwitchDebug = (await debugEl.textContent()) || ''
-      const beforeCountMatch = beforeSwitchDebug.match(/WS messages:\s*(\d+)/)
-      const beforeCount =
-        beforeCountMatch && beforeCountMatch[1] ? parseInt(beforeCountMatch[1]) : 0
+      // const beforeSwitchDebug = (await debugEl.textContent()) || ''
+      // const beforeCountMatch = beforeSwitchDebug.match(/WS messages:\s*(\d+)/)
+      // const beforeCount =
+      //   beforeCountMatch && beforeCountMatch[1] ? parseInt(beforeCountMatch[1]) : 0
       // Switch to second session
       await sessionItems.nth(1).click()
       await page.waitForSelector('.output-header .output-title', { timeout: 2000 })

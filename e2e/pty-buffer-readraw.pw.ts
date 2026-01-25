@@ -54,11 +54,11 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     async ({ page, server }) => {
       await clearAllSessions(page, server)
       const desc = 'basic input test session'
-      const sessionId = await createSession(page, server, {
-        command: 'bash',
-        args: [],
-        description: desc,
-      })
+      // const sessionId = await createSession(page, server, {
+      //   command: 'bash',
+      //   args: [],
+      //   description: desc,
+      // })
       await gotoAndSelectSession(page, server, desc, 8000)
       // Print buffer before any typing
       let before = await getSerializedContentByXtermSerializeAddon(page, {

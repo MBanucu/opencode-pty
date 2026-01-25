@@ -2,6 +2,7 @@ import {
   bunStripANSI,
   getTerminalPlainText,
   getSerializedContentByXtermSerializeAddon,
+  waitForTerminalRegex,
 } from './xterm-test-helpers'
 import { test as extendedTest, expect } from './fixtures'
 

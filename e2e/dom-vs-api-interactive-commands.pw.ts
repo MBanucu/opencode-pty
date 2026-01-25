@@ -32,7 +32,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
       // Send interactive command
       await page.locator('.terminal.xterm').click()
-      await page.keyboard.type('echo "Hello World"')
+      await page.keyboard.type('echo "Hello World"', { delay: 20 })
       await page.keyboard.press('Enter')
 
       // Wait for command execution

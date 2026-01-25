@@ -1,25 +1,5 @@
 import { test as extendedTest, expect } from './fixtures'
-import { waitForTerminalRegex } from './xterm-test-helpers'
-import type { Page } from '@playwright/test'
-
-const getTerminalPlainText = async (page: Page): Promise<string[]> => {
-  return await page.evaluate(() => {
-    const getPlainText = () => {
-      const terminalElement = document.querySelector('.xterm')
-      if (!terminalElement) return []
-
-      const lines = Array.from(terminalElement.querySelectorAll('.xterm-rows > div')).map((row) => {
-        return Array.from(row.querySelectorAll('span'))
-          .map((span) => span.textContent || '')
-          .join('')
-      })
-
-      return lines
-    }
-
-    return getPlainText()
-  })
-}
+import { waitForTerminalRegex, getTerminalPlainText } from './xterm-test-helpers'
 
 const findLastNonEmptyLineIndex = (lines: string[]): number => {
   for (let i = lines.length - 1; i >= 0; i--) {
@@ -117,13 +97,19 @@ extendedTest.describe('Xterm Newline Handling', () => {
       // console.log('🔍 Final last non-empty line index:', finalLastNonEmpty)
       // logLinesUpToIndex(finalLines, finalLastNonEmpty, 'Final content')
 
-      // Analyze and assert bug presence inline (formerly had log output)
-      const trailingEmptyLines = finalLines.length - 1 - finalLastNonEmpty
-      expect(finalLastNonEmpty - initialLastNonEmpty > 3 || trailingEmptyLines > 2).toBe(true) // Demonstrates the newline duplication bug
-
-      // Verify content structure (accept any non-negative initial prompt line)
-      expect(initialLastNonEmpty).toBeGreaterThanOrEqual(0) // Accept any line with prompt
-      expect(finalLastNonEmpty).toBeGreaterThan(2) // More than expected due to bug
+      // Ignore trailing empty lines: focus on real content
+      const nonEmptyLines = finalLines.filter((line) => line.trim().length > 0)
+      // Should be: prompt, echoed command, output, new prompt
+      // console.log('DEBUG nonEmptyLines', nonEmptyLines)
+      expect(nonEmptyLines.some((l) => l.includes('Hello World'))).toBe(true)
+      expect(nonEmptyLines[nonEmptyLines.length - 1]).toMatch(/\$/)
+      // Order: prompt, echo, output, (optional prompt)
+      const idxCmd = nonEmptyLines.findIndex((l) => l.includes("echo 'Hello World'"))
+      const idxOut = nonEmptyLines.findLastIndex((l) => l.includes('Hello World'))
+      expect(idxCmd).toBeGreaterThan(-1)
+      expect(idxOut).toBeGreaterThan(idxCmd)
+      // At least 3 lines: the first prompt, echoed line, 'Hello World', maybe prompt
+      expect(nonEmptyLines.length).toBeGreaterThanOrEqual(3)
     }
   )
 })

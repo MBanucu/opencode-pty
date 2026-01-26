@@ -44,6 +44,8 @@
     "build:dev": "vite build --mode development",
     "build:prod": "bun run build --mode production",
     "build:plugin": "bun build --target bun --outfile=dist/opencode-pty.js index.ts",
+    "build:all:dev": "bun run build:dev && bun run build:plugin",
+    "build:all:prod": "bun run build:prod && bun run build:plugin",
     "install:plugin:dev": "bun run build:plugin && mkdir -p .opencode/plugins/ && cp dist/opencode-pty.js .opencode/plugins/",
     "install:web:dev": "bun run build:dev",
     "install:all:dev": "bun run install:plugin:dev && bun run install:web:dev",

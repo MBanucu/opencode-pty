@@ -207,11 +207,11 @@ async function handleRequest(req: Request, server: Server<WSClient>): Promise<Re
     }
   }
 
-  const staticResponse = await handleStaticAssets(url)
-  if (staticResponse) return staticResponse
-
   const apiResponse = await handleAPISessions(url, req, wsClients)
   if (apiResponse) return apiResponse
+
+  const staticResponse = await handleStaticAssets(url)
+  if (staticResponse) return staticResponse
 
   return new Response('Not found', { status: 404 })
 }

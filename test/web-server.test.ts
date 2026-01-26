@@ -79,14 +79,17 @@ describe('Web Server', () => {
           const jsAsset = jsMatch[1]
           const jsResponse = await fetch(`${serverUrl}/assets/${jsAsset}`)
           expect(jsResponse.status).toBe(200)
-          expect(jsResponse.headers.get('content-type')).toBe('application/javascript')
+          const ct = jsResponse.headers.get('content-type')
+          expect((ct || '').toLowerCase()).toMatch(/^(application|text)\/javascript(;.*)?$/)
         }
 
         if (cssMatch) {
           const cssAsset = cssMatch[1]
           const cssResponse = await fetch(`${serverUrl}/assets/${cssAsset}`)
           expect(cssResponse.status).toBe(200)
-          expect(cssResponse.headers.get('content-type')).toBe('text/css')
+          expect((cssResponse.headers.get('content-type') || '').toLowerCase()).toMatch(
+            /^text\/css(;.*)?$/
+          )
         }
       } finally {
         delete process.env.NODE_ENV

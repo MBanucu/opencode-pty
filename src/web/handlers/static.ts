@@ -40,7 +40,15 @@ export async function handleRoot(htmlPathOverride?: string): Promise<Response> {
   let htmlPath = htmlPathOverride || process.env.HTML_PATH
   if (!htmlPath) {
     const env = process.env.NODE_ENV || 'development'
-    htmlPath = env === 'production' || env === 'test' ? 'dist/web/index.html' : 'src/web/index.html'
+    if (env === 'production' || env === 'test') {
+      // Prefer built assets in prod/test, but fall back to source HTML for
+      // local dev installs or when dist isn't packaged.
+      const distPath = resolve(PROJECT_ROOT, 'dist/web/index.html')
+      const distFile = Bun.file(distPath)
+      htmlPath = (await distFile.exists()) ? 'dist/web/index.html' : 'src/web/index.html'
+    } else {
+      htmlPath = 'src/web/index.html'
+    }
   }
   const finalPath = isAbsolute(htmlPath) ? htmlPath : resolve(PROJECT_ROOT, htmlPath)
   if (process.env.NODE_ENV !== 'production') {

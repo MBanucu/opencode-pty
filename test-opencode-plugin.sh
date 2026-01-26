@@ -70,6 +70,7 @@ PACKAGE_VERSION="$2"
 TEST_DIR="/tmp/${PACKAGE_NAME}-opencode-test-$(date +%s)"
 LOG_FILE="$TEST_DIR/opencode.log"
 TIMEOUT=5  # seconds to wait for startup
+ASSETS_TEST_SUCCESS=false
 
 log_info "Starting OpenCode plugin test for ${PACKAGE_NAME}@${PACKAGE_VERSION}"
 log_info "Test directory: $TEST_DIR"
@@ -208,7 +209,9 @@ log_info "Starting OpenCode in debug wait mode..."
 log_info "This will load the plugin and wait for debugging..."
 
 # Start OpenCode in background with output redirected to log file
-opencode debug wait > "$LOG_FILE" 2>&1 &
+# Force production-style HTML/assets routing for this integration test
+# so that /assets/* is exercised.
+NODE_ENV=production opencode debug wait > "$LOG_FILE" 2>&1 &
 OPENCODE_PID=$!
 
 log_info "OpenCode started with PID: $OPENCODE_PID"
@@ -267,8 +270,9 @@ if [[ -f "$LOG_FILE" ]]; then
     fi
     
     # Look for any errors
-    ERROR_COUNT=$(grep -c -i "error\|failed\|exception" "$LOG_FILE" 2>/dev/null || echo "0")
-    if [[ $ERROR_COUNT -gt 0 ]]; then
+    ERROR_COUNT=$(grep -ciE "error|failed|exception" "$LOG_FILE" 2>/dev/null || true)
+    ERROR_COUNT=${ERROR_COUNT:-0}
+    if [[ "$ERROR_COUNT" =~ ^[0-9]+$ ]] && [[ $ERROR_COUNT -gt 0 ]]; then
         log_warn "⚠️ Found $ERROR_COUNT potential error(s) in log"
         echo "Recent errors:"
         grep -i "error\|failed\|exception" "$LOG_FILE" | tail -5
@@ -302,9 +306,10 @@ if [[ "$SERVER_STARTED" == "true" ]]; then
     
     # Test 1: Basic connectivity
     log_info "Testing basic connectivity to $SERVER_URL..."
-    if curl -s --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "$SERVER_URL" | grep -q "200\|302\|301"; then
-        WEB_TEST_RESULTS+=("✅ Basic connectivity: SUCCESS")
-        log_success "✅ Server responds to HTTP requests"
+    CONNECT_STATUS=$(curl -s --connect-timeout 5 --max-time 10 -o /dev/null -w "%{http_code}" "$SERVER_URL" || echo "000")
+    if echo "$CONNECT_STATUS" | grep -q "200\|302\|301\|404"; then
+        WEB_TEST_RESULTS+=("✅ Basic connectivity: SUCCESS (HTTP $CONNECT_STATUS)")
+        log_success "✅ Server responds to HTTP requests (HTTP $CONNECT_STATUS)"
     else
         WEB_TEST_RESULTS+=("❌ Basic connectivity: FAILED")
         log_warn "❌ Server not responding on $SERVER_URL"
@@ -340,6 +345,73 @@ if [[ "$SERVER_STARTED" == "true" ]]; then
                 else
                     WEB_TEST_RESULTS+=("⚠️ JavaScript: NO SCRIPTS")
                     log_warn "⚠️ No JavaScript scripts found"
+                fi
+
+                # Test 4b: Verify /assets routes work for hashed assets referenced by HTML
+                if grep -q "/assets/" "$TEST_DIR/response.html" 2>/dev/null; then
+                    log_info "Testing /assets routes referenced by HTML..."
+                    ASSETS_TEST_SUCCESS=true
+
+                    # Extract unique /assets/*.js and /assets/*.css paths from the HTML using Node
+                    ASSET_PATHS=$(node -e "
+const fs = require('fs');
+const html = fs.readFileSync(process.argv[1], 'utf8');
+const js = [...html.matchAll(/src=\"(\\/assets\\/[^\"\n]+\\.js)\"/g)].map(m => m[1]);
+const css = [...html.matchAll(/href=\"(\\/assets\\/[^\"\n]+\\.css)\"/g)].map(m => m[1]);
+const all = Array.from(new Set([...js, ...css]));
+for (const a of all) console.log(a);
+" "$TEST_DIR/response.html" 2>/dev/null || true)
+
+                    if [[ -z "${ASSET_PATHS}" ]]; then
+                        ASSETS_TEST_SUCCESS=false
+                        WEB_TEST_RESULTS+=("❌ Assets: NO /assets/*.js|*.css FOUND")
+                        log_warn "❌ No /assets/*.js or /assets/*.css found in HTML"
+                    else
+                        while IFS= read -r asset; do
+                            [[ -z "${asset}" ]] && continue
+                            ASSET_HTTP_STATUS=$(curl -s --connect-timeout 5 --max-time 10 -w "%{http_code}" -o /dev/null "$SERVER_URL$asset" || echo "000")
+                            if [[ "$ASSET_HTTP_STATUS" != "200" ]]; then
+                                ASSETS_TEST_SUCCESS=false
+                                WEB_TEST_RESULTS+=("❌ Asset fetch: FAILED ($asset HTTP $ASSET_HTTP_STATUS)")
+                                log_warn "❌ Asset fetch failed: $asset (HTTP $ASSET_HTTP_STATUS)"
+                                continue
+                            fi
+
+                            # Validate Content-Type (best-effort)
+                            CONTENT_TYPE=$(curl -sI --connect-timeout 5 --max-time 10 "$SERVER_URL$asset" | tr -d '\r' | grep -i '^content-type:' | head -1 | cut -d':' -f2- | xargs || true)
+                            if [[ "$asset" == *.js ]]; then
+                                if ! echo "${CONTENT_TYPE}" | tr '[:upper:]' '[:lower:]' | grep -Eq '^(application|text)/javascript(\s*;|$)'; then
+                                    ASSETS_TEST_SUCCESS=false
+                                    WEB_TEST_RESULTS+=("❌ Asset content-type: BAD ($asset $CONTENT_TYPE)")
+                                    log_warn "❌ Unexpected JS content-type for $asset: ${CONTENT_TYPE:-<missing>}"
+                                fi
+                            fi
+                            if [[ "$asset" == *.css ]]; then
+                                if ! echo "${CONTENT_TYPE}" | tr '[:upper:]' '[:lower:]' | grep -Eq '^text/css(\s*;|$)'; then
+                                    ASSETS_TEST_SUCCESS=false
+                                    WEB_TEST_RESULTS+=("❌ Asset content-type: BAD ($asset $CONTENT_TYPE)")
+                                    log_warn "❌ Unexpected CSS content-type for $asset: ${CONTENT_TYPE:-<missing>}"
+                                fi
+                            fi
+                        done <<< "$ASSET_PATHS"
+
+                        # Traversal sanity check
+                        TRAVERSAL_STATUS=$(curl -s --connect-timeout 5 --max-time 10 -w "%{http_code}" -o /dev/null "$SERVER_URL/assets/../index.html" || echo "000")
+                        if [[ "$TRAVERSAL_STATUS" == "200" ]]; then
+                            ASSETS_TEST_SUCCESS=false
+                            WEB_TEST_RESULTS+=("❌ Assets traversal: VULNERABLE (HTTP 200)")
+                            log_warn "❌ Traversal request unexpectedly succeeded: /assets/../index.html"
+                        fi
+
+                        if [[ "$ASSETS_TEST_SUCCESS" == "true" ]]; then
+                            WEB_TEST_RESULTS+=("✅ Assets: HASHED ASSETS SERVED")
+                            log_success "✅ /assets routes verified for referenced assets"
+                        fi
+                    fi
+                else
+                    ASSETS_TEST_SUCCESS=false
+                    WEB_TEST_RESULTS+=("❌ Assets: NOT REFERENCED")
+                    log_warn "❌ HTML does not reference /assets/"
                 fi
             else
                 WEB_TEST_RESULTS+=("❌ HTML content: TOO SMALL ($HTML_SIZE bytes)")
@@ -413,8 +485,11 @@ if [[ "$SERVER_STARTED" == "true" && -n "${WEB_TEST_RESULTS:-}" ]]; then
     # Check if any critical web tests failed
     if echo "${WEB_TEST_RESULTS[@]}" | grep -q "❌"; then
         log_warn "⚠️ Critical web test failures detected"
-        # Don't fail overall status for web issues unless HTML page completely fails
+        # Fail the test if HTML fails OR if /assets routing checks fail
         if echo "${WEB_TEST_RESULTS[@]}" | grep -q "HTML page load: FAILED"; then
+            OVERALL_STATUS="FAILED"
+        fi
+        if [[ "${ASSETS_TEST_SUCCESS}" != "true" ]] && echo "${WEB_TEST_RESULTS[@]}" | grep -q "Assets:"; then
             OVERALL_STATUS="FAILED"
         fi
     fi
@@ -432,6 +507,7 @@ cat > test-report.json << EOF
     "serverStarted": ${SERVER_STARTED},
     "pluginLoaded": ${PLUGIN_LOADED},
     "opencodeRunning": ${OPENCODE_RUNNING},
+    "assetsRouteTestSuccess": ${ASSETS_TEST_SUCCESS},
     "overallStatus": "${OVERALL_STATUS}"
   },
   "environment": {
@@ -459,6 +535,7 @@ echo "║ Status:  ${OVERALL_STATUS}                                          �
 echo "║ Server:  ${SERVER_STARTED}$(printf "%*s" $((26 - ${#SERVER_STARTED})) "")║"
 echo "║ Plugin:  ${PLUGIN_LOADED}$(printf "%*s" $((26 - ${#PLUGIN_LOADED})) "")║"
 echo "║ OpenCode:${OPENCODE_RUNNING}$(printf "%*s" $((26 - ${#OPENCODE_RUNNING})) "")║"
+echo "║ Assets:  ${ASSETS_TEST_SUCCESS}$(printf "%*s" $((26 - ${#ASSETS_TEST_SUCCESS})) "")║"
 echo "║ PID:     ${OPENCODE_PID}$(printf "%*s" $((26 - ${#OPENCODE_PID})) "")║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo

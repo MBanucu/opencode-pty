@@ -51,6 +51,8 @@ fi
 PACKAGE_NAME="$1"
 PACKAGE_VERSION="$2"
 TEST_DIR="/tmp/${PACKAGE_NAME}-test-$(date +%s)"
+ASSETS_TEST_SUCCESS=false
+TEST_SUCCESS=true
 
 log_info "Starting automated test for ${PACKAGE_NAME}@${PACKAGE_VERSION}"
 log_info "Test directory: $TEST_DIR"
@@ -85,6 +87,10 @@ else
     log_error "Failed to install package"
     exit 1
 fi
+
+# Ensure install runs lifecycle hooks (for packages relying on prepack/build)
+log_info "Ensuring install scripts ran (rebuilding if needed)..."
+bun pm rebuild "${PACKAGE_NAME}" >/dev/null 2>&1 || true
 
 # --- 3. Verify Installation ---
 log_info "Verifying installation details..."
@@ -130,6 +136,141 @@ fi
 log_info "Package details:"
 PACKAGE_INFO=$(bun pm ls "${PACKAGE_NAME}" | grep "${PACKAGE_NAME}@")
 echo "  $PACKAGE_INFO"
+
+# --- 3b. Verify web assets are packaged and routable ---
+# This is a deeper integration check that starts the package web server and
+# verifies that HTML references hashed /assets files that are actually served.
+log_info "Creating /assets route test script..."
+
+cat > assets-test.mjs << 'EOF'
+#!/usr/bin/env bun
+
+// Verifies that the package can serve built web assets at /assets/*
+// by starting the embedded web server and fetching the HTML + referenced assets.
+
+const PACKAGE_NAME = process.env.PACKAGE_NAME
+if (!PACKAGE_NAME) {
+  console.error('Missing PACKAGE_NAME env var')
+  process.exit(1)
+}
+
+function fail(msg) {
+  console.error(`❌ ${msg}`)
+  process.exit(1)
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+function pickPort() {
+  // Pick a reasonably safe ephemeral port range.
+  return 20000 + Math.floor(Math.random() * 20000)
+}
+
+function extractAssets(html) {
+  const js = [...html.matchAll(/src="\/assets\/([^\"]+\.js)"/g)].map((m) => m[1])
+  const css = [...html.matchAll(/href="\/assets\/([^\"]+\.css)"/g)].map((m) => m[1])
+  return {
+    js: Array.from(new Set(js)),
+    css: Array.from(new Set(css)),
+  }
+}
+
+async function fetchOk(url, expected) {
+  const res = await fetch(url)
+  if (res.status !== 200) {
+    const body = await res.text().catch(() => '')
+    fail(`${expected} expected 200, got ${res.status} for ${url}${body ? `\n--- body ---\n${body.slice(0, 4000)}` : ''}`)
+  }
+  return res
+}
+
+let stopWebServer
+let url
+let started = false
+
+try {
+  // In end-user installs, we want this to behave like a production package:
+  // root HTML should be dist/web/index.html and assets should be dist/web/assets/*
+  const prevEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+
+  const serverModule = await import(`${PACKAGE_NAME}/src/web/server.ts`)
+  const { startWebServer } = serverModule
+  stopWebServer = serverModule.stopWebServer
+
+  let lastErr
+  for (let i = 0; i < 8; i++) {
+    const port = pickPort()
+    try {
+      url = startWebServer({ port })
+      started = true
+      break
+    } catch (e) {
+      lastErr = e
+      await sleep(50)
+    }
+  }
+  if (!started || !url) {
+    fail(`Failed to start web server (${String(lastErr || 'unknown error')})`)
+  }
+
+  const root = await fetchOk(`${url}/`, 'Root HTML')
+  const html = await root.text()
+
+  if (!/<!doctype html>/i.test(html)) {
+    fail('Root HTML missing doctype')
+  }
+
+  if (html.includes('/main.tsx')) {
+    fail('Root HTML appears to be dev HTML (/main.tsx) in production mode')
+  }
+
+  if (!html.includes('/assets/')) {
+    fail('Root HTML does not reference /assets/ (missing built asset links)')
+  }
+
+  const assets = extractAssets(html)
+  if (assets.js.length === 0 && assets.css.length === 0) {
+    fail('No .js/.css assets found in HTML under /assets/')
+  }
+
+  for (const js of assets.js) {
+    const res = await fetchOk(`${url}/assets/${js}`, 'JS asset')
+    const ct = (res.headers.get('content-type') || '').toLowerCase()
+    if (!/^(application|text)\/javascript(;|$)/.test(ct)) {
+      fail(`Unexpected JS content-type: ${ct || '(missing)'} for /assets/${js}`)
+    }
+  }
+
+  for (const css of assets.css) {
+    const res = await fetchOk(`${url}/assets/${css}`, 'CSS asset')
+    const ct = (res.headers.get('content-type') || '').toLowerCase()
+    if (!/^text\/css(;|$)/.test(ct)) {
+      fail(`Unexpected CSS content-type: ${ct || '(missing)'} for /assets/${css}`)
+    }
+  }
+
+  // Basic traversal defense sanity check
+  const traversal = await fetch(`${url}/assets/../index.html`)
+  if (traversal.status === 200) {
+    fail('Traversal request unexpectedly succeeded: /assets/../index.html')
+  }
+
+  console.log('✅ /assets route serves built assets')
+
+  // Restore env
+  if (prevEnv == null) delete process.env.NODE_ENV
+  else process.env.NODE_ENV = prevEnv
+} finally {
+  try {
+    if (typeof stopWebServer === 'function') stopWebServer()
+  } catch {}
+}
+EOF
+
+chmod +x assets-test.mjs
 
 # --- 4. Create Test Script ---
 log_info "Creating automated test script..."
@@ -200,6 +341,17 @@ else
     exit 1
 fi
 
+# --- 5b. Run /assets route test ---
+log_info "Running /assets route test (starts embedded web server)..."
+if PACKAGE_NAME="${PACKAGE_NAME}" bun run assets-test.mjs; then
+    log_success "/assets route test passed"
+    ASSETS_TEST_SUCCESS=true
+else
+    log_error "/assets route test failed"
+    ASSETS_TEST_SUCCESS=false
+    TEST_SUCCESS=false
+fi
+
 # --- 6. Additional Verification ---
 log_info "Running additional verification checks..."
 
@@ -238,7 +390,8 @@ cat > test-report.json << EOF
   "mainEntry": "${MAIN_ENTRY}",
   "mainExport": "${MAIN_EXPORT}",
   "installSuccess": true,
-  "testSuccess": true,
+  "testSuccess": ${TEST_SUCCESS},
+  "assetsRouteTestSuccess": ${ASSETS_TEST_SUCCESS:-false},
   "dependencies": $((DEP_COUNT - 1)),
   "bunVersion": "$(bun --version)"
 }
@@ -260,5 +413,10 @@ echo "╚═══════════════════════�
 echo
 log_info "Test directory will be cleaned up automatically."
 log_info "Package is ready for production use!"
+
+if [[ "${TEST_SUCCESS}" != "true" ]]; then
+    log_error "One or more tests failed (see output above)"
+    exit 1
+fi
 
 exit 0

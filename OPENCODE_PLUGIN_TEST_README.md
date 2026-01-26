@@ -61,6 +61,12 @@ Monitors for specific success indicators:
 - Cleanup of test directories
 - PID tracking and verification
 
+### 7. **Web Asset Routing (/assets)**
+
+- When the plugin web server responds with HTML that references `/assets/*.js` and `/assets/*.css`, the script fetches each referenced asset and asserts HTTP 200
+- Validates `Content-Type` best-effort (`text/css` for CSS, `application|text/javascript` for JS)
+- Includes a basic traversal sanity check (`/assets/../index.html` should not return 200)
+
 ## Test Output
 
 The script provides detailed real-time feedback:

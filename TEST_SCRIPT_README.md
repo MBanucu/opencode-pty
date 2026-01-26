@@ -58,6 +58,13 @@ The script performs a comprehensive automated test suite:
 - Provides summary with colored output
 - Automatic cleanup
 
+### 7. **Web Asset Routing (/assets)**
+
+- Starts the package's embedded web server in production mode
+- Fetches `/` and extracts hashed `/assets/*.js` and `/assets/*.css` URLs
+- Verifies each referenced asset returns HTTP 200 with an appropriate `Content-Type`
+- Includes a basic traversal sanity check (`/assets/../index.html` should not return 200)
+
 ## Output
 
 The script provides:
@@ -116,6 +123,7 @@ The script generates `test-report.json` with:
   "mainExport": "PTYPlugin",
   "installSuccess": true,
   "testSuccess": true,
+  "assetsRouteTestSuccess": true,
   "dependencies": 41,
   "bunVersion": "1.3.6"
 }

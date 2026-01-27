@@ -16,7 +16,16 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        test_group: [pty, web, other]
+        test_group:
+          - { name: pty-echo, file: test/pty-echo.test.ts }
+          - { name: pty-integration, file: test/pty-integration.test.ts }
+          - { name: pty-tools, file: test/pty-tools.test.ts }
+          - { name: bun-pty-mwe, file: test/bun-pty-mwe.test.ts }
+          - { name: web-server, file: test/web-server.test.ts }
+          - {
+              name: others,
+              files: 'test/integration.test.ts test/npm-pack-integration.test.ts test/npm-pack-structure.test.ts test/types.test.ts test/websocket.test.ts',
+            }
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -52,12 +61,10 @@ jobs:
 
       - name: Run tests
         run: |
-          if [ "${{ matrix.test_group }}" == "pty" ]; then
-            bun test test/pty-echo.test.ts test/pty-integration.test.ts test/pty-tools.test.ts test/bun-pty-mwe.test.ts
-          elif [ "${{ matrix.test_group }}" == "web" ]; then
-            bun test test/web-server.test.ts
+          if [ -n "${{ matrix.test_group.file }}" ]; then
+            bun test ${{ matrix.test_group.file }}
           else
-            bun test test/integration.test.ts test/npm-pack-integration.test.ts test/npm-pack-structure.test.ts test/types.test.ts test/websocket.test.ts
+            bun test ${{ matrix.test_group.files }}
           fi
 
   dependency-review:

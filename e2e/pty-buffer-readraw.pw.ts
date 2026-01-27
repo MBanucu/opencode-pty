@@ -54,7 +54,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     async ({ page, server }) => {
       await clearAllSessions(page, server)
       const desc = 'basic input test session'
-      const sessionId = await createSession(page, server, {
+      await createSession(page, server, {
         command: 'bash',
         args: [],
         description: desc,
@@ -204,7 +204,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         command: 'bash',
         args: ['-i'],
         description: 'Double Echo Test Session B',
-        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       })
       await gotoAndSelectSession(page, server, 'Double Echo Test Session B', 10000)
       // Debug what prompt is present before event-driven wait
@@ -235,7 +234,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         command: 'bash',
         args: ['-i'],
         description: 'Double Echo Test Session C',
-        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       })
       await gotoAndSelectSession(page, server, 'Double Echo Test Session C', 10000)
       // Debug what prompt is present before event-driven wait
@@ -283,7 +281,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         command: 'bash',
         args: ['-i'],
         description: 'Initial bash state test for plain text comparison',
-        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       })
       await gotoAndSelectSession(
         page,
@@ -335,7 +332,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         command: 'bash',
         args: ['-i'],
         description: 'Double-echo prevention test',
-        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       })
       await gotoAndSelectSession(page, server, 'Double-echo prevention test', 5000)
       await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptDoubleEcho')

@@ -17,7 +17,6 @@ extendedTest.describe('Xterm Content Extraction', () => {
           command: 'bash',
           args: ['-i'],
           description: 'Interactive command comparison test',
-          env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
         },
       })
 

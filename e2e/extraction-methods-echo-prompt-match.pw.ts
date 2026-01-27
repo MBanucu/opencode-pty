@@ -18,7 +18,6 @@ extendedTest(
         command: 'bash',
         args: ['-i'],
         description: 'Echo "Hello World" test',
-        env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
       },
     })
     expect(createResponse.status()).toBe(200)

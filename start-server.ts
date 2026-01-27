@@ -104,7 +104,6 @@ if (process.env.NODE_ENV === 'test') {
     args: ['-i'], // Interactive bash
     description: 'Interactive bash session for e2e tests',
     parentSessionId: 'test-session',
-    env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
   })
 } else if (process.env.CI !== 'true') {
   manager.spawn({
@@ -115,7 +114,6 @@ if (process.env.NODE_ENV === 'test') {
     ],
     description: 'Live streaming test session',
     parentSessionId: 'live-test',
-    env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
   })
 }
 

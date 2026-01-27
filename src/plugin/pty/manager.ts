@@ -100,7 +100,11 @@ class PTYManager {
     return withSession(
       this.lifecycleManager,
       id,
-      (session) => this.lifecycleManager.toInfo(session),
+      (session) => {
+        const info = this.lifecycleManager.toInfo(session)
+        console.log('Manager get returning info:', info)
+        return info
+      },
       null
     )
   }

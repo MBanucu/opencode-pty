@@ -1,6 +1,6 @@
 import { spawn, type IPty } from 'bun-pty'
 import { RingBuffer } from './buffer.ts'
-import type { PTYSession, PTYSessionInfo, SpawnOptions } from './types.ts'
+import type { PTYSession, PTYSessionInfo, SpawnOptions, PTYStatus } from './types.ts'
 import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS } from '../constants.ts'
 
 const SESSION_ID_BYTE_LENGTH = 4
@@ -16,6 +16,7 @@ export class SessionLifecycleManager {
   private sessions: Map<string, PTYSession> = new Map()
 
   private createSessionObject(opts: SpawnOptions): PTYSession {
+    console.log('Creating session object with opts:', opts)
     const id = generateId()
     const args = opts.args ?? []
     const workdir = opts.workdir ?? process.cwd()
@@ -23,7 +24,7 @@ export class SessionLifecycleManager {
       opts.title ?? (`${opts.command} ${args.join(' ')}`.trim() || `Terminal ${id.slice(-4)}`)
 
     const buffer = new RingBuffer()
-    return {
+    const session = {
       id,
       title,
       description: opts.description,
@@ -31,7 +32,7 @@ export class SessionLifecycleManager {
       args,
       workdir,
       env: opts.env,
-      status: 'running',
+      status: 'running' as PTYStatus,
       pid: 0, // will be set after spawn
       createdAt: new Date(),
       parentSessionId: opts.parentSessionId,
@@ -39,6 +40,8 @@ export class SessionLifecycleManager {
       buffer,
       process: null, // will be set
     }
+    console.log('Session object created:', session)
+    return session
   }
 
   private spawnProcess(session: PTYSession): void {
@@ -55,6 +58,12 @@ export class SessionLifecycleManager {
       console.log('PTY process spawned with pid:', ptyProcess.pid)
       session.process = ptyProcess
       session.pid = ptyProcess.pid
+      console.log('Session after spawn:', {
+        id: session.id,
+        pid: session.pid,
+        command: session.command,
+        status: session.status,
+      })
     } catch (error) {
       console.error('Failed to spawn PTY process:', error)
       throw error
@@ -152,6 +161,8 @@ export class SessionLifecycleManager {
         pid: session.pid,
         status: session.status,
         process: !!session.process,
+        command: session.command,
+        args: session.args,
       })
     return session
   }

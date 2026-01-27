@@ -43,6 +43,7 @@ export async function getSession(req: BunRequest<'/api/sessions/:id'>): Promise<
     return new ErrorResponse('Invalid session ID', 400)
   }
   const session = manager.get(sessionId)
+  console.log('API getSession for id:', sessionId, 'session:', session)
   if (!session) {
     return new ErrorResponse('Session not found', 404)
   }

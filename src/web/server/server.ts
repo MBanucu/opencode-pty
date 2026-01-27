@@ -56,6 +56,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
 export async function startWebServer(
   config: Partial<ServerConfig> = {},
+
   testManager?: PTYManager
 ): Promise<string> {
   const finalConfig = { ...defaultConfig, ...config }

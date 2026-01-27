@@ -189,7 +189,7 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
         if (req.headers.get('upgrade') === 'websocket') {
           const success = server!.upgrade(req)
           if (success) {
-            return new Response(null, { status: 101 }) // Upgrade succeeded
+            return undefined // Upgrade succeeded, Bun sends 101 automatically
           }
           return new Response('WebSocket upgrade failed', { status: 400 })
         } else {

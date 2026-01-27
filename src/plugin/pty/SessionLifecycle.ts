@@ -42,16 +42,23 @@ export class SessionLifecycleManager {
   }
 
   private spawnProcess(session: PTYSession): void {
+    console.log('Spawning PTY process for command:', session.command, 'args:', session.args)
     const env = { ...process.env, ...session.env } as Record<string, string>
-    const ptyProcess: IPty = spawn(session.command, session.args, {
-      name: 'xterm-256color',
-      cols: DEFAULT_TERMINAL_COLS,
-      rows: DEFAULT_TERMINAL_ROWS,
-      cwd: session.workdir,
-      env,
-    })
-    session.process = ptyProcess
-    session.pid = ptyProcess.pid
+    try {
+      const ptyProcess: IPty = spawn(session.command, session.args, {
+        name: 'xterm-256color',
+        cols: DEFAULT_TERMINAL_COLS,
+        rows: DEFAULT_TERMINAL_ROWS,
+        cwd: session.workdir,
+        env,
+      })
+      console.log('PTY process spawned with pid:', ptyProcess.pid)
+      session.process = ptyProcess
+      session.pid = ptyProcess.pid
+    } catch (error) {
+      console.error('Failed to spawn PTY process:', error)
+      throw error
+    }
   }
 
   private setupEventHandlers(
@@ -59,12 +66,15 @@ export class SessionLifecycleManager {
     onData: (id: string, data: string) => void,
     onExit: (id: string, exitCode: number | null) => void
   ): void {
+    console.log('Setting up event handlers for session:', session.id)
     session.process!.onData((data: string) => {
+      console.log('PTY onData for session', session.id, 'data length:', data.length)
       session.buffer.append(data)
       onData(session.id, data)
     })
 
     session.process!.onExit(({ exitCode }) => {
+      console.log('PTY onExit for session', session.id, 'exitCode:', exitCode)
       // Flush any remaining incomplete line in the buffer
       session.buffer.flush()
 
@@ -134,7 +144,16 @@ export class SessionLifecycleManager {
   }
 
   getSession(id: string): PTYSession | null {
-    return this.sessions.get(id) || null
+    const session = this.sessions.get(id) || null
+    console.log('SessionLifecycle getSession for id:', id, 'found:', !!session)
+    if (session)
+      console.log('Session details:', {
+        id: session.id,
+        pid: session.pid,
+        status: session.status,
+        process: !!session.process,
+      })
+    return session
   }
 
   listSessions(): PTYSession[] {

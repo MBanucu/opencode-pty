@@ -24,7 +24,6 @@ describe('PTY Echo Behavior', () => {
 
     // Subscribe to raw output events
     onRawOutput((_sessionId, rawData) => {
-      console.log('Received raw data:', rawData)
       receivedOutputs.push(rawData)
     })
 

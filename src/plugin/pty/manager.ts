@@ -41,15 +41,12 @@ class PTYManager {
   }
 
   spawn(opts: SpawnOptions): PTYSessionInfo {
-    console.log('Manager spawn called with opts:', opts)
     const session = this.lifecycleManager.spawn(
       opts,
       (id, data) => {
-        console.log('Manager onData callback for id:', id, 'data length:', data.length)
         notifyRawOutput(id, data)
       },
       async (id, exitCode) => {
-        console.log('Manager onExit callback for id:', id, 'exitCode:', exitCode)
         if (onSessionUpdate) onSessionUpdate()
         const session = this.lifecycleManager.getSession(id)
         if (session && session.notifyOnExit) {
@@ -57,20 +54,17 @@ class PTYManager {
         }
       }
     )
-    console.log('Manager spawn returning session:', session)
     if (onSessionUpdate) onSessionUpdate()
     return session
   }
 
   write(id: string, data: string): boolean {
-    console.log('Manager write called for id:', id, 'data:', data)
     const result = withSession(
       this.lifecycleManager,
       id,
       (session) => this.outputManager.write(session, data),
       false
     )
-    console.log('Manager write result:', result)
     return result
   }
 
@@ -102,7 +96,6 @@ class PTYManager {
       id,
       (session) => {
         const info = this.lifecycleManager.toInfo(session)
-        console.log('Manager get returning info:', info)
         return info
       },
       null

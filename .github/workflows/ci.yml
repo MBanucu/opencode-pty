@@ -47,11 +47,8 @@ jobs:
       - name: Build
         run: bun run build:all:prod
 
-      - name: Install expect
-        run: sudo apt-get update && sudo apt-get install -y expect
-
       - name: Run tests
-        run: unbuffer bun test
+        run: bun test
 
   dependency-review:
     runs-on: ubuntu-24.04

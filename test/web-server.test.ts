@@ -137,13 +137,17 @@ describe('Web Server', () => {
         parentSessionId: 'test',
       })
 
+      console.log('Created session:', session)
+
       // Wait for PTY to start
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
+      console.log('Session response status:', response.status)
       expect(response.status).toBe(200)
 
       const sessionData = await response.json()
+      console.log('Session data:', sessionData)
       expect(sessionData.id).toBe(session.id)
       expect(sessionData.command).toBe('cat')
       expect(sessionData.args).toEqual([])
@@ -152,6 +156,7 @@ describe('Web Server', () => {
     it('should return 404 for non-existent session', async () => {
       const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
       const response = await fetch(`${serverUrl}/api/sessions/${nonexistentId}`)
+      console.log('Non-existent response status:', response.status)
       expect(response.status).toBe(404)
     })
 
@@ -164,6 +169,8 @@ describe('Web Server', () => {
         parentSessionId: 'test',
       })
 
+      console.log('Input session:', session)
+
       // Wait for PTY to start
       await new Promise((resolve) => setTimeout(resolve, 100))
 
@@ -172,6 +179,8 @@ describe('Web Server', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: 'test input\n' }),
       })
+
+      console.log('Input response status:', response.status)
 
       // Should return success
       expect(response.status).toBe(200)
@@ -190,12 +199,16 @@ describe('Web Server', () => {
         parentSessionId: 'test',
       })
 
+      console.log('Kill session:', session)
+
       // Wait for PTY to start
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/kill`, {
         method: 'POST',
       })
+
+      console.log('Kill response status:', response.status)
 
       expect(response.status).toBe(200)
       const result = await response.json()
@@ -211,10 +224,13 @@ describe('Web Server', () => {
         parentSessionId: 'test-output',
       })
 
+      console.log('Output session:', session)
+
       // Wait a bit for output to be captured
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/buffer/raw`)
+      console.log('Buffer response status:', response.status)
       expect(response.status).toBe(200)
 
       const bufferData = await response.json()

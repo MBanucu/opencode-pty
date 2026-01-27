@@ -35,11 +35,14 @@ describe('PTY Echo Behavior', () => {
       parentSessionId: 'test',
     })
 
+    console.log('Echo session:', session)
+
     // Wait for PTY to initialize and show prompt
     await new Promise((resolve) => setTimeout(resolve, 200))
 
     // Send test input
     const success = manager.write(session.id, 'a')
+    console.log('Write success:', success)
     expect(success).toBe(true)
 
     // Wait for echo to be processed
@@ -50,6 +53,8 @@ describe('PTY Echo Behavior', () => {
 
     // Verify echo occurred
     const allOutput = receivedOutputs.join('')
+    console.log('All output:', allOutput)
+    console.log('Received outputs:', receivedOutputs)
     expect(allOutput).toContain('a')
 
     // Should have received some output (prompt + echo)

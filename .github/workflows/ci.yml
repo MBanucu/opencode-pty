@@ -48,7 +48,7 @@ jobs:
         run: bun run build:all:prod
 
       - name: Run tests
-        run: bun test --concurrency 1
+        run: bun test test/bun-pty-mwe.test.ts && bun test test/integration.test.ts && bun test test/npm-pack-integration.test.ts && bun test test/npm-pack-structure.test.ts && bun test test/pty-echo.test.ts && bun test test/pty-integration.test.ts && bun test test/pty-tools.test.ts && bun test test/types.test.ts && bun test test/web-server.test.ts && bun test test/websocket.test.ts
 
   dependency-review:
     runs-on: ubuntu-24.04

@@ -49,7 +49,7 @@ describe('Web Server', () => {
     })
   })
 
-  describe('HTTP Endpoints', () => {
+  describe.serial('HTTP Endpoints', () => {
     let serverUrl: string
 
     beforeEach(async () => {

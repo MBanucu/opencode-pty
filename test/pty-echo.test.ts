@@ -20,7 +20,6 @@ describe('PTY Echo Behavior', () => {
   })
 
   it('should echo input characters in interactive bash session', async () => {
-    if (process.env.CI) return // Skip PTY tests in CI due to manager issues
     const receivedOutputs: string[] = []
 
     // Subscribe to raw output events

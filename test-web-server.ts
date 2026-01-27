@@ -16,30 +16,12 @@ initLogger(fakeClient)
 initManager(fakeClient)
 
 // Cleanup on process termination
-process.on('SIGTERM', () => {
+process.on('SIGTERM', cleanup)
+process.on('SIGINT', cleanup)
+
+function cleanup() {
   manager.cleanupAll()
   process.exit(0)
-})
-
-process.on('SIGINT', () => {
-  manager.cleanupAll()
-  process.exit(0)
-})
-
-// Use the specified port after cleanup
-function findAvailablePort(port: number): number {
-  // Only kill processes if we're confident they belong to our test servers
-  // In parallel execution, avoid killing other workers' servers
-  if (process.env.TEST_WORKER_INDEX) {
-    // For parallel workers, assume the port is available since we assign unique ports
-    return port
-  }
-
-  // For single execution, clean up any stale processes
-  Bun.spawnSync(['sh', '-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`])
-  // Small delay to allow cleanup
-  Bun.sleepSync(200)
-  return port
 }
 
 // Parse command line arguments
@@ -55,15 +37,13 @@ const argv = yargs(hideBin(process.argv))
   })
   .parseSync()
 
-let basePort = argv.port
+let port = argv.port
 
 // For parallel workers, ensure unique start ports
 if (process.env.TEST_WORKER_INDEX) {
   const workerIndex = parseInt(process.env.TEST_WORKER_INDEX, 10)
-  basePort = 8877 + workerIndex
+  port = 8877 + workerIndex
 }
-
-let port = findAvailablePort(basePort)
 
 startWebServer({ port })
 
@@ -77,21 +57,14 @@ if (process.env.NODE_ENV === 'test') {
 
 // Health check for test mode
 if (process.env.NODE_ENV === 'test') {
-  let retries = 20 // 10 seconds
-  while (retries > 0) {
-    try {
-      const response = await fetch(`http://localhost:${port}/api/sessions`)
-      if (response.ok) {
-        break
-      }
-    } catch (error) {
-      // Server not ready yet
+  try {
+    const response = await fetch(`http://localhost:${port}/api/sessions`)
+    if (!response.ok) {
+      console.error('Server health check failed')
+      process.exit(1)
     }
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    retries--
-  }
-  if (retries === 0) {
-    console.error('Server failed to start properly after 10 seconds')
+  } catch (error) {
+    console.error('Server health check failed:', error)
     process.exit(1)
   }
 }
@@ -118,8 +91,3 @@ if (process.env.NODE_ENV === 'test') {
     env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
   })
 }
-
-// Keep the server running indefinitely
-setInterval(() => {
-  // Keep-alive check - server will continue running
-}, 1000)

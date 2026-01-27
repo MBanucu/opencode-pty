@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server/server.ts'
 import { PTYManager, manager } from '../src/plugin/pty/manager.ts'
 
-describe('Web Server', () => {
+describe.serial('Web Server', () => {
   const fakeClient = {
     app: {
       log: async (_opts: any) => {

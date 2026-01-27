@@ -25,7 +25,7 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
 
   // Connect to WebSocket on mount
   useEffect(() => {
-    const ws = new WebSocket(`ws://${location.host}`)
+    const ws = new WebSocket(`ws://${location.host}/ws`)
     ws.onopen = () => {
       setConnected(true)
       // Request initial session list

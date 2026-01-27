@@ -27,7 +27,7 @@ describe('WebSocket Functionality', () => {
       await startWebServer({ port: 8772 })
 
       // Create a WebSocket connection
-      const ws = new WebSocket('ws://localhost:8772')
+      const ws = new WebSocket('ws://localhost:8772/ws')
 
       await new Promise((resolve, reject) => {
         ws.onopen = () => {
@@ -48,7 +48,7 @@ describe('WebSocket Functionality', () => {
     it('should send session list on connection', async () => {
       await startWebServer({ port: 8773 })
 
-      const ws = new WebSocket('ws://localhost:8773')
+      const ws = new WebSocket('ws://localhost:8773/ws')
 
       const messages: any[] = []
       ws.onmessage = (event) => {
@@ -78,7 +78,7 @@ describe('WebSocket Functionality', () => {
     beforeEach(async () => {
       manager.cleanupAll() // Clean up any leftover sessions
       await startWebServer({ port: 8774 })
-      ws = new WebSocket('ws://localhost:8774')
+      ws = new WebSocket('ws://localhost:8774/ws')
 
       await new Promise((resolve, reject) => {
         ws.onopen = () => resolve(void 0)

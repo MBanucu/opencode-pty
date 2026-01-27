@@ -48,8 +48,8 @@ describe('Web Server Integration', () => {
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       // Create multiple WebSocket clients
-      const ws1 = new WebSocket('ws://localhost:8781')
-      const ws2 = new WebSocket('ws://localhost:8781')
+      const ws1 = new WebSocket('ws://localhost:8781/ws')
+      const ws2 = new WebSocket('ws://localhost:8781/ws')
       const messages1: any[] = []
       const messages2: any[] = []
 
@@ -116,7 +116,7 @@ describe('Web Server Integration', () => {
       expect(result).toHaveProperty('success')
 
       // Test WebSocket error handling
-      const ws = new WebSocket('ws://localhost:8782')
+      const ws = new WebSocket('ws://localhost:8782/ws')
       const wsMessages: any[] = []
 
       ws.onmessage = (event) => wsMessages.push(JSON.parse(event.data))
@@ -177,7 +177,7 @@ describe('Web Server Integration', () => {
       // Wait for PTY to start
       await new Promise((resolve) => setTimeout(resolve, 100))
 
-      const ws = new WebSocket('ws://localhost:8784')
+      const ws = new WebSocket('ws://localhost:8784/ws')
       await new Promise((resolve) => {
         ws.onopen = resolve
       })

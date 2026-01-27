@@ -37,7 +37,7 @@ describe('PTY Manager Integration', () => {
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       // Create WebSocket connection and subscribe
-      const ws = new WebSocket('ws://localhost:8775')
+      const ws = new WebSocket('ws://localhost:8775/ws')
       const receivedMessages: any[] = []
 
       ws.onmessage = (event) => {
@@ -89,8 +89,8 @@ describe('PTY Manager Integration', () => {
       })
 
       // Create two WebSocket connections
-      const ws1 = new WebSocket('ws://localhost:8776')
-      const ws2 = new WebSocket('ws://localhost:8776')
+      const ws1 = new WebSocket('ws://localhost:8776/ws')
+      const ws2 = new WebSocket('ws://localhost:8776/ws')
       const messages1: any[] = []
       const messages2: any[] = []
 

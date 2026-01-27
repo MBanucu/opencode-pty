@@ -200,25 +200,12 @@ const wsHandler = {
   },
 }
 
-async function handleRequest(req: Request, server: Server<WSClient>): Promise<Response> {
+async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
 
   // Handle root path
   if (url.pathname === '/') {
-    if (req.headers.get('upgrade') === 'websocket') {
-      log.info('WebSocket upgrade request')
-      const success = server.upgrade(req, {
-        data: { socket: null as any, subscribedSessions: new Set() },
-      })
-      if (success) {
-        log.info('WebSocket upgrade success')
-        return new Response(null, { status: 101 }) // Upgrade succeeded
-      }
-      log.warn('WebSocket upgrade failed')
-      return new Response('WebSocket upgrade failed', { status: 400 })
-    } else {
-      return wrapWithSecurityHeaders(handleRoot)(req)
-    }
+    return wrapWithSecurityHeaders(handleRoot)(req)
   }
 
   return get404Response({ url: req.url, method: req.method, note: 'No route matched' })
@@ -246,6 +233,22 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
 
     routes: {
       ...staticRoutes,
+      '/ws': (req: Request) => {
+        if (req.headers.get('upgrade') === 'websocket') {
+          log.info('WebSocket upgrade request on /ws')
+          const success = server!.upgrade(req, {
+            data: { socket: null as any, subscribedSessions: new Set() },
+          })
+          if (success) {
+            log.info('WebSocket upgrade success on /ws')
+            return new Response(null, { status: 101 }) // Upgrade succeeded
+          }
+          log.warn('WebSocket upgrade failed on /ws')
+          return new Response('WebSocket upgrade failed', { status: 400 })
+        } else {
+          return new Response('WebSocket endpoint - use WebSocket upgrade', { status: 426 })
+        }
+      },
       '/health': wrapWithSecurityHeaders(handleHealth),
       '/api/sessions': wrapWithSecurityHeaders(async (req: Request) => {
         if (req.method === 'GET') return getSessions()

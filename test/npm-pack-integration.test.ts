@@ -83,7 +83,7 @@ describe('npm pack integration', () => {
     expect(install.code).toBe(0)
 
     // Copy the server script to tempDir
-    copyFileSync(join(process.cwd(), 'start-server.ts'), join(tempDir, 'start-server.ts'))
+    copyFileSync(join(process.cwd(), 'test/start-server.ts'), join(tempDir, 'start-server.ts'))
 
     // Verify the package structure
     const packageDir = join(tempDir, 'node_modules/opencode-pty-test')

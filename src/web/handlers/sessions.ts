@@ -1,8 +1,7 @@
-/* eslint-disable no-undef */
 import { manager } from '../../plugin/pty/manager.ts'
 import type { ServerWebSocket } from 'bun'
 import type { WSClient, RouteContext } from '../types.ts'
-import { JsonResponse } from '../router/middleware.ts'
+import { JsonResponse, ErrorResponse } from '../router/middleware.ts'
 
 function broadcastSessionUpdate(wsClients: Map<ServerWebSocket<WSClient>, WSClient>): void {
   const sessions = manager.list()
@@ -29,23 +28,30 @@ export async function getSessions(_url: URL, _req: Request, _ctx: RouteContext):
 }
 
 export async function createSession(_url: URL, req: Request, ctx: RouteContext): Promise<Response> {
-  const body = (await req.json()) as {
-    command: string
-    args?: string[]
-    description?: string
-    workdir?: string
+  try {
+    const body = (await req.json()) as {
+      command: string
+      args?: string[]
+      description?: string
+      workdir?: string
+    }
+    if (!body.command || typeof body.command !== 'string' || body.command.trim() === '') {
+      return new ErrorResponse('Command is required', 400)
+    }
+    const session = manager.spawn({
+      command: body.command,
+      args: body.args || [],
+      title: body.description,
+      description: body.description,
+      workdir: body.workdir,
+      parentSessionId: 'web-api',
+    })
+    // Broadcast updated session list to all clients
+    broadcastSessionUpdate(ctx.wsClients!)
+    return new JsonResponse(session)
+  } catch (err) {
+    return new ErrorResponse('Invalid JSON in request body', 400)
   }
-  const session = manager.spawn({
-    command: body.command,
-    args: body.args || [],
-    title: body.description,
-    description: body.description,
-    workdir: body.workdir,
-    parentSessionId: 'web-api',
-  })
-  // Broadcast updated session list to all clients
-  broadcastSessionUpdate(ctx.wsClients!)
-  return new JsonResponse(session)
 }
 
 export async function clearSessions(
@@ -61,42 +67,57 @@ export async function clearSessions(
 
 export async function getSession(_url: URL, _req: Request, ctx: RouteContext): Promise<Response> {
   const sessionId = ctx.params.id
-  if (!sessionId) return new Response('Invalid session ID', { status: 400 })
+  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
+    return new ErrorResponse('Invalid session ID', 400)
+  }
   const session = manager.get(sessionId)
   if (!session) {
-    return new Response('Session not found', { status: 404 })
+    return new ErrorResponse('Session not found', 404)
   }
   return new JsonResponse(session)
 }
 
 export async function sendInput(_url: URL, req: Request, ctx: RouteContext): Promise<Response> {
   const sessionId = ctx.params.id
-  if (!sessionId) return new Response('Invalid session ID', { status: 400 })
-  const body = (await req.json()) as { data: string }
-  const success = manager.write(sessionId, body.data)
-  if (!success) {
-    return new Response('Failed to write to session', { status: 400 })
+  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
+    return new ErrorResponse('Invalid session ID', 400)
   }
-  return new JsonResponse({ success: true })
+  try {
+    const body = (await req.json()) as { data: string }
+    if (!body.data || typeof body.data !== 'string') {
+      return new ErrorResponse('Data field is required and must be a string', 400)
+    }
+    const success = manager.write(sessionId, body.data)
+    if (!success) {
+      return new ErrorResponse('Failed to write to session', 400)
+    }
+    return new JsonResponse({ success: true })
+  } catch (err) {
+    return new ErrorResponse('Invalid JSON in request body', 400)
+  }
 }
 
 export async function killSession(_url: URL, _req: Request, ctx: RouteContext): Promise<Response> {
   const sessionId = ctx.params.id
-  if (!sessionId) return new Response('Invalid session ID', { status: 400 })
+  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
+    return new ErrorResponse('Invalid session ID', 400)
+  }
   const success = manager.kill(sessionId)
   if (!success) {
-    return new Response('Failed to kill session', { status: 400 })
+    return new ErrorResponse('Failed to kill session', 400)
   }
   return new JsonResponse({ success: true })
 }
 
 export async function getRawBuffer(_url: URL, _req: Request, ctx: RouteContext): Promise<Response> {
   const sessionId = ctx.params.id
-  if (!sessionId) return new Response('Invalid session ID', { status: 400 })
+  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
+    return new ErrorResponse('Invalid session ID', 400)
+  }
 
   const bufferData = manager.getRawBuffer(sessionId)
   if (!bufferData) {
-    return new Response('Session not found', { status: 404 })
+    return new ErrorResponse('Session not found', 404)
   }
 
   return new JsonResponse(bufferData)
@@ -108,11 +129,13 @@ export async function getPlainBuffer(
   ctx: RouteContext
 ): Promise<Response> {
   const sessionId = ctx.params.id
-  if (!sessionId) return new Response('Invalid session ID', { status: 400 })
+  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
+    return new ErrorResponse('Invalid session ID', 400)
+  }
 
   const bufferData = manager.getRawBuffer(sessionId)
   if (!bufferData) {
-    return new Response('Session not found', { status: 404 })
+    return new ErrorResponse('Session not found', 404)
   }
 
   const plainText = Bun.stripANSI(bufferData.raw)

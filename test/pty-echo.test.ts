@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { initManager, manager } from '../src/plugin/pty/manager.ts'
+import { PTYManager } from '../src/plugin/pty/manager.ts'
 
 describe('PTY Echo Behavior', () => {
   const fakeClient = {
@@ -10,20 +10,23 @@ describe('PTY Echo Behavior', () => {
     },
   } as any
 
+  let testManager: PTYManager
+
   beforeEach(() => {
-    initManager(fakeClient)
+    testManager = new PTYManager()
+    testManager.init(fakeClient)
   })
 
   afterEach(() => {
     // Clean up any sessions
-    manager.clearAllSessions()
+    testManager.clearAllSessions()
   })
 
   it('should echo input characters in interactive bash session', async () => {
     const receivedOutputs: string[] = []
 
     // Spawn interactive bash session
-    const session = manager.spawn({
+    const session = testManager.spawn({
       command: 'bash',
       args: ['-i'],
       description: 'Echo test session',
@@ -34,21 +37,21 @@ describe('PTY Echo Behavior', () => {
     })
 
     console.log('Echo session:', session)
-    const fullSession = manager.get(session.id)
+    const fullSession = testManager.get(session.id)
     console.log('Echo session from get:', fullSession)
 
     // Wait for PTY to initialize and show prompt
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Send test input
-    const success = manager.write(session.id, 'a\n')
+    const success = testManager.write(session.id, 'a\n')
     console.log('Write success:', success)
 
     // Wait for echo to be processed
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Clean up
-    manager.kill(session.id, true)
+    testManager.kill(session.id, true)
 
     // Verify echo occurred
     const allOutput = receivedOutputs.join('')
@@ -64,7 +67,7 @@ describe('PTY Echo Behavior', () => {
     const receivedOutputs: string[] = []
 
     // Spawn interactive bash session
-    const session = manager.spawn({
+    const session = testManager.spawn({
       command: 'bash',
       args: ['-i'],
       description: 'Echo test session 2',
@@ -75,21 +78,21 @@ describe('PTY Echo Behavior', () => {
     })
 
     console.log('Echo session 2:', session)
-    const fullSession = manager.get(session.id)
+    const fullSession = testManager.get(session.id)
     console.log('Echo session 2 from get:', fullSession)
 
     // Wait for PTY to initialize and show prompt
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Send test input
-    const success = manager.write(session.id, 'b\n')
+    const success = testManager.write(session.id, 'b\n')
     console.log('Write success:', success)
 
     // Wait for echo to be processed
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Clean up
-    manager.kill(session.id, true)
+    testManager.kill(session.id, true)
 
     // Verify echo occurred
     const allOutput = receivedOutputs.join('')

@@ -1,13 +1,13 @@
-import { manager } from '../../../plugin/pty/manager.ts'
+import type { PTYManager } from '../../../plugin/pty/manager.ts'
 import type { BunRequest } from 'bun'
 import { JsonResponse, ErrorResponse } from './responses.ts'
 
-export async function getSessions(): Promise<Response> {
+export async function getSessions(manager: PTYManager): Promise<Response> {
   const sessions = manager.list()
   return new JsonResponse(sessions)
 }
 
-export async function createSession(req: Request): Promise<Response> {
+export async function createSession(req: Request, manager: PTYManager): Promise<Response> {
   try {
     const body = (await req.json()) as {
       command: string
@@ -32,12 +32,15 @@ export async function createSession(req: Request): Promise<Response> {
   }
 }
 
-export async function clearSessions(): Promise<Response> {
+export async function clearSessions(manager: PTYManager): Promise<Response> {
   manager.clearAllSessions()
   return new JsonResponse({ success: true })
 }
 
-export async function getSession(req: BunRequest<'/api/sessions/:id'>): Promise<Response> {
+export async function getSession(
+  req: BunRequest<'/api/sessions/:id'>,
+  manager: PTYManager
+): Promise<Response> {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
@@ -49,7 +52,10 @@ export async function getSession(req: BunRequest<'/api/sessions/:id'>): Promise<
   return new JsonResponse(session)
 }
 
-export async function sendInput(req: BunRequest<'/api/sessions/:id/input'>): Promise<Response> {
+export async function sendInput(
+  req: BunRequest<'/api/sessions/:id/input'>,
+  manager: PTYManager
+): Promise<Response> {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
@@ -69,7 +75,10 @@ export async function sendInput(req: BunRequest<'/api/sessions/:id/input'>): Pro
   }
 }
 
-export async function killSession(req: BunRequest<'/api/sessions/:id/kill'>): Promise<Response> {
+export async function killSession(
+  req: BunRequest<'/api/sessions/:id/kill'>,
+  manager: PTYManager
+): Promise<Response> {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
@@ -82,7 +91,8 @@ export async function killSession(req: BunRequest<'/api/sessions/:id/kill'>): Pr
 }
 
 export async function getRawBuffer(
-  req: BunRequest<'/api/sessions/:id/buffer/raw'>
+  req: BunRequest<'/api/sessions/:id/buffer/raw'>,
+  manager: PTYManager
 ): Promise<Response> {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
@@ -98,7 +108,8 @@ export async function getRawBuffer(
 }
 
 export async function getPlainBuffer(
-  req: BunRequest<'/api/sessions/:id/buffer/plain'>
+  req: BunRequest<'/api/sessions/:id/buffer/plain'>,
+  manager: PTYManager
 ): Promise<Response> {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {

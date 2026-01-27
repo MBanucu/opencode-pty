@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server/server.ts'
-import { initManager, manager } from '../src/plugin/pty/manager.ts'
+import { PTYManager, manager } from '../src/plugin/pty/manager.ts'
 
 describe('Web Server', () => {
   const fakeClient = {
@@ -11,35 +11,38 @@ describe('Web Server', () => {
     },
   } as any
 
+  let testManager: PTYManager
+
   beforeEach(() => {
-    initManager(fakeClient)
+    testManager = manager
+    testManager.init(fakeClient)
   })
 
   afterEach(() => {
     stopWebServer()
-    manager.cleanupAll() // Ensure cleanup after each test
+    testManager.cleanupAll() // Ensure cleanup after each test
   })
 
   describe('Server Lifecycle', () => {
     it('should start server successfully', async () => {
-      const url = await startWebServer({ port: 8766 })
+      const url = await startWebServer({ port: 8766 }, testManager)
       expect(url).toBe('http://localhost:8766')
       expect(getServerUrl()).toBe('http://localhost:8766')
     })
 
     it('should handle custom configuration', async () => {
-      const url = await startWebServer({ port: 8767, hostname: '127.0.0.1' })
+      const url = await startWebServer({ port: 8767, hostname: '127.0.0.1' }, testManager)
       expect(url).toBe('http://127.0.0.1:8767')
     })
 
     it('should prevent multiple server instances', async () => {
-      await startWebServer({ port: 8768 })
-      const secondUrl = await startWebServer({ port: 8769 })
+      await startWebServer({ port: 8768 }, testManager)
+      const secondUrl = await startWebServer({ port: 8769 }, testManager)
       expect(secondUrl).toBe('http://localhost:8768') // Returns existing server URL
     })
 
     it('should stop server correctly', async () => {
-      await startWebServer({ port: 8770 })
+      await startWebServer({ port: 8770 }, testManager)
       expect(getServerUrl()).toBeTruthy()
       stopWebServer()
       expect(getServerUrl()).toBeNull()
@@ -50,8 +53,8 @@ describe('Web Server', () => {
     let serverUrl: string
 
     beforeEach(async () => {
-      manager.cleanupAll() // Clean up any leftover sessions
-      serverUrl = await startWebServer({ port: 8771 })
+      testManager.cleanupAll() // Clean up any leftover sessions
+      serverUrl = await startWebServer({ port: 8771 }, testManager)
     })
 
     it('should serve built assets when NODE_ENV=test', async () => {
@@ -130,7 +133,7 @@ describe('Web Server', () => {
 
     it('should return individual session', async () => {
       // Create a test session first
-      const session = manager.spawn({
+      const session = testManager.spawn({
         command: 'cat',
         args: [],
         description: 'Test session',
@@ -138,7 +141,7 @@ describe('Web Server', () => {
       })
 
       console.log('Created session:', session)
-      const fullSession = manager.get(session.id)
+      const fullSession = testManager.get(session.id)
       console.log('Session from manager.get:', fullSession)
 
       // Wait for PTY to start
@@ -165,7 +168,7 @@ describe('Web Server', () => {
 
     it('should handle input to session', async () => {
       // Create a session to test input
-      const session = manager.spawn({
+      const session = testManager.spawn({
         command: 'cat',
         args: [],
         description: 'Test session',
@@ -191,11 +194,11 @@ describe('Web Server', () => {
       expect(result).toHaveProperty('success', true)
 
       // Clean up
-      manager.kill(session.id, true)
+      testManager.kill(session.id, true)
     })
 
     it('should handle kill session', async () => {
-      const session = manager.spawn({
+      const session = testManager.spawn({
         command: 'sleep',
         args: ['1'],
         description: 'Test session',
@@ -220,7 +223,7 @@ describe('Web Server', () => {
 
     it('should return session output', async () => {
       // Create a session that produces output
-      const session = manager.spawn({
+      const session = testManager.spawn({
         command: 'echo',
         args: ['line1\nline2\nline3'],
         description: 'Test session with output',

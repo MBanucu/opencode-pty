@@ -27,7 +27,7 @@ function notifyRawOutput(sessionId: string, rawData: string): void {
   }
 }
 
-class PTYManager {
+export class PTYManager {
   private lifecycleManager = new SessionLifecycleManager()
   private outputManager = new OutputManager()
   private notificationManager = new NotificationManager()

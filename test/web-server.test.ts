@@ -196,8 +196,8 @@ describe('Web Server', () => {
 
     it('should handle kill session', async () => {
       const session = manager.spawn({
-        command: 'echo',
-        args: ['test output'],
+        command: 'sleep',
+        args: ['1'],
         description: 'Test session',
         parentSessionId: 'test',
       })

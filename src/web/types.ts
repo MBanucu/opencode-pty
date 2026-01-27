@@ -30,6 +30,9 @@ export interface WSClient {
   subscribedSessions: Set<string>
 }
 
+// Router-related types (re-exported from router)
+export type { RouteContext, RouteHandler, Middleware, Route } from './router/router.ts'
+
 // React component types
 export interface Session {
   id: string

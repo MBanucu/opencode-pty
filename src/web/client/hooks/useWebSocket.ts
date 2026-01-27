@@ -82,7 +82,7 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
           }
         }
         // eslint-disable-next-line no-empty
-      } catch { }
+      } catch {}
     }
     ws.onclose = () => {
       setConnected(false)
@@ -92,7 +92,7 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
         pingIntervalRef.current = null
       }
     }
-    ws.onerror = () => { }
+    ws.onerror = () => {}
     wsRef.current = ws
     return () => {
       ws.close()

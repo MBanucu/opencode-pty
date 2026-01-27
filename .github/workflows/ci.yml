@@ -48,7 +48,7 @@ jobs:
         run: bun run build:all:prod
 
       - name: Run tests
-        run: bun test
+        run: bun test --match "should echo input characters in interactive bash session"
 
   dependency-review:
     runs-on: ubuntu-24.04

@@ -33,7 +33,7 @@ This document is the authoritative and up-to-date guide for both agentic coding 
 
 - Start the PTY Web UI in dev mode:
   ```sh
-  bun run test-web-server.ts
+  bun run e2e/test-web-server.ts
   ```
 - Open http://localhost:8766 in your browser (shows session management, streaming, and toolkit features).
 

@@ -40,7 +40,7 @@
     "test:e2e": "bun run build:dev && PW_DISABLE_TS_ESM=1 NODE_ENV=test bun --bun playwright test",
     "test:all": "bun run test && bun run test:e2e",
     "dev": "vite --host",
-    "dev:server": "bun run test-web-server.ts",
+    "dev:server": "bun run e2e/test-web-server.ts",
     "build": "bun run clean && bun run typecheck && vite build",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",

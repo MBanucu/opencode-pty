@@ -1,6 +1,6 @@
-import { initManager, manager } from './src/plugin/pty/manager.ts'
-import { initLogger } from './src/plugin/logger.ts'
-import { startWebServer } from './src/web/server.ts'
+import { initManager, manager } from '../src/plugin/pty/manager.ts'
+import { initLogger } from '../src/plugin/logger.ts'
+import { startWebServer } from '../src/web/server.ts'
 
 // Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {

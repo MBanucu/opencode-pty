@@ -26,7 +26,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const port = BASE_PORT + workerInfo.workerIndex
       const url = `http://localhost:${port}`
 
-      const proc: ChildProcess = spawn('bun', ['run', 'test-web-server.ts', `--port=${port}`], {
+      const proc: ChildProcess = spawn('bun', ['run', 'e2e/test-web-server.ts', `--port=${port}`], {
         env: {
           ...process.env,
           TEST_WORKER_INDEX: workerInfo.workerIndex.toString(),

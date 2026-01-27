@@ -69,7 +69,7 @@ This plugin includes a modern React-based web interface for monitoring and inter
 Run the test server to start the web interface:
 
 ```bash
-bun run test-web-server.ts
+bun run e2e/test-web-server.ts
 ```
 
 This will:

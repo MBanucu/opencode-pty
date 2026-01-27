@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import { describe, it, expect, beforeEach } from 'bun:test'
 import { Router } from '../src/web/router/router.ts'
 import { securityHeaders, JsonResponse } from '../src/web/router/middleware.ts'

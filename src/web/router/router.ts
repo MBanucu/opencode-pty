@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import type { ServerWebSocket } from 'bun'
 import type { WSClient } from '../types.ts'
 

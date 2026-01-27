@@ -2,8 +2,8 @@ import type { Server, ServerWebSocket } from 'bun'
 import { manager, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import logger from './logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
-import { handleRoot, handleStaticAssets, get404Response } from './handlers/static.ts'
-import { handleHealth, handleAPISessions } from './handlers/api.ts'
+import { handleStaticAssets, get404Response } from './handlers/static.ts'
+import { createRouter } from './router/routes.ts'
 import { DEFAULT_SERVER_PORT } from './constants.ts'
 
 const log = logger.child({ module: 'web-server' })
@@ -16,24 +16,8 @@ const defaultConfig: ServerConfig = {
 let server: Server<WSClient> | null = null
 const wsClients: Map<ServerWebSocket<WSClient>, WSClient> = new Map()
 
-type Route = {
-  path: string
-  method: string
-  handler: (url: URL, req: Request) => Promise<Response>
-}
-
-const routes: Route[] = [
-  {
-    path: '/',
-    method: 'GET',
-    handler: async () => handleRoot(),
-  },
-  {
-    path: '/health',
-    method: 'GET',
-    handler: async () => handleHealth(wsClients.size),
-  },
-]
+// Create router instance
+const router = createRouter(wsClients)
 
 function subscribeToSession(wsClient: WSClient, sessionId: string): boolean {
   const session = manager.get(sessionId)
@@ -200,16 +184,13 @@ async function handleRequest(req: Request, server: Server<WSClient>): Promise<Re
     return new Response('WebSocket upgrade failed', { status: 400 })
   }
 
-  // Check routes
-  for (const route of routes) {
-    if (url.pathname === route.path && req.method === route.method) {
-      return await route.handler(url, req)
-    }
+  // Try router first
+  const routerResponse = await router.handle(req, { wsClients })
+  if (routerResponse.status !== 404) {
+    return routerResponse
   }
 
-  const apiResponse = await handleAPISessions(url, req, wsClients)
-  if (apiResponse) return apiResponse
-
+  // Fallback to static assets
   const staticResponse = await handleStaticAssets(url)
   if (staticResponse) return staticResponse
 

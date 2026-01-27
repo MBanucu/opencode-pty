@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import type { Middleware } from './router.ts'
 
 /**

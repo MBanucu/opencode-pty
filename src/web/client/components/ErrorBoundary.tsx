@@ -1,7 +1,4 @@
 import React from 'react'
-import pinoLogger from 'opencode-pty-test/shared/logger'
-
-const log = pinoLogger.child({ module: 'ErrorBoundary' })
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -20,26 +17,14 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   handleReset = () => {
-    log.info('User attempting error boundary reset')
     this.setState({ hasError: false, error: undefined, errorInfo: undefined })
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    log.error({ error: error.message, stack: error.stack }, 'React Error Boundary caught error')
     return { hasError: true, error }
   }
 
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    log.error(
-      {
-        error: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        errorBoundary: 'main',
-      },
-      'React Error Boundary caught detailed error'
-    )
-
     this.setState({
       error,
       errorInfo,

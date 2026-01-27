@@ -60,14 +60,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         description: desc,
       })
       await gotoAndSelectSession(page, server, desc, 8000)
-      // Print buffer before any typing
-      let before = await getSerializedContentByXtermSerializeAddon(page, {
-        excludeModes: true,
-        excludeAltBuffer: true,
-      })
-      // eslint-disable-next-line no-console
-      console.log('ISOLATION_BEFORE:', before)
-
       // Try several input strategies sequentially
       const term = page.locator('.terminal.xterm')
       await term.click()
@@ -85,8 +77,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         excludeModes: true,
         excludeAltBuffer: true,
       })
-      // eslint-disable-next-line no-console
-      console.log('ISOLATION_AFTER:', after)
       // Must contain either our command or its output
       expect(after).toMatch(/echo OK|OK/)
     }
@@ -207,29 +197,12 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       })
       await gotoAndSelectSession(page, server, 'Double Echo Test Session B', 10000)
       // Debug what prompt is present before event-driven wait
-      let promptBufferB = await getSerializedContentByXtermSerializeAddon(page, {
-        excludeModes: true,
-        excludeAltBuffer: true,
-      })
-      console.log(`[${new Date().toISOString()}] DEBUG_PROMPT_BEFORE_WAIT_B:`, promptBufferB)
       await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptB')
       await page.locator('.terminal.xterm').click()
       // Dump buffer before typing in Session B
-      let beforeInputB = await getSerializedContentByXtermSerializeAddon(page, {
-        excludeModes: true,
-        excludeAltBuffer: true,
-      })
-      // eslint-disable-next-line no-console
-      console.log(`[${new Date().toISOString()}] DEBUG_BEFORE_INPUT_B:`, beforeInputB)
       await page.keyboard.type('1')
       await waitForTerminalRegex(page, /1/, '__waitInputEchoB')
       // Dump buffer after typing in Session B
-      let afterInputB = await getSerializedContentByXtermSerializeAddon(page, {
-        excludeModes: true,
-        excludeAltBuffer: true,
-      })
-      // eslint-disable-next-line no-console
-      console.log(`[${new Date().toISOString()}] DEBUG_AFTER_INPUT_B:`, afterInputB)
       const sessionId = await createSession(page, server, {
         command: 'bash',
         args: ['-i'],
@@ -237,29 +210,12 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       })
       await gotoAndSelectSession(page, server, 'Double Echo Test Session C', 10000)
       // Debug what prompt is present before event-driven wait
-      let promptBufferC = await getSerializedContentByXtermSerializeAddon(page, {
-        excludeModes: true,
-        excludeAltBuffer: true,
-      })
-      console.log(`[${new Date().toISOString()}] DEBUG_PROMPT_BEFORE_WAIT_C:`, promptBufferC)
       await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptC')
       await page.locator('.terminal.xterm').click()
       // Dump buffer before typing in Session C
-      let beforeInputC = await getSerializedContentByXtermSerializeAddon(page, {
-        excludeModes: true,
-        excludeAltBuffer: true,
-      })
-      // eslint-disable-next-line no-console
-      console.log(`[${new Date().toISOString()}] DEBUG_BEFORE_INPUT_C:`, beforeInputC)
       await page.keyboard.type('1')
       await waitForTerminalRegex(page, /1/, '__waitInputEchoC')
       // Dump buffer after typing in Session C
-      let afterInputC = await getSerializedContentByXtermSerializeAddon(page, {
-        excludeModes: true,
-        excludeAltBuffer: true,
-      })
-      // eslint-disable-next-line no-console
-      console.log(`[${new Date().toISOString()}] DEBUG_AFTER_INPUT_C:`, afterInputC)
       const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
       const apiPlainText = apiData.plain
       const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {

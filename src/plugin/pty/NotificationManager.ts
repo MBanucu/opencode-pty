@@ -1,9 +1,6 @@
-import logger from '../logger.ts'
 import type { PTYSession } from './types.ts'
 import type { OpencodeClient } from '@opencode-ai/sdk'
 import { NOTIFICATION_LINE_TRUNCATE, NOTIFICATION_TITLE_TRUNCATE } from '../constants.ts'
-
-const log = logger.child({ service: 'pty.notifications' })
 
 export class NotificationManager {
   private client: OpencodeClient | null = null
@@ -14,7 +11,6 @@ export class NotificationManager {
 
   async sendExitNotification(session: PTYSession, exitCode: number): Promise<void> {
     if (!this.client) {
-      log.warn({ id: session.id }, 'client not initialized, skipping notification')
       return
     }
 
@@ -26,17 +22,7 @@ export class NotificationManager {
           parts: [{ type: 'text', text: message }],
         },
       })
-      log.info(
-        {
-          id: session.id,
-          exitCode,
-          parentSessionId: session.parentSessionId,
-        },
-        'sent exit notification'
-      )
-    } catch (err) {
-      log.error({ id: session.id, error: String(err) }, 'failed to send exit notification')
-    }
+    } catch (err) {}
   }
 
   private buildExitNotification(session: PTYSession, exitCode: number): string {

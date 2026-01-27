@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { initManager, manager, onRawOutput } from '../src/plugin/pty/manager.ts'
-import { initLogger } from '../src/plugin/logger.ts'
 
 describe('PTY Echo Behavior', () => {
   const fakeClient = {
@@ -12,7 +11,6 @@ describe('PTY Echo Behavior', () => {
   } as any
 
   beforeEach(() => {
-    initLogger(fakeClient)
     initManager(fakeClient)
   })
 

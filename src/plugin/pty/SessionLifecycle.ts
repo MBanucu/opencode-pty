@@ -1,10 +1,7 @@
 import { spawn, type IPty } from 'bun-pty'
-import logger from '../logger.ts'
 import { RingBuffer } from './buffer.ts'
 import type { PTYSession, PTYSessionInfo, SpawnOptions } from './types.ts'
 import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS } from '../constants.ts'
-
-const log = logger.child({ service: 'pty.lifecycle' })
 
 const SESSION_ID_BYTE_LENGTH = 4
 
@@ -67,11 +64,10 @@ export class SessionLifecycleManager {
       onData(session.id, data)
     })
 
-    session.process!.onExit(({ exitCode, signal }) => {
+    session.process!.onExit(({ exitCode }) => {
       // Flush any remaining incomplete line in the buffer
       session.buffer.flush()
 
-      log.info({ id: session.id, exitCode, signal, command: session.command }, 'pty exited')
       if (session.status === 'running') {
         session.status = 'exited'
         session.exitCode = exitCode
@@ -98,8 +94,6 @@ export class SessionLifecycleManager {
       return false
     }
 
-    log.info({ id, cleanup }, 'killing pty')
-
     if (session.status === 'running') {
       try {
         session.process!.kill()
@@ -124,12 +118,10 @@ export class SessionLifecycleManager {
   }
 
   clearAllSessions(): void {
-    log.info('clearing all sessions')
     this.clearAllSessionsInternal()
   }
 
   cleanupBySession(parentSessionId: string): void {
-    log.info({ parentSessionId }, 'cleaning up ptys for session')
     for (const [id, session] of this.sessions) {
       if (session.parentSessionId === parentSessionId) {
         this.kill(id, true)
@@ -138,7 +130,6 @@ export class SessionLifecycleManager {
   }
 
   cleanupAll(): void {
-    log.info('cleaning up all ptys')
     this.clearAllSessionsInternal()
   }
 

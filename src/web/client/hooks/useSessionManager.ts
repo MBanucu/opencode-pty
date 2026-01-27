@@ -1,8 +1,5 @@
 import { useCallback } from 'react'
 import type { Session } from 'opencode-pty-test/shared/types'
-import pinoLogger from 'opencode-pty-test/shared/logger'
-
-const logger = pinoLogger.child({ module: 'useSessionManager' })
 
 interface UseSessionManagerOptions {
   activeSession: Session | null
@@ -24,7 +21,6 @@ export function useSessionManager({
       try {
         // Validate session object first
         if (!session?.id) {
-          logger.error({ session }, 'Invalid session object passed to handleSessionClick')
           return
         }
         setActiveSession(session)
@@ -45,12 +41,10 @@ export function useSessionManager({
           // Call callback with raw data
           onRawOutputUpdate?.(rawData.raw || '')
         } catch (fetchError) {
-          logger.error({ error: fetchError }, 'Network error fetching session data')
           onOutputUpdate?.([])
           onRawOutputUpdate?.('')
         }
       } catch (error) {
-        logger.error({ error }, 'Unexpected error in handleSessionClick')
         // Ensure UI remains stable
         onOutputUpdate?.([])
         onRawOutputUpdate?.('')
@@ -67,26 +61,13 @@ export function useSessionManager({
 
       try {
         const baseUrl = `${location.protocol}//${location.host}`
-        const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}/input`, {
+        await fetch(`${baseUrl}/api/sessions/${activeSession.id}/input`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data }),
         })
-
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => 'Unable to read error response')
-          logger.error(
-            {
-              status: response.status,
-              statusText: response.statusText,
-              error: errorText,
-            },
-            'Failed to send input'
-          )
-        }
-      } catch (error) {
-        logger.error({ error }, 'Network error sending input')
-      }
+        // eslint-disable-next-line no-empty
+      } catch {}
     },
     [activeSession]
   )
@@ -114,21 +95,10 @@ export function useSessionManager({
         setActiveSession(null)
         onOutputUpdate?.([])
         onRawOutputUpdate?.('')
-      } else {
-        const errorText = await response.text().catch(() => 'Unable to read error response')
-        logger.error(
-          {
-            status: response.status,
-            statusText: response.statusText,
-            error: errorText,
-          },
-          'Failed to kill session'
-        )
       }
-    } catch (error) {
-      logger.error({ error }, 'Network error killing session')
-    }
-  }, [activeSession, onOutputUpdate])
+      // eslint-disable-next-line no-empty
+    } catch {}
+  }, [activeSession, setActiveSession, onOutputUpdate, onRawOutputUpdate])
 
   return {
     handleSessionClick,

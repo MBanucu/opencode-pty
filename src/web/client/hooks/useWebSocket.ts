@@ -1,13 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Session } from 'opencode-pty-test/shared/types'
-import pinoLogger from 'opencode-pty-test/shared/logger'
 import {
   WEBSOCKET_PING_INTERVAL,
   RETRY_DELAY,
   SKIP_AUTOSELECT_KEY,
 } from 'opencode-pty-test/shared/constants'
-
-const logger = pinoLogger.child({ module: 'useWebSocket' })
 
 interface UseWebSocketOptions {
   activeSession: Session | null
@@ -84,9 +81,8 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
             onRawData?.(data.rawData)
           }
         }
-      } catch (error) {
-        logger.error({ error }, 'Failed to parse WebSocket message')
-      }
+        // eslint-disable-next-line no-empty
+      } catch { }
     }
     ws.onclose = () => {
       setConnected(false)
@@ -96,9 +92,7 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
         pingIntervalRef.current = null
       }
     }
-    ws.onerror = (error) => {
-      logger.error({ error }, 'WebSocket error')
-    }
+    ws.onerror = () => { }
     wsRef.current = ws
     return () => {
       ws.close()

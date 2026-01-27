@@ -1,4 +1,3 @@
-import logger from '../logger.ts'
 import type { PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from './types.ts'
 import type { OpencodeClient } from '@opencode-ai/sdk'
 import { SessionLifecycleManager } from './SessionLifecycle.ts'
@@ -12,8 +11,6 @@ export function setOnSessionUpdate(callback: () => void) {
   onSessionUpdate = callback
 }
 
-const log = logger.child({ service: 'pty.manager' })
-
 type RawOutputCallback = (sessionId: string, rawData: string) => void
 
 const rawOutputCallbacks: RawOutputCallback[] = []
@@ -26,9 +23,7 @@ function notifyRawOutput(sessionId: string, rawData: string): void {
   for (const callback of rawOutputCallbacks) {
     try {
       callback(sessionId, rawData)
-    } catch (err) {
-      log.error({ sessionId, error: String(err) }, 'raw output callback failed')
-    }
+    } catch {}
   }
 }
 

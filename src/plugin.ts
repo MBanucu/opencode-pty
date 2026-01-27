@@ -1,4 +1,3 @@
-import logger, { initLogger } from './plugin/logger.ts'
 import type { PluginContext, PluginResult } from './plugin/types.ts'
 import { initManager, manager } from './plugin/pty/manager.ts'
 import { initPermissions } from './plugin/pty/permissions.ts'
@@ -10,8 +9,6 @@ import { ptyKill } from './plugin/pty/tools/kill.ts'
 import { ptyServerUrl } from './plugin/pty/tools/server-url.ts'
 import { startWebServer } from './web/server/server.ts'
 
-const log = logger.child({ service: 'pty.plugin' })
-
 interface SessionDeletedEvent {
   type: 'session.deleted'
   properties: {
@@ -22,7 +19,6 @@ interface SessionDeletedEvent {
 }
 
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
-  initLogger(client)
   initPermissions(client, directory)
   initManager(client)
 
@@ -55,7 +51,6 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
         const sessionEvent = event as SessionDeletedEvent
         const sessionId = sessionEvent.properties?.info?.id
         if (sessionId) {
-          log.info({ sessionId }, 'cleaning up PTYs for deleted session')
           manager.cleanupBySession(sessionId)
         }
       }

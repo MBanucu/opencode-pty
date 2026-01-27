@@ -1,18 +1,10 @@
 import { test as extendedTest, expect } from '../fixtures'
-import { createTestLogger } from '../test-logger.ts'
-
-const log = createTestLogger('ui-test')
 
 extendedTest.describe('App Component', () => {
   extendedTest('renders the PTY Sessions title', async ({ page, server }) => {
     // Ensure clean state for parallel execution
     const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
     expect(clearResponse.status()).toBe(200)
-
-    // Log page errors
-    page.on('pageerror', (error) => {
-      log.error(`PAGE ERROR: ${error.message}`)
-    })
 
     await page.goto(server.baseURL + '/')
     await expect(page.getByText('PTY Sessions')).toBeVisible()
@@ -60,9 +52,6 @@ extendedTest.describe('App Component', () => {
   })
 
   extendedTest('shows empty state when no session is selected', async ({ page, server }) => {
-    // Log all console messages for debugging
-    page.on('console', () => {})
-
     // Clear any existing sessions
     const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
     expect(clearResponse.status()).toBe(200)
@@ -98,9 +87,6 @@ extendedTest.describe('App Component', () => {
       'increments WS message counter when receiving data for active session',
       async ({ page, server }) => {
         extendedTest.setTimeout(15000) // Increase timeout for slow session startup
-        // Log all console messages for debugging
-        page.on('console', () => {})
-        page.on('pageerror', (error) => log.error('PAGE ERROR: ' + error.message))
 
         // Navigate and wait for initial setup
         await page.goto(server.baseURL + '/')

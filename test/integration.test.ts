@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer } from '../src/web/server/server.ts'
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
-import { initLogger } from '../src/plugin/logger.ts'
 
 describe('Web Server Integration', () => {
   const fakeClient = {
@@ -13,7 +12,6 @@ describe('Web Server Integration', () => {
   } as any
 
   beforeEach(() => {
-    initLogger(fakeClient)
     initManager(fakeClient)
   })
 

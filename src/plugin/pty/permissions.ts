@@ -1,8 +1,5 @@
 import type { PluginClient } from '../types.ts'
 import { allStructured } from './wildcard.ts'
-import logger from '../logger.ts'
-
-const log = logger.child({ service: 'pty.permissions' })
 
 type PermissionAction = 'allow' | 'ask' | 'deny'
 type BashPermissions = PermissionAction | Record<string, PermissionAction>
@@ -31,7 +28,6 @@ async function getPermissionConfig(): Promise<PermissionConfig> {
     }
     return (response.data as { permission?: PermissionConfig }).permission ?? {}
   } catch (e) {
-    log.warn({ error: String(e) }, 'failed to get config')
     return {}
   }
 }
@@ -114,9 +110,5 @@ export async function checkWorkdirPermission(workdir: string): Promise<void> {
   }
 
   if (extDirPerm === 'ask') {
-    log.info(
-      { workdir },
-      "external_directory permission is 'ask', treating as allow for PTY plugin"
-    )
   }
 }

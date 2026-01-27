@@ -1,6 +1,5 @@
 import type { Server, ServerWebSocket, BunRequest } from 'bun'
 import { manager, onRawOutput, setOnSessionUpdate } from '../../plugin/pty/manager.ts'
-import logger from '../shared/logger.ts'
 import type { WSMessage, ServerConfig } from '../shared/types.ts'
 import { get404Response } from './handlers/static.ts'
 import { handleHealth } from './handlers/health.ts'
@@ -17,8 +16,6 @@ import {
 import { DEFAULT_SERVER_PORT } from '../shared/constants.ts'
 
 import { buildStaticRoutes } from './handlers/static.ts'
-
-const log = logger.child({ module: 'web-server' })
 
 const defaultConfig: ServerConfig = {
   port: DEFAULT_SERVER_PORT,
@@ -72,14 +69,11 @@ function sendSessionList(ws: ServerWebSocket<any>): void {
 
 function handleSubscribe(ws: ServerWebSocket<any>, message: WSMessage): void {
   if (message.sessionId) {
-    log.info({ sessionId: message.sessionId }, 'Client subscribing to session')
     const session = manager.get(message.sessionId)
     if (!session) {
-      log.warn({ sessionId: message.sessionId }, 'Subscription failed - session not found')
       ws.send(JSON.stringify({ type: 'error', error: `Session ${message.sessionId} not found` }))
     } else {
       ws.subscribe(`session:${message.sessionId}`)
-      log.info({ sessionId: message.sessionId }, 'Subscription successful')
     }
   }
 }
@@ -100,7 +94,6 @@ function handleUnknownMessage(ws: ServerWebSocket<any>, _message: WSMessage): vo
 
 // Set callback for session updates
 setOnSessionUpdate(() => {
-  log.info('Sending session update to clients')
   const sessions = manager.list()
   const sessionData = sessions.map((s) => ({
     id: s.id,
@@ -114,7 +107,6 @@ setOnSessionUpdate(() => {
     createdAt: s.createdAt.toISOString(),
   }))
   const message = { type: 'session_list', sessions: sessionData }
-  log.info({ clientCount: wsClients.size }, 'Sending to clients')
   for (const [ws] of wsClients) {
     ws.send(JSON.stringify(message))
   }
@@ -141,7 +133,6 @@ function handleWebSocketMessage(ws: ServerWebSocket<any>, data: string): void {
         handleUnknownMessage(ws, message)
     }
   } catch (err) {
-    log.debug({ error: String(err) }, 'failed to handle ws message')
     ws.send(JSON.stringify({ type: 'error', error: 'Invalid message format' }))
   }
 }
@@ -149,7 +140,6 @@ function handleWebSocketMessage(ws: ServerWebSocket<any>, data: string): void {
 const wsHandler = {
   open(ws: ServerWebSocket<any>) {
     wsConnectionCount++
-    log.info({ totalClients: wsConnectionCount }, 'ws client connected')
     wsClients.set(ws, {})
     sendSessionList(ws)
   },
@@ -161,7 +151,6 @@ const wsHandler = {
   close(_ws: ServerWebSocket<any>) {
     wsConnectionCount--
     wsClients.delete(_ws)
-    log.info('ws client disconnected')
   },
 }
 
@@ -172,10 +161,7 @@ async function handleRequest(req: Request): Promise<Response> {
 export async function startWebServer(config: Partial<ServerConfig> = {}): Promise<string> {
   const finalConfig = { ...defaultConfig, ...config }
 
-  log.info({ port: finalConfig.port, hostname: finalConfig.hostname }, 'Starting web server')
-
   if (server) {
-    log.warn('web server already running')
     return `http://${server.hostname}:${server.port}`
   }
 
@@ -201,13 +187,10 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
       ),
       '/ws': (req: Request) => {
         if (req.headers.get('upgrade') === 'websocket') {
-          log.info('WebSocket upgrade request on /ws')
           const success = server!.upgrade(req)
           if (success) {
-            log.info('WebSocket upgrade success on /ws')
             return new Response(null, { status: 101 }) // Upgrade succeeded
           }
-          log.warn('WebSocket upgrade failed on /ws')
           return new Response('WebSocket upgrade failed', { status: 400 })
         } else {
           return new Response('WebSocket endpoint - use WebSocket upgrade', { status: 426 })
@@ -255,7 +238,6 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
     fetch: handleRequest,
   })
 
-  log.info({ url: `http://${finalConfig.hostname}:${finalConfig.port}` }, 'web server started')
   return `http://${finalConfig.hostname}:${finalConfig.port}`
 }
 
@@ -264,7 +246,6 @@ export function stopWebServer(): void {
     server.stop()
     server = null
     wsClients.clear()
-    log.info('web server stopped')
   }
 }
 

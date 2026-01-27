@@ -1,5 +1,4 @@
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
-import { initLogger } from '../src/plugin/logger.ts'
 import { startWebServer } from '../src/web/server/server.ts'
 
 // Set NODE_ENV if not set
@@ -12,7 +11,6 @@ const fakeClient = {
     log: async (_opts: any) => {},
   },
 } as any
-initLogger(fakeClient)
 initManager(fakeClient)
 
 // Cleanup on process termination

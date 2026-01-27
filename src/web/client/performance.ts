@@ -1,7 +1,4 @@
 // Performance monitoring utilities
-import pinoLogger from '../shared/logger.ts'
-
-const log = pinoLogger.child({ module: 'performance' })
 
 const PERFORMANCE_MEASURE_LIMIT = 100
 
@@ -88,8 +85,7 @@ export function trackWebVitals(): void {
         })
       })
       clsObserver.observe({ entryTypes: ['layout-shift'] })
-    } catch (e) {
-      log.warn({ error: e }, 'Performance tracking not fully supported')
-    }
+      // eslint-disable-next-line no-empty
+    } catch {}
   }
 }

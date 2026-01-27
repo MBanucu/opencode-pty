@@ -24,7 +24,7 @@ describe('Web Server Integration', () => {
   describe('Full User Workflow', () => {
     it('should handle multiple concurrent sessions and clients', async () => {
       manager.cleanupAll() // Clean up any leftover sessions
-      startWebServer({ port: 8781 })
+      await startWebServer({ port: 8781 })
 
       // Create multiple sessions
       const session1 = manager.spawn({
@@ -88,7 +88,7 @@ describe('Web Server Integration', () => {
 
     it('should handle error conditions gracefully', async () => {
       manager.cleanupAll() // Clean up any leftover sessions
-      startWebServer({ port: 8782 })
+      await startWebServer({ port: 8782 })
 
       // Test non-existent session
       let response = await fetch('http://localhost:8782/api/sessions/nonexistent')
@@ -138,7 +138,7 @@ describe('Web Server Integration', () => {
 
   describe('Performance and Reliability', () => {
     it('should handle rapid API requests', async () => {
-      startWebServer({ port: 8783 })
+      await startWebServer({ port: 8783 })
 
       // Create a session
       const session = manager.spawn({
@@ -164,7 +164,7 @@ describe('Web Server Integration', () => {
     })
 
     it('should cleanup properly on server stop', async () => {
-      startWebServer({ port: 8784 })
+      await startWebServer({ port: 8784 })
 
       // Create session and WebSocket
       manager.spawn({

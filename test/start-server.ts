@@ -65,7 +65,7 @@ if (process.env.TEST_WORKER_INDEX) {
 
 let port = findAvailablePort(basePort)
 
-startWebServer({ port })
+await startWebServer({ port })
 
 // Only log in non-test environments or when explicitly requested
 

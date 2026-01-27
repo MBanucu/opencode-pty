@@ -23,7 +23,7 @@ describe('PTY Manager Integration', () => {
 
   describe('Output Broadcasting', () => {
     it('should broadcast output to subscribed WebSocket clients', async () => {
-      startWebServer({ port: 8775 })
+      await startWebServer({ port: 8775 })
 
       // Create a test session
       const session = manager.spawn({
@@ -72,7 +72,7 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should not broadcast to unsubscribed clients', async () => {
-      startWebServer({ port: 8776 })
+      await startWebServer({ port: 8776 })
 
       const session1 = manager.spawn({
         command: 'echo',
@@ -133,7 +133,7 @@ describe('PTY Manager Integration', () => {
 
   describe('Session Management Integration', () => {
     it('should provide session data in correct format', async () => {
-      startWebServer({ port: 8777 })
+      await startWebServer({ port: 8777 })
 
       const session = manager.spawn({
         command: 'node',
@@ -158,7 +158,7 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should handle session lifecycle correctly', async () => {
-      startWebServer({ port: 8778 })
+      await startWebServer({ port: 8778 })
 
       // Create session that exits quickly
       const session = manager.spawn({
@@ -179,7 +179,7 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should support session killing via API', async () => {
-      startWebServer({ port: 8779 })
+      await startWebServer({ port: 8779 })
 
       // Create a long-running session
       const session = manager.spawn({

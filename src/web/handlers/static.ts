@@ -55,22 +55,6 @@ function escapeHtml(raw: string): string {
   return raw.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch] || ch)
 }
 
-export async function handleRoot(): Promise<Response> {
-  // Always serve the built index.html
-  const htmlPath = 'dist/web/index.html'
-  const finalPath = resolve(PROJECT_ROOT, htmlPath)
-  const file = Bun.file(finalPath)
-  if (await file.exists()) {
-    return new Response(await file.arrayBuffer(), {
-      headers: { 'Content-Type': 'text/html', ...SECURITY_HEADERS },
-    })
-  }
-  return get404Response({
-    htmlPath,
-    finalPath,
-  })
-}
-
 export async function buildStaticRoutes(): Promise<Record<string, Response>> {
   const routes: Record<string, Response> = {}
   const files = readdirSync(STATIC_DIR, { recursive: true })

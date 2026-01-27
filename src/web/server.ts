@@ -2,7 +2,7 @@ import type { Server, ServerWebSocket, BunRequest } from 'bun'
 import { manager, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import logger from './logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
-import { get404Response, handleRoot } from './handlers/static.ts'
+import { get404Response } from './handlers/static.ts'
 import { handleHealth } from './handlers/health.ts'
 import {
   getSessions,
@@ -201,13 +201,6 @@ const wsHandler = {
 }
 
 async function handleRequest(req: Request): Promise<Response> {
-  const url = new URL(req.url)
-
-  // Handle root path
-  if (url.pathname === '/') {
-    return wrapWithSecurityHeaders(handleRoot)(req)
-  }
-
   return get404Response({ url: req.url, method: req.method, note: 'No route matched' })
 }
 
@@ -233,6 +226,9 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
 
     routes: {
       ...staticRoutes,
+      '/': wrapWithSecurityHeaders(
+        () => new Response(null, { status: 302, headers: { Location: '/index.html' } })
+      ),
       '/ws': (req: Request) => {
         if (req.headers.get('upgrade') === 'websocket') {
           log.info('WebSocket upgrade request on /ws')

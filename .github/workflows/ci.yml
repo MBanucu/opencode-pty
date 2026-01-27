@@ -48,7 +48,7 @@ jobs:
         run: bun run build:all:prod
 
       - name: Run tests
-        run: bun test test/pty-echo.test.ts test/web-server.test.ts
+        run: bun test test/pty-echo.test.ts test/web-server.test.ts test/websocket.test.ts
 
   dependency-review:
     runs-on: ubuntu-24.04

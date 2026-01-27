@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
-import type { Session } from '../types.ts'
-import pinoLogger from '../logger.ts'
+import type { Session } from 'opencode-pty-test/shared/types'
+import pinoLogger from 'opencode-pty-test/shared/logger'
 
 const logger = pinoLogger.child({ module: 'useSessionManager' })
 

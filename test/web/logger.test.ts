@@ -5,7 +5,7 @@ describe('Web Logger', () => {
 
   it('should export a default logger', async () => {
     // Dynamic import to avoid issues in Node environment
-    const { default: logger } = await import('../../src/web/logger.ts')
+    const { default: logger } = await import('../../src/web/shared/logger.ts')
 
     expect(logger).toBeDefined()
     expect(typeof logger.info).toBe('function')
@@ -13,7 +13,7 @@ describe('Web Logger', () => {
   })
 
   it('should have logger methods', async () => {
-    const { default: logger } = await import('../../src/web/logger.ts')
+    const { default: logger } = await import('../../src/web/shared/logger.ts')
 
     // These should not throw (though they may not log in Node environment)
     expect(() => logger.info('test')).not.toThrow()

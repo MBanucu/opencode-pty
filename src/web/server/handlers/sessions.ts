@@ -1,4 +1,4 @@
-import { manager } from '../../plugin/pty/manager.ts'
+import { manager } from '../../../plugin/pty/manager.ts'
 import type { BunRequest } from 'bun'
 import { JsonResponse, ErrorResponse } from './responses.ts'
 

@@ -1,4 +1,4 @@
-import type { Session } from '../types.ts'
+import type { Session } from 'opencode-pty-test/shared/types'
 
 interface SidebarProps {
   sessions: Session[]

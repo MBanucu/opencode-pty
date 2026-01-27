@@ -4,9 +4,9 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  root: 'src/web',
+  root: 'src/web/client',
   build: {
-    outDir: '../../dist/web',
+    outDir: '../../../dist/web',
     emptyOutDir: true,
     minify: process.env.NODE_ENV === 'production' ? 'esbuild' : false, // Enable minification for production
   },

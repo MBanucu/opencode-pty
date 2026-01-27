@@ -2,11 +2,11 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { readdirSync, statSync } from 'node:fs'
 import { join, extname } from 'node:path'
-import { ASSET_CONTENT_TYPES } from '../constants.ts'
+import { ASSET_CONTENT_TYPES } from '../../shared/constants.ts'
 
 // ----- MODULE-SCOPE CONSTANTS -----
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const PROJECT_ROOT = resolve(__dirname, '../../..')
+const PROJECT_ROOT = resolve(import.meta.dir, '../../../..')
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',

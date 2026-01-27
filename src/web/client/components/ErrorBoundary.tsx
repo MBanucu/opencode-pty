@@ -1,5 +1,5 @@
 import React from 'react'
-import pinoLogger from '../logger.ts'
+import pinoLogger from 'opencode-pty-test/shared/logger'
 
 const log = pinoLogger.child({ module: 'ErrorBoundary' })
 

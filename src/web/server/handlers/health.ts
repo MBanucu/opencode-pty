@@ -1,4 +1,4 @@
-import { manager } from '../../plugin/pty/manager.ts'
+import { manager } from '../../../plugin/pty/manager.ts'
 import { JsonResponse } from './responses.ts'
 import { wsConnectionCount } from '../server.ts'
 

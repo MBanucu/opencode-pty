@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { startWebServer, stopWebServer } from '../src/web/server.ts'
+import { startWebServer, stopWebServer } from '../src/web/server/server.ts'
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
 import { initLogger } from '../src/plugin/logger.ts'
 

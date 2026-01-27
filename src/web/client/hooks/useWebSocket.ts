@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Session } from '../types.ts'
-import pinoLogger from '../logger.ts'
-import { WEBSOCKET_PING_INTERVAL, RETRY_DELAY, SKIP_AUTOSELECT_KEY } from '../constants.ts'
+import type { Session } from 'opencode-pty-test/shared/types'
+import pinoLogger from 'opencode-pty-test/shared/logger'
+import {
+  WEBSOCKET_PING_INTERVAL,
+  RETRY_DELAY,
+  SKIP_AUTOSELECT_KEY,
+} from 'opencode-pty-test/shared/constants'
 
 const logger = pinoLogger.child({ module: 'useWebSocket' })
 

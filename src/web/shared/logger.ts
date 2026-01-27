@@ -1,5 +1,5 @@
 import pino, { type LevelWithSilentOrString } from 'pino'
-import { getLogLevel } from '../shared/logger-config.ts'
+import { getLogLevel } from '../../shared/logger-config.ts'
 
 // Determine environment - use process.env for consistency with plugin logger
 const isDevelopment = process.env.NODE_ENV !== 'production'

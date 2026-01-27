@@ -1,5 +1,5 @@
 // Performance monitoring utilities
-import pinoLogger from './logger.ts'
+import pinoLogger from '../shared/logger.ts'
 
 const log = pinoLogger.child({ module: 'performance' })
 

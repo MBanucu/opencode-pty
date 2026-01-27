@@ -8,7 +8,7 @@ import { ptyRead } from './plugin/pty/tools/read.ts'
 import { ptyList } from './plugin/pty/tools/list.ts'
 import { ptyKill } from './plugin/pty/tools/kill.ts'
 import { ptyServerUrl } from './plugin/pty/tools/server-url.ts'
-import { startWebServer } from './web/server.ts'
+import { startWebServer } from './web/server/server.ts'
 
 const log = logger.child({ service: 'pty.plugin' })
 

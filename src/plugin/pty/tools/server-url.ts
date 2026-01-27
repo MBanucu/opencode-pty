@@ -1,5 +1,5 @@
 import { tool } from '@opencode-ai/plugin'
-import { getServerUrl } from '../../../web/server.ts'
+import { getServerUrl } from '../../../web/server/server.ts'
 import DESCRIPTION from './server-url.txt'
 
 export const ptyServerUrl = tool({

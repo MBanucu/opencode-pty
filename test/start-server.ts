@@ -1,6 +1,6 @@
-import { initManager, manager } from 'opencode-pty-test/src/plugin/pty/manager.ts'
-import { initLogger } from 'opencode-pty-test/src/plugin/logger.ts'
-import { startWebServer } from 'opencode-pty-test/src/web/server.ts'
+import { initManager, manager } from 'opencode-pty-test/src/plugin/pty/manager'
+import { initLogger } from 'opencode-pty-test/src/plugin/logger'
+import { startWebServer } from 'opencode-pty-test/src/web/server/server'
 
 // Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {

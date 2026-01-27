@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import type { WSMessage, SessionData, ServerConfig, WSClient } from '../src/web/types.ts'
+import type { WSMessage, SessionData, ServerConfig, WSClient } from '../src/web/shared/types.ts'
 
 describe('Web Types', () => {
   describe('WSMessage', () => {

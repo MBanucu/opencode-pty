@@ -1,7 +1,7 @@
 import type { Server, ServerWebSocket, BunRequest } from 'bun'
-import { manager, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
-import logger from './logger.ts'
-import type { WSMessage, ServerConfig } from './types.ts'
+import { manager, onRawOutput, setOnSessionUpdate } from '../../plugin/pty/manager.ts'
+import logger from '../shared/logger.ts'
+import type { WSMessage, ServerConfig } from '../shared/types.ts'
 import { get404Response } from './handlers/static.ts'
 import { handleHealth } from './handlers/health.ts'
 import {
@@ -14,7 +14,7 @@ import {
   getRawBuffer,
   getPlainBuffer,
 } from './handlers/sessions.ts'
-import { DEFAULT_SERVER_PORT } from './constants.ts'
+import { DEFAULT_SERVER_PORT } from '../shared/constants.ts'
 
 import { buildStaticRoutes } from './handlers/static.ts'
 

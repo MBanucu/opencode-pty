@@ -44,7 +44,7 @@ describe('PTY Echo Behavior', () => {
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Send test input
-    const success = manager.write(session.id, 'a')
+    const success = manager.write(session.id, 'a\n')
     console.log('Write success:', success)
 
     // Wait for echo to be processed

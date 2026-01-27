@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server/server.ts'
-import { PTYManager, manager } from '../src/plugin/pty/manager.ts'
+import { PTYManager } from '../src/plugin/pty/manager.ts'
 
 describe.serial('Web Server', () => {
   const fakeClient = {
@@ -14,7 +14,7 @@ describe.serial('Web Server', () => {
   let testManager: PTYManager
 
   beforeEach(() => {
-    testManager = manager
+    testManager = new PTYManager()
     testManager.init(fakeClient)
   })
 

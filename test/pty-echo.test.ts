@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { initManager, manager, onRawOutput } from '../src/plugin/pty/manager.ts'
+import {
+  initManager,
+  manager,
+  onRawOutput,
+  clearRawOutputCallbacks,
+} from '../src/plugin/pty/manager.ts'
 
 describe('PTY Echo Behavior', () => {
   const fakeClient = {
@@ -17,6 +22,7 @@ describe('PTY Echo Behavior', () => {
   afterEach(() => {
     // Clean up any sessions
     manager.clearAllSessions()
+    clearRawOutputCallbacks()
   })
 
   it('should echo input characters in interactive bash session', async () => {

@@ -19,6 +19,10 @@ export function onRawOutput(callback: RawOutputCallback): void {
   rawOutputCallbacks.push(callback)
 }
 
+export function clearRawOutputCallbacks(): void {
+  rawOutputCallbacks.length = 0
+}
+
 function notifyRawOutput(sessionId: string, rawData: string): void {
   for (const callback of rawOutputCallbacks) {
     try {

@@ -174,7 +174,12 @@ src/web/
   - ✅ Implemented middleware pipeline
   - ✅ Built route registration system
   - ✅ Added comprehensive tests
-- **Phase 2**: 2-3 days (Route migration)
+- **Phase 2**: ✅ COMPLETED - Route migration
+  - ✅ Migrated all API routes from handleAPISessions to new router
+  - ✅ Created dedicated handlers in src/web/handlers/
+  - ✅ Updated server.ts to use router.handle() for all requests
+  - ✅ Removed old routing logic and api.ts file
+  - ✅ Maintained backward compatibility
 - **Phase 3**: 1 day (Cleanup and optimization)
 
 Total estimated time: 4-6 days
@@ -205,3 +210,35 @@ Total estimated time: 4-6 days
 - Middleware application
 - HTTP method routing
 - Complex parameter patterns
+
+## Phase 2 Implementation Details
+
+### Files Created/Modified
+
+- `src/web/handlers/sessions.ts` - All session-related API handlers
+- `src/web/handlers/health.ts` - Health check handler
+- `src/web/router/routes.ts` - Updated with all API routes
+- `src/web/server.ts` - Refactored to use router.handle() instead of scattered logic
+- `src/web/handlers/api.ts` - Removed (logic migrated to new files)
+
+### Routes Migrated
+
+All API routes now use the new router with parameter support:
+
+- `GET /api/sessions` - List all sessions
+- `POST /api/sessions` - Create new session
+- `POST /api/sessions/clear` - Clear all sessions
+- `GET /api/sessions/:id` - Get specific session
+- `POST /api/sessions/:id/input` - Send input to session
+- `POST /api/sessions/:id/kill` - Kill session
+- `GET /api/sessions/:id/buffer/raw` - Get raw buffer
+- `GET /api/sessions/:id/buffer/plain` - Get plain buffer
+
+### Key Improvements
+
+- **Clean Handler Structure**: Each handler handles one specific route
+- **Parameter Extraction**: Automatic `:id` parameter parsing instead of regex
+- **Consistent Responses**: All handlers use JsonResponse with security headers
+- **Middleware Integration**: Security headers applied globally
+- **Type Safety**: Full TypeScript support with RouteContext
+- **Backward Compatibility**: Same API endpoints and behavior

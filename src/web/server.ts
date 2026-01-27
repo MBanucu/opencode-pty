@@ -1,7 +1,7 @@
 import type { Server, ServerWebSocket, BunRequest } from 'bun'
 import { manager, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import logger from './logger.ts'
-import type { WSMessage, WSClient, ServerConfig } from './types.ts'
+import type { WSMessage, ServerConfig } from './types.ts'
 import { get404Response } from './handlers/static.ts'
 import { handleHealth } from './handlers/health.ts'
 import {
@@ -25,10 +25,11 @@ const defaultConfig: ServerConfig = {
   hostname: 'localhost',
 }
 
-let server: Server<WSClient> | null = null
-const wsClients: Map<ServerWebSocket<WSClient>, WSClient> = new Map()
+let server: Server<any> | null = null
+let wsConnectionCount = 0
+const wsClients: Map<ServerWebSocket<any>, any> = new Map()
 
-export { wsClients }
+export { wsConnectionCount }
 
 function wrapWithSecurityHeaders(
   handler: (req: Request) => Promise<Response> | Response
@@ -52,37 +53,7 @@ function wrapWithSecurityHeaders(
   }
 }
 
-function subscribeToSession(wsClient: WSClient, sessionId: string): boolean {
-  const session = manager.get(sessionId)
-  if (!session) {
-    return false
-  }
-  wsClient.subscribedSessions.add(sessionId)
-  return true
-}
-
-function unsubscribeFromSession(wsClient: WSClient, sessionId: string): void {
-  wsClient.subscribedSessions.delete(sessionId)
-}
-
-function broadcastRawSessionData(sessionId: string, rawData: string): void {
-  const message: WSMessage = { type: 'raw_data', sessionId, rawData }
-  const messageStr = JSON.stringify(message)
-
-  for (const [ws, client] of wsClients) {
-    if (client.subscribedSessions.has(sessionId)) {
-      try {
-        ws.send(messageStr)
-      } catch (err) {
-        log.error({ error: String(err) }, 'Failed to send to client')
-      }
-    }
-  }
-
-  log.debug({ sessionId, messageSize: messageStr.length }, 'broadcast raw data message')
-}
-
-function sendSessionList(ws: ServerWebSocket<WSClient>): void {
+function sendSessionList(ws: ServerWebSocket<any>): void {
   const sessions = manager.list()
   const sessionData = sessions.map((s) => ({
     id: s.id,
@@ -99,79 +70,75 @@ function sendSessionList(ws: ServerWebSocket<WSClient>): void {
   ws.send(JSON.stringify(message))
 }
 
-function handleSubscribe(
-  ws: ServerWebSocket<WSClient>,
-  wsClient: WSClient,
-  message: WSMessage
-): void {
+function handleSubscribe(ws: ServerWebSocket<any>, message: WSMessage): void {
   if (message.sessionId) {
     log.info({ sessionId: message.sessionId }, 'Client subscribing to session')
-    const success = subscribeToSession(wsClient, message.sessionId)
-    if (!success) {
+    const session = manager.get(message.sessionId)
+    if (!session) {
       log.warn({ sessionId: message.sessionId }, 'Subscription failed - session not found')
       ws.send(JSON.stringify({ type: 'error', error: `Session ${message.sessionId} not found` }))
     } else {
+      ws.subscribe(`session:${message.sessionId}`)
       log.info({ sessionId: message.sessionId }, 'Subscription successful')
     }
   }
 }
 
-function handleUnsubscribe(
-  _ws: ServerWebSocket<WSClient>,
-  wsClient: WSClient,
-  message: WSMessage
-): void {
+function handleUnsubscribe(ws: ServerWebSocket<any>, message: WSMessage): void {
   if (message.sessionId) {
-    unsubscribeFromSession(wsClient, message.sessionId)
+    ws.unsubscribe(`session:${message.sessionId}`)
   }
 }
 
-function handleSessionListRequest(
-  ws: ServerWebSocket<WSClient>,
-  _wsClient: WSClient,
-  _message: WSMessage
-): void {
+function handleSessionListRequest(ws: ServerWebSocket<any>, _message: WSMessage): void {
   sendSessionList(ws)
 }
 
-function handleUnknownMessage(
-  ws: ServerWebSocket<WSClient>,
-  _wsClient: WSClient,
-  _message: WSMessage
-): void {
+function handleUnknownMessage(ws: ServerWebSocket<any>, _message: WSMessage): void {
   ws.send(JSON.stringify({ type: 'error', error: 'Unknown message type' }))
 }
 
 // Set callback for session updates
 setOnSessionUpdate(() => {
+  log.info('Sending session update to clients')
+  const sessions = manager.list()
+  const sessionData = sessions.map((s) => ({
+    id: s.id,
+    title: s.title,
+    description: s.description,
+    command: s.command,
+    status: s.status,
+    exitCode: s.exitCode,
+    pid: s.pid,
+    lineCount: s.lineCount,
+    createdAt: s.createdAt.toISOString(),
+  }))
+  const message = { type: 'session_list', sessions: sessionData }
+  log.info({ clientCount: wsClients.size }, 'Sending to clients')
   for (const [ws] of wsClients) {
-    sendSessionList(ws)
+    ws.send(JSON.stringify(message))
   }
 })
 
-function handleWebSocketMessage(
-  ws: ServerWebSocket<WSClient>,
-  wsClient: WSClient,
-  data: string
-): void {
+function handleWebSocketMessage(ws: ServerWebSocket<any>, data: string): void {
   try {
     const message: WSMessage = JSON.parse(data)
 
     switch (message.type) {
       case 'subscribe':
-        handleSubscribe(ws, wsClient, message)
+        handleSubscribe(ws, message)
         break
 
       case 'unsubscribe':
-        handleUnsubscribe(ws, wsClient, message)
+        handleUnsubscribe(ws, message)
         break
 
       case 'session_list':
-        handleSessionListRequest(ws, wsClient, message)
+        handleSessionListRequest(ws, message)
         break
 
       default:
-        handleUnknownMessage(ws, wsClient, message)
+        handleUnknownMessage(ws, message)
     }
   } catch (err) {
     log.debug({ error: String(err) }, 'failed to handle ws message')
@@ -180,23 +147,21 @@ function handleWebSocketMessage(
 }
 
 const wsHandler = {
-  open(ws: ServerWebSocket<WSClient>) {
-    log.info('ws client connected')
-    const wsClient: WSClient = { socket: ws, subscribedSessions: new Set() }
-    wsClients.set(ws, wsClient)
+  open(ws: ServerWebSocket<any>) {
+    wsConnectionCount++
+    log.info({ totalClients: wsConnectionCount }, 'ws client connected')
+    wsClients.set(ws, {})
     sendSessionList(ws)
   },
 
-  message(ws: ServerWebSocket<WSClient>, message: string) {
-    const wsClient = wsClients.get(ws)
-    if (wsClient) {
-      handleWebSocketMessage(ws, wsClient, message)
-    }
+  message(ws: ServerWebSocket<any>, message: string) {
+    handleWebSocketMessage(ws, message)
   },
 
-  close(ws: ServerWebSocket<WSClient>) {
+  close(_ws: ServerWebSocket<any>) {
+    wsConnectionCount--
+    wsClients.delete(_ws)
     log.info('ws client disconnected')
-    wsClients.delete(ws)
   },
 }
 
@@ -215,7 +180,12 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
   }
 
   onRawOutput((sessionId, rawData) => {
-    broadcastRawSessionData(sessionId, rawData)
+    if (server) {
+      server.publish(
+        `session:${sessionId}`,
+        JSON.stringify({ type: 'raw_data', sessionId, rawData })
+      )
+    }
   })
 
   const staticRoutes = await buildStaticRoutes()
@@ -232,9 +202,7 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
       '/ws': (req: Request) => {
         if (req.headers.get('upgrade') === 'websocket') {
           log.info('WebSocket upgrade request on /ws')
-          const success = server!.upgrade(req, {
-            data: { socket: null as any, subscribedSessions: new Set() },
-          })
+          const success = server!.upgrade(req)
           if (success) {
             log.info('WebSocket upgrade success on /ws')
             return new Response(null, { status: 101 }) // Upgrade succeeded
@@ -279,7 +247,10 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
       }),
     },
 
-    websocket: wsHandler,
+    websocket: {
+      perMessageDeflate: true,
+      ...wsHandler,
+    },
 
     fetch: handleRequest,
   })

@@ -46,7 +46,7 @@ class PTYManager {
   }
 
   spawn(opts: SpawnOptions): PTYSessionInfo {
-    return this.lifecycleManager.spawn(
+    const session = this.lifecycleManager.spawn(
       opts,
       (id, data) => {
         notifyRawOutput(id, data)
@@ -59,6 +59,8 @@ class PTYManager {
         }
       }
     )
+    if (onSessionUpdate) onSessionUpdate()
+    return session
   }
 
   write(id: string, data: string): boolean {

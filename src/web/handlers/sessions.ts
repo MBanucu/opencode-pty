@@ -1,27 +1,6 @@
 import { manager } from '../../plugin/pty/manager.ts'
-import type { ServerWebSocket, BunRequest } from 'bun'
-import type { WSClient } from '../types.ts'
+import type { BunRequest } from 'bun'
 import { JsonResponse, ErrorResponse } from './responses.ts'
-import { wsClients } from '../server.ts'
-
-function broadcastSessionUpdate(wsClients: Map<ServerWebSocket<WSClient>, WSClient>): void {
-  const sessions = manager.list()
-  const sessionData = sessions.map((s) => ({
-    id: s.id,
-    title: s.title,
-    description: s.description,
-    command: s.command,
-    status: s.status,
-    exitCode: s.exitCode,
-    pid: s.pid,
-    lineCount: s.lineCount,
-    createdAt: s.createdAt.toISOString(),
-  }))
-  const message = { type: 'session_list', sessions: sessionData }
-  for (const [ws] of wsClients) {
-    ws.send(JSON.stringify(message))
-  }
-}
 
 export async function getSessions(): Promise<Response> {
   const sessions = manager.list()
@@ -47,8 +26,6 @@ export async function createSession(req: Request): Promise<Response> {
       workdir: body.workdir,
       parentSessionId: 'web-api',
     })
-    // Broadcast updated session list to all clients
-    broadcastSessionUpdate(wsClients)
     return new JsonResponse(session)
   } catch (err) {
     return new ErrorResponse('Invalid JSON in request body', 400)
@@ -57,8 +34,6 @@ export async function createSession(req: Request): Promise<Response> {
 
 export async function clearSessions(): Promise<Response> {
   manager.clearAllSessions()
-  // Broadcast updated session list to all clients
-  broadcastSessionUpdate(wsClients)
   return new JsonResponse({ success: true })
 }
 

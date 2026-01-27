@@ -1,6 +1,6 @@
 import { manager } from '../../plugin/pty/manager.ts'
 import { JsonResponse } from './responses.ts'
-import { wsClients } from '../server.ts'
+import { wsConnectionCount } from '../server.ts'
 
 export async function handleHealth(): Promise<Response> {
   const sessions = manager.list()
@@ -19,7 +19,7 @@ export async function handleHealth(): Promise<Response> {
       active: activeSessions,
     },
     websocket: {
-      connections: wsClients.size,
+      connections: wsConnectionCount,
     },
     memory: process.memoryUsage
       ? {

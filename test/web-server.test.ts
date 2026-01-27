@@ -138,6 +138,8 @@ describe('Web Server', () => {
       })
 
       console.log('Created session:', session)
+      const fullSession = manager.get(session.id)
+      console.log('Session from manager.get:', fullSession)
 
       // Wait for PTY to start
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -155,6 +157,7 @@ describe('Web Server', () => {
 
     it('should return 404 for non-existent session', async () => {
       const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
+      console.log('Testing non-existent session ID:', nonexistentId)
       const response = await fetch(`${serverUrl}/api/sessions/${nonexistentId}`)
       console.log('Non-existent response status:', response.status)
       expect(response.status).toBe(404)

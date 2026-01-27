@@ -1,4 +1,4 @@
-import { join, resolve, dirname, isAbsolute } from 'node:path'
+import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ASSET_CONTENT_TYPES } from '../constants.ts'
 
@@ -15,16 +15,33 @@ const SECURITY_HEADERS = {
     "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
 } as const
 
-function get404Response(debugInfo?: Record<string, unknown>): Response {
-  let body: string
-  if (debugInfo) {
-    body = `<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404: Not Found</h1><pre>${escapeHtml(
-      JSON.stringify(debugInfo, null, 2)
-    )}</pre></body></html>`
-  } else {
-    body =
-      '<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404: Not Found</h1></body></html>'
+export function get404Response(debugInfo: Record<string, unknown> = {}): Response {
+  // Filter out sensitive environment variables
+  const safeEnv: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!/secret|key|password|token|auth/i.test(key)) {
+      safeEnv[key] = value
+    }
   }
+
+  // Default debug info (includes safe env vars and constants)
+  const defaultInfo = {
+    ...safeEnv, // Safe environment variables
+    PROJECT_ROOT,
+    __dirname,
+    'import.meta.dir': import.meta.dir,
+    'process.cwd()': process.cwd(),
+    'process.platform': process.platform,
+    'process.version': process.version,
+  }
+
+  // Merge passed debugInfo (overrides defaults)
+  const fullDebugInfo = { ...defaultInfo, ...debugInfo }
+
+  const body = `<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404: Not Found</h1><pre>${escapeHtml(
+    JSON.stringify(fullDebugInfo, null, 2)
+  )}</pre></body></html>`
+
   return new Response(body, {
     status: 404,
     headers: { 'Content-Type': 'text/html', ...SECURITY_HEADERS },
@@ -36,24 +53,10 @@ function escapeHtml(raw: string): string {
   return raw.replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch] || ch)
 }
 
-export async function handleRoot(htmlPathOverride?: string): Promise<Response> {
-  let htmlPath = htmlPathOverride || process.env.HTML_PATH
-  if (!htmlPath) {
-    const env = process.env.NODE_ENV || 'development'
-    if (env === 'production' || env === 'test') {
-      // Prefer built assets in prod/test, but fall back to source HTML for
-      // local dev installs or when dist isn't packaged.
-      const distPath = resolve(PROJECT_ROOT, 'dist/web/index.html')
-      const distFile = Bun.file(distPath)
-      htmlPath = (await distFile.exists()) ? 'dist/web/index.html' : 'src/web/index.html'
-    } else {
-      htmlPath = 'src/web/index.html'
-    }
-  }
-  const finalPath = isAbsolute(htmlPath) ? htmlPath : resolve(PROJECT_ROOT, htmlPath)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[handleRoot] Serving:', finalPath)
-  }
+export async function handleRoot(): Promise<Response> {
+  // Always serve the built index.html
+  const htmlPath = 'dist/web/index.html'
+  const finalPath = resolve(PROJECT_ROOT, htmlPath)
   const file = Bun.file(finalPath)
   if (await file.exists()) {
     return new Response(await file.arrayBuffer(), {
@@ -62,13 +65,6 @@ export async function handleRoot(htmlPathOverride?: string): Promise<Response> {
   }
   // Add extra debug info upon 404
   return get404Response({
-    'process.cwd()': process.cwd(),
-    'import.meta.dir (__dirname)': __dirname,
-    'Bun.env.HTML_PATH': Bun.env.HTML_PATH,
-    'Bun.env.NODE_ENV': Bun.env.NODE_ENV,
-    PROJECT_ROOT: PROJECT_ROOT,
-    __dirname: __dirname,
-    htmlPathOverride,
     htmlPath,
     finalPath,
   })
@@ -76,21 +72,10 @@ export async function handleRoot(htmlPathOverride?: string): Promise<Response> {
 
 export async function handleStaticAssets(url: URL): Promise<Response | null> {
   const pathname = url.pathname
-  // ----- /assets/ handling with traversal check -----
   if (pathname.startsWith('/assets/')) {
     const relativePath = pathname.slice('/assets/'.length)
     if (!relativePath || relativePath.includes('..') || relativePath.startsWith('/')) {
-      // Deny traversal or malformed asset paths explicitly
-      return get404Response({
-        'process.cwd()': process.cwd(),
-        'import.meta.dir (__dirname)': __dirname,
-        'Bun.env.HTML_PATH': Bun.env.HTML_PATH,
-        'Bun.env.NODE_ENV': Bun.env.NODE_ENV,
-        PROJECT_ROOT: PROJECT_ROOT,
-        __dirname: __dirname,
-        url: url.pathname,
-        filePath: undefined,
-      })
+      return get404Response({ url: pathname, note: 'Invalid asset path' })
     }
     const filePath = join(PROJECT_ROOT, 'dist/web/assets', relativePath)
     const file = Bun.file(filePath)
@@ -107,55 +92,8 @@ export async function handleStaticAssets(url: URL): Promise<Response | null> {
         },
       })
     } else {
-      return get404Response({
-        'process.cwd()': process.cwd(),
-        'import.meta.dir (__dirname)': __dirname,
-        'Bun.env.HTML_PATH': Bun.env.HTML_PATH,
-        'Bun.env.NODE_ENV': Bun.env.NODE_ENV,
-        PROJECT_ROOT: PROJECT_ROOT,
-        __dirname: __dirname,
-        url: url.pathname,
-        relativePath,
-        filePath,
-      })
+      return get404Response({ url: pathname, filePath, note: 'Asset not found' })
     }
   }
-
-  // ----- Dev/test source files -----
-  if (process.env.NODE_ENV === 'test' && /\.[jt]sx?$/.test(pathname)) {
-    const relativeTsPath = pathname.startsWith('/') ? pathname.slice(1) : pathname
-    const filePath = join(PROJECT_ROOT, 'src/web', relativeTsPath)
-    const file = Bun.file(filePath)
-    if (await file.exists()) {
-      return new Response(await file.arrayBuffer(), {
-        headers: {
-          'Content-Type': 'application/javascript; charset=utf-8',
-          'Cache-Control': 'no-cache',
-          ...SECURITY_HEADERS,
-        },
-      })
-    } else {
-      return get404Response({
-        'process.cwd()': process.cwd(),
-        'import.meta.dir (__dirname)': __dirname,
-        'Bun.env.HTML_PATH': Bun.env.HTML_PATH,
-        'Bun.env.NODE_ENV': Bun.env.NODE_ENV,
-        PROJECT_ROOT: PROJECT_ROOT,
-        __dirname: __dirname,
-        url: url.pathname,
-        relativeTsPath,
-        filePath,
-      })
-    }
-  }
-  // For any other unhandled paths, return 404 with minimal info
-  if (url.pathname.startsWith('/api/')) return null
-  return get404Response({
-    'process.cwd()': process.cwd(),
-    'import.meta.dir (__dirname)': __dirname,
-    'Bun.env.NODE_ENV': Bun.env.NODE_ENV,
-    PROJECT_ROOT: PROJECT_ROOT,
-    url: url.pathname,
-    note: 'No asset/source-file handler matched',
-  })
+  return null
 }

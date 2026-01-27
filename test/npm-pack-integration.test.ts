@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'bun:test'
-import { mkdtempSync, rmSync, readFileSync, copyFileSync, mkdirSync, existsSync } from 'fs'
+import { mkdtempSync, rmSync, readFileSync, copyFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
@@ -82,16 +82,15 @@ describe('npm pack integration', () => {
     const install = await run(['npm', 'install', tgzPath], { cwd: tempDir })
     expect(install.code).toBe(0)
 
-    // Copy the server script to the installed package
-    const packageDir = join(tempDir, 'node_modules/opencode-pty-test')
-    mkdirSync(packageDir, { recursive: true })
-    copyFileSync(join(process.cwd(), 'test-web-server.ts'), join(packageDir, 'test-web-server.ts'))
+    // Copy the server script to tempDir
+    copyFileSync(join(process.cwd(), 'start-server.ts'), join(tempDir, 'start-server.ts'))
 
     // Verify the package structure
+    const packageDir = join(tempDir, 'node_modules/opencode-pty-test')
     expect(existsSync(join(packageDir, 'src/plugin/pty/manager.ts'))).toBe(true)
     expect(existsSync(join(packageDir, 'dist/web/index.html'))).toBe(true)
-    serverProcess = Bun.spawn(['bun', 'run', 'test-web-server.ts'], {
-      cwd: packageDir,
+    serverProcess = Bun.spawn(['bun', 'run', 'start-server.ts'], {
+      cwd: tempDir,
       env: { ...process.env, NODE_ENV: 'test' },
       stdout: 'inherit',
       stderr: 'inherit',
@@ -131,5 +130,12 @@ describe('npm pack integration', () => {
     const assetResponse = await fetch(`http://localhost:${port}/assets/${assetName}`)
     expect(assetResponse.status).toBe(200)
     // Could add more specific checks here, like content-type or specific assets
+
+    // 6) Fetch index.html and verify it's the built version
+    const indexResponse = await fetch(`http://localhost:${port}/`)
+    expect(indexResponse.status).toBe(200)
+    const indexContent = await indexResponse.text()
+    expect(indexContent).not.toContain('main.tsx') // Fails if raw HTML is served
+    expect(indexContent).toContain('/assets/') // Confirms built assets are referenced
   }, 30000)
 })

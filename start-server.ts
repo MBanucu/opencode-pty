@@ -1,0 +1,125 @@
+import { initManager, manager } from 'opencode-pty-test/src/plugin/pty/manager.ts'
+import { initLogger } from 'opencode-pty-test/src/plugin/logger.ts'
+import { startWebServer } from 'opencode-pty-test/src/web/server.ts'
+
+// Set NODE_ENV if not set
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'test'
+}
+
+const fakeClient = {
+  app: {
+    log: async (_opts: any) => {},
+  },
+} as any
+initLogger(fakeClient)
+initManager(fakeClient)
+
+// Cleanup on process termination
+process.on('SIGTERM', () => {
+  manager.cleanupAll()
+  process.exit(0)
+})
+
+process.on('SIGINT', () => {
+  manager.cleanupAll()
+  process.exit(0)
+})
+
+// Use the specified port after cleanup
+function findAvailablePort(port: number): number {
+  // Only kill processes if we're confident they belong to our test servers
+  // In parallel execution, avoid killing other workers' servers
+  if (process.env.TEST_WORKER_INDEX) {
+    // For parallel workers, assume the port is available since we assign unique ports
+    return port
+  }
+
+  // For single execution, clean up any stale processes
+  Bun.spawnSync(['sh', '-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`])
+  // Small delay to allow cleanup
+  Bun.sleepSync(200)
+  return port
+}
+
+// Parse command line arguments
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
+
+const argv = yargs(hideBin(process.argv))
+  .option('port', {
+    alias: 'p',
+    type: 'number',
+    description: 'Port to run the server on',
+    default: 8877,
+  })
+  .parseSync()
+
+let basePort = argv.port
+
+// For parallel workers, ensure unique start ports
+if (process.env.TEST_WORKER_INDEX) {
+  const workerIndex = parseInt(process.env.TEST_WORKER_INDEX, 10)
+  basePort = 8877 + workerIndex
+}
+
+let port = findAvailablePort(basePort)
+
+startWebServer({ port })
+
+// Only log in non-test environments or when explicitly requested
+
+// Write port to file for tests to read
+if (process.env.NODE_ENV === 'test') {
+  const workerIndex = process.env.TEST_WORKER_INDEX || '0'
+  await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, port.toString())
+}
+
+// Health check for test mode
+if (process.env.NODE_ENV === 'test') {
+  let retries = 20 // 10 seconds
+  while (retries > 0) {
+    try {
+      const response = await fetch(`http://localhost:${port}/api/sessions`)
+      if (response.ok) {
+        break
+      }
+    } catch (error) {
+      // Server not ready yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    retries--
+  }
+  if (retries === 0) {
+    console.error('Server failed to start properly after 10 seconds')
+    process.exit(1)
+  }
+}
+
+// Create test sessions for manual testing and e2e tests
+if (process.env.NODE_ENV === 'test') {
+  // Create an interactive bash session for e2e tests
+  manager.spawn({
+    command: 'bash',
+    args: ['-i'], // Interactive bash
+    description: 'Interactive bash session for e2e tests',
+    parentSessionId: 'test-session',
+    env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
+  })
+} else if (process.env.CI !== 'true') {
+  manager.spawn({
+    command: 'bash',
+    args: [
+      '-c',
+      "echo 'Welcome to live streaming test'; echo 'Type commands and see real-time output'; for i in {1..100}; do echo \"$(date): Live update $i...\"; sleep 1; done",
+    ],
+    description: 'Live streaming test session',
+    parentSessionId: 'live-test',
+    env: { TERM: 'xterm', PS1: '\\u@\\h:\\w\\$ ' },
+  })
+}
+
+// Keep the server running indefinitely
+setInterval(() => {
+  // Keep-alive check - server will continue running
+}, 1000)

@@ -2,7 +2,7 @@ import type { Server, ServerWebSocket } from 'bun'
 import { manager, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import logger from './logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
-import { handleRoot, handleStaticAssets } from './handlers/static.ts'
+import { handleRoot, handleStaticAssets, get404Response } from './handlers/static.ts'
 import { handleHealth, handleAPISessions } from './handlers/api.ts'
 import { DEFAULT_SERVER_PORT } from './constants.ts'
 
@@ -213,7 +213,7 @@ async function handleRequest(req: Request, server: Server<WSClient>): Promise<Re
   const staticResponse = await handleStaticAssets(url)
   if (staticResponse) return staticResponse
 
-  return new Response('Not found', { status: 404 })
+  return get404Response({ url: req.url, method: req.method, note: 'No route matched' })
 }
 
 export function startWebServer(config: Partial<ServerConfig> = {}): string {

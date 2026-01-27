@@ -104,11 +104,11 @@ describe('Web Server', () => {
       expect(response.status).toBe(200)
       const html = await response.text()
 
-      // Should contain dev HTML with main.tsx
+      // Should contain built HTML
       expect(html).toContain('<!doctype html>')
       expect(html).toContain('PTY Sessions Monitor')
-      expect(html).toContain('/main.tsx')
-      expect(html).not.toContain('/assets/')
+      expect(html).toContain('<div id="root"></div>')
+      expect(html).toContain('/assets/')
     })
 
     it('should serve HTML on root path', async () => {
@@ -230,7 +230,9 @@ describe('Web Server', () => {
     it('should return 404 for non-existent endpoints', async () => {
       const response = await fetch(`${serverUrl}/api/nonexistent`)
       expect(response.status).toBe(404)
-      expect(await response.text()).toBe('Not found')
+      const text = await response.text()
+      expect(text).toContain('404: Not Found')
+      expect(text).toContain('<!DOCTYPE html>')
     })
   })
 })

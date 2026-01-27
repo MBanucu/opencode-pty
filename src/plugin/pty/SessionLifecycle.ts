@@ -16,7 +16,7 @@ export class SessionLifecycleManager {
   private sessions: Map<string, PTYSession> = new Map()
 
   private createSessionObject(opts: SpawnOptions): PTYSession {
-    console.log('Creating session object with opts:', opts)
+    console.log(`${new Date().toISOString()}: Creating session object with opts:`, opts)
     const id = generateId()
     const args = opts.args ?? []
     const workdir = opts.workdir ?? process.cwd()
@@ -40,12 +40,17 @@ export class SessionLifecycleManager {
       buffer,
       process: null, // will be set
     }
-    console.log('Session object created:', session)
+    console.log(`${new Date().toISOString()}: Session object created:`, session)
     return session
   }
 
   private spawnProcess(session: PTYSession): void {
-    console.log('Spawning PTY process for command:', session.command, 'args:', session.args)
+    console.log(
+      `${new Date().toISOString()}: Spawning PTY process for command:`,
+      session.command,
+      'args:',
+      session.args
+    )
     const env = { ...process.env, ...session.env } as Record<string, string>
     try {
       const ptyProcess: IPty = spawn(session.command, session.args, {
@@ -55,10 +60,10 @@ export class SessionLifecycleManager {
         cwd: session.workdir,
         env,
       })
-      console.log('PTY process spawned with pid:', ptyProcess.pid)
+      console.log(`${new Date().toISOString()}: PTY process spawned with pid:`, ptyProcess.pid)
       session.process = ptyProcess
       session.pid = ptyProcess.pid
-      console.log('Session after spawn:', {
+      console.log(`${new Date().toISOString()}: Session after spawn:`, {
         id: session.id,
         pid: session.pid,
         command: session.command,
@@ -75,15 +80,25 @@ export class SessionLifecycleManager {
     onData: (id: string, data: string) => void,
     onExit: (id: string, exitCode: number | null) => void
   ): void {
-    console.log('Setting up event handlers for session:', session.id)
+    console.log(`${new Date().toISOString()}: Setting up event handlers for session:`, session.id)
     session.process!.onData((data: string) => {
-      console.log('PTY onData for session', session.id, 'data length:', data.length)
+      console.log(
+        `${new Date().toISOString()}: PTY onData for session`,
+        session.id,
+        'data length:',
+        data.length
+      )
       session.buffer.append(data)
       onData(session.id, data)
     })
 
     session.process!.onExit(({ exitCode }) => {
-      console.log('PTY onExit for session', session.id, 'exitCode:', exitCode)
+      console.log(
+        `${new Date().toISOString()}: PTY onExit for session`,
+        session.id,
+        'exitCode:',
+        exitCode
+      )
       // Flush any remaining incomplete line in the buffer
       session.buffer.flush()
 
@@ -154,9 +169,14 @@ export class SessionLifecycleManager {
 
   getSession(id: string): PTYSession | null {
     const session = this.sessions.get(id) || null
-    console.log('SessionLifecycle getSession for id:', id, 'found:', !!session)
+    console.log(
+      `${new Date().toISOString()}: SessionLifecycle getSession for id:`,
+      id,
+      'found:',
+      !!session
+    )
     if (session)
-      console.log('Session details:', {
+      console.log(`${new Date().toISOString()}: Session details:`, {
         id: session.id,
         pid: session.pid,
         status: session.status,

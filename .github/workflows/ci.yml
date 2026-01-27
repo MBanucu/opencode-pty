@@ -14,18 +14,6 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        test_group:
-          - { name: pty-echo, file: test/pty-echo.test.ts }
-          - { name: pty-integration, file: test/pty-integration.test.ts }
-          - { name: pty-tools, file: test/pty-tools.test.ts }
-          - { name: bun-pty-mwe, file: test/bun-pty-mwe.test.ts }
-          - { name: web-server, file: test/web-server.test.ts }
-          - {
-              name: others,
-              files: 'test/integration.test.ts test/npm-pack-integration.test.ts test/npm-pack-structure.test.ts test/types.test.ts test/websocket.test.ts',
-            }
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -60,12 +48,7 @@ jobs:
         run: bun run build:all:prod
 
       - name: Run tests
-        run: |
-          if [ -n "${{ matrix.test_group.file }}" ]; then
-            bun test ${{ matrix.test_group.file }}
-          else
-            bun test ${{ matrix.test_group.files }}
-          fi
+        run: bun test
 
   dependency-review:
     runs-on: ubuntu-24.04

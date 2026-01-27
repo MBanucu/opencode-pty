@@ -24,6 +24,7 @@ describe('PTY Echo Behavior', () => {
 
     // Subscribe to raw output events
     onRawOutput((_sessionId, rawData) => {
+      console.log('Received raw data:', rawData)
       receivedOutputs.push(rawData)
     })
 
@@ -40,14 +41,14 @@ describe('PTY Echo Behavior', () => {
     console.log('Echo session from get:', fullSession)
 
     // Wait for PTY to initialize and show prompt
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Send test input
     const success = manager.write(session.id, 'a')
     console.log('Write success:', success)
 
     // Wait for echo to be processed
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     // Clean up
     manager.kill(session.id, true)

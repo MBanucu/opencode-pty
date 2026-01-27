@@ -140,7 +140,7 @@ describe('Web Server', () => {
       console.log('Created session:', session)
 
       // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
       console.log('Session response status:', response.status)
@@ -172,7 +172,7 @@ describe('Web Server', () => {
       console.log('Input session:', session)
 
       // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/input`, {
         method: 'POST',
@@ -202,7 +202,7 @@ describe('Web Server', () => {
       console.log('Kill session:', session)
 
       // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/kill`, {
         method: 'POST',
@@ -227,7 +227,7 @@ describe('Web Server', () => {
       console.log('Output session:', session)
 
       // Wait a bit for output to be captured
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const response = await fetch(`${serverUrl}/api/sessions/${session.id}/buffer/raw`)
       console.log('Buffer response status:', response.status)

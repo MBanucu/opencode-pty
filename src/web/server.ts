@@ -1,9 +1,19 @@
-import type { Server, ServerWebSocket } from 'bun'
+import type { Server, ServerWebSocket, BunRequest } from 'bun'
 import { manager, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import logger from './logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
-import { handleStaticAssets, get404Response } from './handlers/static.ts'
-import { createRouter } from './router/routes.ts'
+import { handleStaticAssets, get404Response, handleRoot } from './handlers/static.ts'
+import { handleHealth } from './handlers/health.ts'
+import {
+  getSessions,
+  createSession,
+  clearSessions,
+  getSession,
+  sendInput,
+  killSession,
+  getRawBuffer,
+  getPlainBuffer,
+} from './handlers/sessions.ts'
 import { DEFAULT_SERVER_PORT } from './constants.ts'
 
 const log = logger.child({ module: 'web-server' })
@@ -16,8 +26,29 @@ const defaultConfig: ServerConfig = {
 let server: Server<WSClient> | null = null
 const wsClients: Map<ServerWebSocket<WSClient>, WSClient> = new Map()
 
-// Create router instance
-const router = createRouter(wsClients)
+export { wsClients }
+
+function wrapWithSecurityHeaders(
+  handler: (req: Request) => Promise<Response> | Response
+): (req: Request) => Promise<Response> {
+  return async (req: Request) => {
+    const response = await handler(req)
+    const headers = new Headers(response.headers)
+    headers.set('X-Content-Type-Options', 'nosniff')
+    headers.set('X-Frame-Options', 'DENY')
+    headers.set('X-XSS-Protection', '1; mode=block')
+    headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+    headers.set(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+    )
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    })
+  }
+}
 
 function subscribeToSession(wsClient: WSClient, sessionId: string): boolean {
   const session = manager.get(sessionId)
@@ -170,24 +201,22 @@ const wsHandler = {
 async function handleRequest(req: Request, server: Server<WSClient>): Promise<Response> {
   const url = new URL(req.url)
 
-  // Handle WebSocket upgrade
-  if (req.headers.get('upgrade') === 'websocket') {
-    log.info('WebSocket upgrade request')
-    const success = server.upgrade(req, {
-      data: { socket: null as any, subscribedSessions: new Set() },
-    })
-    if (success) {
-      log.info('WebSocket upgrade success')
-      return new Response(null, { status: 101 }) // Upgrade succeeded
+  // Handle root path
+  if (url.pathname === '/') {
+    if (req.headers.get('upgrade') === 'websocket') {
+      log.info('WebSocket upgrade request')
+      const success = server.upgrade(req, {
+        data: { socket: null as any, subscribedSessions: new Set() },
+      })
+      if (success) {
+        log.info('WebSocket upgrade success')
+        return new Response(null, { status: 101 }) // Upgrade succeeded
+      }
+      log.warn('WebSocket upgrade failed')
+      return new Response('WebSocket upgrade failed', { status: 400 })
+    } else {
+      return wrapWithSecurityHeaders(handleRoot)(req)
     }
-    log.warn('WebSocket upgrade failed')
-    return new Response('WebSocket upgrade failed', { status: 400 })
-  }
-
-  // Try router first
-  const routerResponse = await router.handle(req, { wsClients })
-  if (routerResponse.status !== 404) {
-    return routerResponse
   }
 
   // Fallback to static assets
@@ -214,6 +243,41 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
   server = Bun.serve({
     hostname: finalConfig.hostname,
     port: finalConfig.port,
+
+    routes: {
+      '/health': wrapWithSecurityHeaders(handleHealth),
+      '/api/sessions': wrapWithSecurityHeaders(async (req: Request) => {
+        if (req.method === 'GET') return getSessions(req)
+        if (req.method === 'POST') return createSession(req)
+        return new Response('Method not allowed', { status: 405 })
+      }),
+      '/api/sessions/clear': wrapWithSecurityHeaders(async (req: Request) => {
+        if (req.method === 'POST') return clearSessions(req)
+        return new Response('Method not allowed', { status: 405 })
+      }),
+      '/api/sessions/:id': wrapWithSecurityHeaders(async (req: Request) => {
+        if (req.method === 'GET') return getSession(req as BunRequest<'/api/sessions/:id'>)
+        return new Response('Method not allowed', { status: 405 })
+      }),
+      '/api/sessions/:id/input': wrapWithSecurityHeaders(async (req: Request) => {
+        if (req.method === 'POST') return sendInput(req as BunRequest<'/api/sessions/:id/input'>)
+        return new Response('Method not allowed', { status: 405 })
+      }),
+      '/api/sessions/:id/kill': wrapWithSecurityHeaders(async (req: Request) => {
+        if (req.method === 'POST') return killSession(req as BunRequest<'/api/sessions/:id/kill'>)
+        return new Response('Method not allowed', { status: 405 })
+      }),
+      '/api/sessions/:id/buffer/raw': wrapWithSecurityHeaders(async (req: Request) => {
+        if (req.method === 'GET')
+          return getRawBuffer(req as BunRequest<'/api/sessions/:id/buffer/raw'>)
+        return new Response('Method not allowed', { status: 405 })
+      }),
+      '/api/sessions/:id/buffer/plain': wrapWithSecurityHeaders(async (req: Request) => {
+        if (req.method === 'GET')
+          return getPlainBuffer(req as BunRequest<'/api/sessions/:id/buffer/plain'>)
+        return new Response('Method not allowed', { status: 405 })
+      }),
+    },
 
     websocket: wsHandler,
 

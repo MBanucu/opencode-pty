@@ -1,7 +1,8 @@
 import { manager } from '../../plugin/pty/manager.ts'
-import type { ServerWebSocket } from 'bun'
-import type { WSClient, RouteContext } from '../types.ts'
-import { JsonResponse, ErrorResponse } from '../router/middleware.ts'
+import type { ServerWebSocket, BunRequest } from 'bun'
+import type { WSClient } from '../types.ts'
+import { JsonResponse, ErrorResponse } from './responses.ts'
+import { wsClients } from '../server.ts'
 
 function broadcastSessionUpdate(wsClients: Map<ServerWebSocket<WSClient>, WSClient>): void {
   const sessions = manager.list()
@@ -22,12 +23,12 @@ function broadcastSessionUpdate(wsClients: Map<ServerWebSocket<WSClient>, WSClie
   }
 }
 
-export async function getSessions(_url: URL, _req: Request, _ctx: RouteContext): Promise<Response> {
+export async function getSessions(req: Request): Promise<Response> {
   const sessions = manager.list()
   return new JsonResponse(sessions)
 }
 
-export async function createSession(_url: URL, req: Request, ctx: RouteContext): Promise<Response> {
+export async function createSession(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as {
       command: string
@@ -47,26 +48,22 @@ export async function createSession(_url: URL, req: Request, ctx: RouteContext):
       parentSessionId: 'web-api',
     })
     // Broadcast updated session list to all clients
-    broadcastSessionUpdate(ctx.wsClients!)
+    broadcastSessionUpdate(wsClients)
     return new JsonResponse(session)
   } catch (err) {
     return new ErrorResponse('Invalid JSON in request body', 400)
   }
 }
 
-export async function clearSessions(
-  _url: URL,
-  _req: Request,
-  ctx: RouteContext
-): Promise<Response> {
+export async function clearSessions(req: Request): Promise<Response> {
   manager.clearAllSessions()
   // Broadcast updated session list to all clients
-  broadcastSessionUpdate(ctx.wsClients!)
+  broadcastSessionUpdate(wsClients)
   return new JsonResponse({ success: true })
 }
 
-export async function getSession(_url: URL, _req: Request, ctx: RouteContext): Promise<Response> {
-  const sessionId = ctx.params.id
+export async function getSession(req: BunRequest<'/api/sessions/:id'>): Promise<Response> {
+  const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
   }
@@ -77,8 +74,8 @@ export async function getSession(_url: URL, _req: Request, ctx: RouteContext): P
   return new JsonResponse(session)
 }
 
-export async function sendInput(_url: URL, req: Request, ctx: RouteContext): Promise<Response> {
-  const sessionId = ctx.params.id
+export async function sendInput(req: BunRequest<'/api/sessions/:id/input'>): Promise<Response> {
+  const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
   }
@@ -97,8 +94,8 @@ export async function sendInput(_url: URL, req: Request, ctx: RouteContext): Pro
   }
 }
 
-export async function killSession(_url: URL, _req: Request, ctx: RouteContext): Promise<Response> {
-  const sessionId = ctx.params.id
+export async function killSession(req: BunRequest<'/api/sessions/:id/kill'>): Promise<Response> {
+  const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
   }
@@ -109,8 +106,10 @@ export async function killSession(_url: URL, _req: Request, ctx: RouteContext): 
   return new JsonResponse({ success: true })
 }
 
-export async function getRawBuffer(_url: URL, _req: Request, ctx: RouteContext): Promise<Response> {
-  const sessionId = ctx.params.id
+export async function getRawBuffer(
+  req: BunRequest<'/api/sessions/:id/buffer/raw'>
+): Promise<Response> {
+  const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
   }
@@ -124,11 +123,9 @@ export async function getRawBuffer(_url: URL, _req: Request, ctx: RouteContext):
 }
 
 export async function getPlainBuffer(
-  _url: URL,
-  _req: Request,
-  ctx: RouteContext
+  req: BunRequest<'/api/sessions/:id/buffer/plain'>
 ): Promise<Response> {
-  const sessionId = ctx.params.id
+  const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
   }

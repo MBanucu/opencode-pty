@@ -13,6 +13,7 @@ describe('Web Server', () => {
 
   beforeEach(() => {
     initManager(fakeClient)
+    clearRawOutputCallbacks()
   })
 
   afterEach(() => {
@@ -52,6 +53,7 @@ describe('Web Server', () => {
 
     beforeEach(async () => {
       manager.cleanupAll() // Clean up any leftover sessions
+      clearRawOutputCallbacks()
       serverUrl = await startWebServer({ port: 8771 })
     })
 

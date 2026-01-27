@@ -17,6 +17,7 @@ describe('PTY Echo Behavior', () => {
 
   beforeEach(() => {
     initManager(fakeClient)
+    clearRawOutputCallbacks()
   })
 
   afterEach(() => {

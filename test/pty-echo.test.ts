@@ -38,7 +38,7 @@ describe('PTY Echo Behavior', () => {
     console.log('Echo session:', session)
 
     // Wait for PTY to initialize and show prompt
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Send test input
     const success = manager.write(session.id, 'a')
@@ -46,7 +46,7 @@ describe('PTY Echo Behavior', () => {
     expect(success).toBe(true)
 
     // Wait for echo to be processed
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Clean up
     manager.kill(session.id, true)

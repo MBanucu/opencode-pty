@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server/server.ts'
-import { initManager, manager, clearRawOutputCallbacks } from '../src/plugin/pty/manager.ts'
+import { initManager, manager } from '../src/plugin/pty/manager.ts'
 
 describe('Web Server', () => {
   const fakeClient = {
@@ -13,13 +13,11 @@ describe('Web Server', () => {
 
   beforeEach(() => {
     initManager(fakeClient)
-    clearRawOutputCallbacks()
   })
 
   afterEach(() => {
     stopWebServer()
     manager.cleanupAll() // Ensure cleanup after each test
-    clearRawOutputCallbacks()
   })
 
   describe('Server Lifecycle', () => {
@@ -53,7 +51,6 @@ describe('Web Server', () => {
 
     beforeEach(async () => {
       manager.cleanupAll() // Clean up any leftover sessions
-      clearRawOutputCallbacks()
       serverUrl = await startWebServer({ port: 8771 })
     })
 

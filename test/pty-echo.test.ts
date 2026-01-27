@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import {
-  initManager,
-  manager,
-  onRawOutput,
-  clearRawOutputCallbacks,
-} from '../src/plugin/pty/manager.ts'
+import { initManager, manager } from '../src/plugin/pty/manager.ts'
 
 describe('PTY Echo Behavior', () => {
   const fakeClient = {
@@ -17,22 +12,15 @@ describe('PTY Echo Behavior', () => {
 
   beforeEach(() => {
     initManager(fakeClient)
-    clearRawOutputCallbacks()
   })
 
   afterEach(() => {
     // Clean up any sessions
     manager.clearAllSessions()
-    clearRawOutputCallbacks()
   })
 
   it('should echo input characters in interactive bash session', async () => {
     const receivedOutputs: string[] = []
-
-    // Subscribe to raw output events
-    onRawOutput((_sessionId, rawData) => {
-      receivedOutputs.push(rawData)
-    })
 
     // Spawn interactive bash session
     const session = manager.spawn({
@@ -40,6 +28,9 @@ describe('PTY Echo Behavior', () => {
       args: ['-i'],
       description: 'Echo test session',
       parentSessionId: 'test',
+      onData: (_sessionId, rawData) => {
+        receivedOutputs.push(rawData)
+      },
     })
 
     console.log('Echo session:', session)
@@ -72,17 +63,15 @@ describe('PTY Echo Behavior', () => {
   it('should echo different input characters in interactive bash session', async () => {
     const receivedOutputs: string[] = []
 
-    // Subscribe to raw output events
-    onRawOutput((_sessionId, rawData) => {
-      receivedOutputs.push(rawData)
-    })
-
     // Spawn interactive bash session
     const session = manager.spawn({
       command: 'bash',
       args: ['-i'],
       description: 'Echo test session 2',
       parentSessionId: 'test2',
+      onData: (_sessionId, rawData) => {
+        receivedOutputs.push(rawData)
+      },
     })
 
     console.log('Echo session 2:', session)

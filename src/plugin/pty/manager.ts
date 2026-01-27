@@ -19,10 +19,6 @@ export function onRawOutput(callback: RawOutputCallback): void {
   rawOutputCallbacks.push(callback)
 }
 
-export function clearRawOutputCallbacks(): void {
-  rawOutputCallbacks.length = 0
-}
-
 function notifyRawOutput(sessionId: string, rawData: string): void {
   for (const callback of rawOutputCallbacks) {
     try {
@@ -48,15 +44,16 @@ class PTYManager {
     console.log(`${new Date().toISOString()}: Manager spawn called with opts:`, opts)
     const session = this.lifecycleManager.spawn(
       opts,
-      (id, data) => {
-        console.log(
-          `${new Date().toISOString()}: Manager onData callback for id:`,
-          id,
-          'data length:',
-          data.length
-        )
-        notifyRawOutput(id, data)
-      },
+      opts.onData ||
+        ((id, data) => {
+          console.log(
+            `${new Date().toISOString()}: Manager onData callback for id:`,
+            id,
+            'data length:',
+            data.length
+          )
+          notifyRawOutput(id, data)
+        }),
       async (id, exitCode) => {
         console.log(
           `${new Date().toISOString()}: Manager onExit callback for id:`,

@@ -44,6 +44,7 @@ export interface SpawnOptions {
   description?: string
   parentSessionId: string
   notifyOnExit?: boolean
+  onData?: (sessionId: string, data: string) => void
 }
 
 export interface ReadResult {

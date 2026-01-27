@@ -45,7 +45,7 @@ if (process.env.TEST_WORKER_INDEX) {
   port = 8877 + workerIndex
 }
 
-startWebServer({ port })
+await startWebServer({ port })
 
 // Only log in non-test environments or when explicitly requested
 

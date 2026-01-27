@@ -2,7 +2,7 @@ import { manager } from '../../plugin/pty/manager.ts'
 import { JsonResponse } from './responses.ts'
 import { wsClients } from '../server.ts'
 
-export async function handleHealth(req: Request): Promise<Response> {
+export async function handleHealth(): Promise<Response> {
   const sessions = manager.list()
   const activeSessions = sessions.filter((s) => s.status === 'running').length
   const totalSessions = sessions.length

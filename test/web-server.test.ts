@@ -23,25 +23,25 @@ describe('Web Server', () => {
   })
 
   describe('Server Lifecycle', () => {
-    it('should start server successfully', () => {
-      const url = startWebServer({ port: 8766 })
+    it('should start server successfully', async () => {
+      const url = await startWebServer({ port: 8766 })
       expect(url).toBe('http://localhost:8766')
       expect(getServerUrl()).toBe('http://localhost:8766')
     })
 
-    it('should handle custom configuration', () => {
-      const url = startWebServer({ port: 8767, hostname: '127.0.0.1' })
+    it('should handle custom configuration', async () => {
+      const url = await startWebServer({ port: 8767, hostname: '127.0.0.1' })
       expect(url).toBe('http://127.0.0.1:8767')
     })
 
-    it('should prevent multiple server instances', () => {
-      startWebServer({ port: 8768 })
-      const secondUrl = startWebServer({ port: 8769 })
+    it('should prevent multiple server instances', async () => {
+      await startWebServer({ port: 8768 })
+      const secondUrl = await startWebServer({ port: 8769 })
       expect(secondUrl).toBe('http://localhost:8768') // Returns existing server URL
     })
 
-    it('should stop server correctly', () => {
-      startWebServer({ port: 8770 })
+    it('should stop server correctly', async () => {
+      await startWebServer({ port: 8770 })
       expect(getServerUrl()).toBeTruthy()
       stopWebServer()
       expect(getServerUrl()).toBeNull()
@@ -51,9 +51,9 @@ describe('Web Server', () => {
   describe('HTTP Endpoints', () => {
     let serverUrl: string
 
-    beforeEach(() => {
+    beforeEach(async () => {
       manager.cleanupAll() // Clean up any leftover sessions
-      serverUrl = startWebServer({ port: 8771 })
+      serverUrl = await startWebServer({ port: 8771 })
     })
 
     it('should serve built assets when NODE_ENV=test', async () => {

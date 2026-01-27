@@ -2,7 +2,7 @@ import type { Server, ServerWebSocket, BunRequest } from 'bun'
 import { manager, onRawOutput, setOnSessionUpdate } from '../plugin/pty/manager.ts'
 import logger from './logger.ts'
 import type { WSMessage, WSClient, ServerConfig } from './types.ts'
-import { handleStaticAssets, get404Response, handleRoot } from './handlers/static.ts'
+import { get404Response, handleRoot } from './handlers/static.ts'
 import { handleHealth } from './handlers/health.ts'
 import {
   getSessions,
@@ -15,6 +15,8 @@ import {
   getPlainBuffer,
 } from './handlers/sessions.ts'
 import { DEFAULT_SERVER_PORT } from './constants.ts'
+
+import { buildStaticRoutes } from './handlers/static.ts'
 
 const log = logger.child({ module: 'web-server' })
 
@@ -219,14 +221,10 @@ async function handleRequest(req: Request, server: Server<WSClient>): Promise<Re
     }
   }
 
-  // Fallback to static assets
-  const staticResponse = await handleStaticAssets(url)
-  if (staticResponse) return staticResponse
-
   return get404Response({ url: req.url, method: req.method, note: 'No route matched' })
 }
 
-export function startWebServer(config: Partial<ServerConfig> = {}): string {
+export async function startWebServer(config: Partial<ServerConfig> = {}): Promise<string> {
   const finalConfig = { ...defaultConfig, ...config }
 
   log.info({ port: finalConfig.port, hostname: finalConfig.hostname }, 'Starting web server')
@@ -240,19 +238,22 @@ export function startWebServer(config: Partial<ServerConfig> = {}): string {
     broadcastRawSessionData(sessionId, rawData)
   })
 
+  const staticRoutes = await buildStaticRoutes()
+
   server = Bun.serve({
     hostname: finalConfig.hostname,
     port: finalConfig.port,
 
     routes: {
+      ...staticRoutes,
       '/health': wrapWithSecurityHeaders(handleHealth),
       '/api/sessions': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'GET') return getSessions(req)
+        if (req.method === 'GET') return getSessions()
         if (req.method === 'POST') return createSession(req)
         return new Response('Method not allowed', { status: 405 })
       }),
       '/api/sessions/clear': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'POST') return clearSessions(req)
+        if (req.method === 'POST') return clearSessions()
         return new Response('Method not allowed', { status: 405 })
       }),
       '/api/sessions/:id': wrapWithSecurityHeaders(async (req: Request) => {

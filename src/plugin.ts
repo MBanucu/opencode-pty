@@ -44,7 +44,7 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
           'Get the URL of the running PTY web server instance by calling the pty_server_url tool and display it.',
         description: 'Get the link to the running PTY web server',
       }
-      startWebServer()
+      await startWebServer()
     },
     event: async ({ event }) => {
       if (!event) {

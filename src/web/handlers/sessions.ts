@@ -23,7 +23,7 @@ function broadcastSessionUpdate(wsClients: Map<ServerWebSocket<WSClient>, WSClie
   }
 }
 
-export async function getSessions(req: Request): Promise<Response> {
+export async function getSessions(): Promise<Response> {
   const sessions = manager.list()
   return new JsonResponse(sessions)
 }
@@ -55,7 +55,7 @@ export async function createSession(req: Request): Promise<Response> {
   }
 }
 
-export async function clearSessions(req: Request): Promise<Response> {
+export async function clearSessions(): Promise<Response> {
   manager.clearAllSessions()
   // Broadcast updated session list to all clients
   broadcastSessionUpdate(wsClients)

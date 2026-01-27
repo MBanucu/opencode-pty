@@ -176,69 +176,81 @@ export async function startWebServer(config: Partial<ServerConfig> = {}): Promis
 
   const staticRoutes = await buildStaticRoutes()
 
-  server = Bun.serve({
-    hostname: finalConfig.hostname,
-    port: finalConfig.port,
+  const createServer = (port: number) => {
+    return Bun.serve({
+      hostname: finalConfig.hostname,
+      port,
 
-    routes: {
-      ...staticRoutes,
-      '/': wrapWithSecurityHeaders(
-        () => new Response(null, { status: 302, headers: { Location: '/index.html' } })
-      ),
-      '/ws': (req: Request) => {
-        if (req.headers.get('upgrade') === 'websocket') {
-          const success = server!.upgrade(req)
-          if (success) {
-            return undefined // Upgrade succeeded, Bun sends 101 automatically
+      routes: {
+        ...staticRoutes,
+        '/': wrapWithSecurityHeaders(
+          () => new Response(null, { status: 302, headers: { Location: '/index.html' } })
+        ),
+        '/ws': (req: Request) => {
+          if (req.headers.get('upgrade') === 'websocket') {
+            const success = server!.upgrade(req)
+            if (success) {
+              return undefined // Upgrade succeeded, Bun sends 101 automatically
+            }
+            return new Response('WebSocket upgrade failed', { status: 400 })
+          } else {
+            return new Response('WebSocket endpoint - use WebSocket upgrade', { status: 426 })
           }
-          return new Response('WebSocket upgrade failed', { status: 400 })
-        } else {
-          return new Response('WebSocket endpoint - use WebSocket upgrade', { status: 426 })
-        }
+        },
+        '/health': wrapWithSecurityHeaders(handleHealth),
+        '/api/sessions': wrapWithSecurityHeaders(async (req: Request) => {
+          if (req.method === 'GET') return getSessions()
+          if (req.method === 'POST') return createSession(req)
+          return new Response('Method not allowed', { status: 405 })
+        }),
+        '/api/sessions/clear': wrapWithSecurityHeaders(async (req: Request) => {
+          if (req.method === 'POST') return clearSessions()
+          return new Response('Method not allowed', { status: 405 })
+        }),
+        '/api/sessions/:id': wrapWithSecurityHeaders(async (req: Request) => {
+          if (req.method === 'GET') return getSession(req as BunRequest<'/api/sessions/:id'>)
+          return new Response('Method not allowed', { status: 405 })
+        }),
+        '/api/sessions/:id/input': wrapWithSecurityHeaders(async (req: Request) => {
+          if (req.method === 'POST') return sendInput(req as BunRequest<'/api/sessions/:id/input'>)
+          return new Response('Method not allowed', { status: 405 })
+        }),
+        '/api/sessions/:id/kill': wrapWithSecurityHeaders(async (req: Request) => {
+          if (req.method === 'POST') return killSession(req as BunRequest<'/api/sessions/:id/kill'>)
+          return new Response('Method not allowed', { status: 405 })
+        }),
+        '/api/sessions/:id/buffer/raw': wrapWithSecurityHeaders(async (req: Request) => {
+          if (req.method === 'GET')
+            return getRawBuffer(req as BunRequest<'/api/sessions/:id/buffer/raw'>)
+          return new Response('Method not allowed', { status: 405 })
+        }),
+        '/api/sessions/:id/buffer/plain': wrapWithSecurityHeaders(async (req: Request) => {
+          if (req.method === 'GET')
+            return getPlainBuffer(req as BunRequest<'/api/sessions/:id/buffer/plain'>)
+          return new Response('Method not allowed', { status: 405 })
+        }),
       },
-      '/health': wrapWithSecurityHeaders(handleHealth),
-      '/api/sessions': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'GET') return getSessions()
-        if (req.method === 'POST') return createSession(req)
-        return new Response('Method not allowed', { status: 405 })
-      }),
-      '/api/sessions/clear': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'POST') return clearSessions()
-        return new Response('Method not allowed', { status: 405 })
-      }),
-      '/api/sessions/:id': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'GET') return getSession(req as BunRequest<'/api/sessions/:id'>)
-        return new Response('Method not allowed', { status: 405 })
-      }),
-      '/api/sessions/:id/input': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'POST') return sendInput(req as BunRequest<'/api/sessions/:id/input'>)
-        return new Response('Method not allowed', { status: 405 })
-      }),
-      '/api/sessions/:id/kill': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'POST') return killSession(req as BunRequest<'/api/sessions/:id/kill'>)
-        return new Response('Method not allowed', { status: 405 })
-      }),
-      '/api/sessions/:id/buffer/raw': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'GET')
-          return getRawBuffer(req as BunRequest<'/api/sessions/:id/buffer/raw'>)
-        return new Response('Method not allowed', { status: 405 })
-      }),
-      '/api/sessions/:id/buffer/plain': wrapWithSecurityHeaders(async (req: Request) => {
-        if (req.method === 'GET')
-          return getPlainBuffer(req as BunRequest<'/api/sessions/:id/buffer/plain'>)
-        return new Response('Method not allowed', { status: 405 })
-      }),
-    },
 
-    websocket: {
-      perMessageDeflate: true,
-      ...wsHandler,
-    },
+      websocket: {
+        perMessageDeflate: true,
+        ...wsHandler,
+      },
 
-    fetch: handleRequest,
-  })
+      fetch: handleRequest,
+    })
+  }
 
-  return `http://${finalConfig.hostname}:${finalConfig.port}`
+  try {
+    server = createServer(finalConfig.port)
+  } catch (error: any) {
+    if (error.code === 'EADDRINUSE' || error.message?.includes('EADDRINUSE')) {
+      server = createServer(0)
+    } else {
+      throw error
+    }
+  }
+
+  return `http://${server.hostname}:${server.port}`
 }
 
 export function stopWebServer(): void {

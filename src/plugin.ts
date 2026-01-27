@@ -6,8 +6,7 @@ import { ptyWrite } from './plugin/pty/tools/write.ts'
 import { ptyRead } from './plugin/pty/tools/read.ts'
 import { ptyList } from './plugin/pty/tools/list.ts'
 import { ptyKill } from './plugin/pty/tools/kill.ts'
-import { ptyServerUrl } from './plugin/pty/tools/server-url.ts'
-import { startWebServer } from './web/server/server.ts'
+import { getServerUrl, startWebServer } from './web/server/server.ts'
 
 interface SessionDeletedEvent {
   type: 'session.deleted'
@@ -17,30 +16,45 @@ interface SessionDeletedEvent {
     }
   }
 }
+const ptyServerUrlCommand = 'background-pty-server-url'
 
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initPermissions(client, directory)
   initManager(client)
 
   return {
+    "command.execute.before": async (input) => {
+      if (input.command === ptyServerUrlCommand) {
+        const serverUrl = getServerUrl()
+        client.session.prompt({
+          path: { id: input.sessionID },
+          body: {
+            parts: [{
+              type: 'text',
+              text: serverUrl ? `PTY Web Server URL: ${serverUrl}` : 'PTY Web Server is not running.',
+            }],
+            noReply: true,
+          }
+        })
+        throw new Error('Command handled by PTY plugin')
+      }
+    },
     tool: {
       pty_spawn: ptySpawn,
       pty_write: ptyWrite,
       pty_read: ptyRead,
       pty_list: ptyList,
       pty_kill: ptyKill,
-      pty_server_url: ptyServerUrl,
     },
     config: async (input) => {
       if (!input.command) {
         input.command = {}
       }
-      input.command['background-pty-server-url'] = {
-        template:
-          'Get the URL of the running PTY web server instance by calling the pty_server_url tool and display it.',
-        description: 'Get the link to the running PTY web server',
+      const serverUrl = await startWebServer()
+      input.command[ptyServerUrlCommand] = {
+        template: `${serverUrl}`,
+        description: 'print link to PTY web server',
       }
-      await startWebServer()
     },
     event: async ({ event }) => {
       if (!event) {

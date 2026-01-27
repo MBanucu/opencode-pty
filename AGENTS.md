@@ -79,8 +79,77 @@ This document is the authoritative and up-to-date guide for both agentic coding 
   - Run single/filtered unit test: `bun test --match "<pattern>"`
 - **Other:**
   - `bun run clean` — Remove build artifacts, test results, etc.
+  - `bun run ci` — Run quality checks and all tests (used by CI pipeline)
 
 **Note:** Many scripts have special requirements or additional ENV flags; see inline package.json script comments for platform- or environment-specific details (e.g. Playwright+Bun TS support requires `PW_DISABLE_TS_ESM=1`).
+
+---
+
+## Code Style & Conventions
+
+### Naming Conventions
+
+- **Functions/Variables**: camelCase (`setOnSessionUpdate`, `rawOutputCallbacks`)
+- **Types/Classes**: PascalCase (`PTYManager`, `SessionLifecycleManager`)
+- **Constants**: UPPER_CASE (`DEFAULT_READ_LIMIT`, `MAX_LINE_LENGTH`)
+- **Directories**: kebab-case (`src/web/client`, `e2e`)
+- **Files**: kebab-case for directories, camelCase for components/hooks (`useWebSocket.ts`, `TerminalRenderer.tsx`)
+
+### TypeScript Configuration
+
+- Strict TypeScript settings enabled (`strict: true`)
+- Module resolution: `"bundler"` with `"moduleResolution": "bundler"`
+- Target: ESNext with modern features
+- No implicit returns or unused variables/parameters allowed
+- Explicit type annotations required where beneficial
+
+### Formatting (Prettier)
+
+- **Semicolons**: Disabled (`semi: false`)
+- **Quotes**: Single quotes preferred (`singleQuote: true`)
+- **Trailing commas**: ES5 style (`trailingComma: "es5"`)
+- **Print width**: 100 characters (`printWidth: 100`)
+- **Indentation**: 2 spaces, no tabs (`tabWidth: 2`, `useTabs: false`)
+
+### Import/Export Style
+
+- Use ES6 imports/exports
+- Group imports: external libraries first, then internal modules
+- Prefer named exports over default exports for better tree-shaking
+- Use absolute imports for internal modules where possible
+
+### Documentation
+
+- Use JSDoc comments for public APIs
+- Inline comments for complex logic
+- No redundant comments on self-explanatory code
+
+---
+
+## Error Handling & Logging
+
+### Error Handling Patterns
+
+- Use try/catch blocks for operations that may fail
+- Throw descriptive `Error` objects with clear messages
+- Handle errors gracefully in async operations
+- Validate inputs and provide meaningful error messages
+- Use custom error builders for common error types (e.g., `buildSessionNotFoundError`)
+
+### Logging Approach
+
+- Logging is handled through the OpenCode client's notification system
+- Use `client.session.promptAsync()` for user-facing notifications
+- Session lifecycle events (start, exit) generate notifications automatically
+- No dedicated logging files; logging is integrated with OpenCode's session system
+- Debug logging can be enabled via OpenCode's `--log-level DEBUG` flag
+
+### Exception Safety
+
+- Operations that modify state should be atomic where possible
+- Clean up resources in error paths (session cleanup, buffer management)
+- Silent failure in notification paths to prevent cascading errors
+- Validate session state before operations
 
 ---
 
@@ -125,4 +194,199 @@ This document is the authoritative and up-to-date guide for both agentic coding 
 
 ---
 
-## [Next sections will follow this improved outline.]
+## Security Best Practices
+
+### Input Validation
+
+- Validate all user inputs before processing
+- Use regex pattern validation for search/filter operations
+- Sanitize file paths and command arguments
+- Check permissions before executing operations
+
+### Process Security
+
+- PTY sessions run with user permissions only
+- External directory access controlled via permission settings
+- No elevated privileges or sudo operations
+- Session isolation prevents cross-session interference
+
+### Dependency Security
+
+- Regular dependency updates via `bun install`
+- CI includes security scanning (CodeQL, dependency review)
+- No secrets or credentials committed to repository
+- Environment variables used for sensitive configuration
+
+### Code Security
+
+- Strict TypeScript prevents type-related vulnerabilities
+- ESLint rules enforce secure coding patterns
+- No dynamic code execution or eval usage
+- Buffer overflow protection through TypeScript bounds checking
+
+---
+
+## Dependency Management
+
+### Package Management
+
+- **Runtime**: Bun for fast package management and execution
+- **Dependencies**: Listed in `package.json` with specific versions
+- **Lockfile**: `bun.lockb` ensures reproducible installs
+- **Peer Dependencies**: TypeScript ^5 required
+
+### Key Dependencies
+
+- `@opencode-ai/plugin` & `@opencode-ai/sdk` — OpenCode integration
+- `@xterm/xterm` & `@xterm/addon-*` — Terminal emulation
+- `bun-pty` — PTY process management
+- `react` & `react-dom` — Web UI framework
+- `strip-ansi` — ANSI escape sequence removal
+
+### Development Dependencies
+
+- Testing: `@playwright/test`, Bun test runner
+- Code Quality: `eslint`, `prettier`, `typescript`
+- Build: `vite`, `@vitejs/plugin-react`
+
+### Updating Dependencies
+
+- Use `bun update <package>` for specific package updates
+- Run full test suite after updates
+- Check for breaking changes in changelogs
+- Update lockfile and commit together
+
+---
+
+## Release Process
+
+### Automated Release
+
+- Releases triggered by version bumps to main branch
+- Use `./release.sh` script for version management:
+  ```sh
+  ./release.sh --patch  # Patch version bump
+  ./release.sh --minor  # Minor version bump
+  ./release.sh --major  # Major version bump
+  ./release.sh --dry-run  # Preview changes
+  ```
+
+### Release Workflow
+
+1. **Version Bump**: Script updates `package.json` version
+2. **Git Tag**: Creates `v{X.Y.Z}` tag on main branch
+3. **GitHub Actions**: Triggers release workflow
+4. **NPM Publish**: Automated publishing with provenance
+5. **Changelog**: Generated from git commit history
+
+### Pre-release Checks
+
+- All tests pass (`bun run ci`)
+- Build succeeds (`bun run build`)
+- No uncommitted changes
+- Git working directory clean
+
+### Post-release
+
+- Version available on NPM within minutes
+- OpenCode plugin updates automatically
+- GitHub release created with changelog
+
+---
+
+## Contributing Guidelines
+
+### Development Workflow
+
+1. **Fork & Branch**: Create feature branch from main
+2. **Code Changes**: Follow established conventions
+3. **Testing**: Add/update tests for new functionality
+4. **Quality Checks**: Run `bun run quality` before committing
+5. **Commit**: Use descriptive commit messages
+6. **Pull Request**: Create PR with clear description
+
+### Pull Request Requirements
+
+- **Tests**: Include unit and E2E tests as appropriate
+- **Documentation**: Update AGENTS.md for significant changes
+- **Breaking Changes**: Clearly document API changes
+- **Code Review**: Address review feedback
+- **CI**: All checks must pass
+
+### Code Review Checklist
+
+- [ ] TypeScript types correct and complete
+- [ ] Error handling appropriate
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] Security considerations addressed
+- [ ] Performance implications considered
+- [ ] Code style conventions followed
+
+### Commit Message Convention
+
+- Use imperative mood: "Add feature" not "Added feature"
+- Start with action verb (Add, Fix, Update, Remove, etc.)
+- Keep first line under 50 characters
+- Add detailed description for complex changes
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### Build Failures
+
+- **Type errors**: Run `bun run typecheck` to identify issues
+- **Lint errors**: Use `bun run lint:fix` for auto-fixable issues
+- **Missing dependencies**: Run `bun install` to ensure all packages installed
+
+#### Test Failures
+
+- **Unit tests**: Check for race conditions or state leakage between tests
+- **E2E tests**: Verify dev server running, check browser console for errors
+- **Flaky tests**: Increase timeouts or add explicit waits
+
+#### Runtime Issues
+
+- **Permission denied**: Check PTY session permissions in OpenCode settings
+- **Session not found**: Verify session ID and lifecycle
+- **Buffer issues**: Check buffer size limits and regex patterns
+
+#### Development Environment
+
+- **Bun version**: Ensure Bun latest version installed
+- **Node modules**: Clear cache with `rm -rf node_modules && bun install`
+- **Port conflicts**: Check if dev server ports (8766) are available
+
+### Debug Mode
+
+- Enable verbose logging: `opencode --log-level DEBUG --print-logs`
+- Check debug logs in `~/.local/share/opencode/logs/`
+- Use browser dev tools for web UI debugging
+
+### Getting Help
+
+- Check existing issues on GitHub
+- Review README.md and this AGENTS.md
+- Create detailed bug reports with reproduction steps
+- Include environment info (Bun version, OS, OpenCode version)
+
+---
+
+## Appendix: Minimal .opencode/package.json
+
+For local plugin development, create a minimal `package.json` in `.opencode/`:
+
+```json
+{
+  "name": "opencode-local-plugins",
+  "private": true,
+  "dependencies": {
+    "your-plugin-dep": "^1.0.0"
+  }
+}
+```
+
+Then run `bun install` in `.opencode/` and restart OpenCode.

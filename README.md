@@ -24,6 +24,8 @@ This plugin gives the agent full control over multiple terminal sessions, like t
 - **Permission Support**: Respects OpenCode's bash permission settings
 - **Session Lifecycle**: Sessions persist until explicitly killed
 - **Auto-cleanup**: PTYs are cleaned up when OpenCode sessions end
+- **Web UI**: Modern React-based interface for session management
+- **Real-time Streaming**: WebSocket-based live output updates
 
 ## Setup
 
@@ -52,13 +54,14 @@ opencode
 
 ## Tools Provided
 
-| Tool        | Description                                                                 |
-| ----------- | --------------------------------------------------------------------------- |
-| `pty_spawn` | Create a new PTY session (command, args, workdir, env, title, notifyOnExit) |
-| `pty_write` | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C)         |
-| `pty_read`  | Read output buffer with pagination and optional regex filtering             |
-| `pty_list`  | List all PTY sessions with status, PID, line count                          |
-| `pty_kill`  | Terminate a PTY, optionally cleanup the buffer                              |
+| Tool             | Description                                                                 |
+| ---------------- | --------------------------------------------------------------------------- |
+| `pty_spawn`      | Create a new PTY session (command, args, workdir, env, title, notifyOnExit) |
+| `pty_write`      | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C)         |
+| `pty_read`       | Read output buffer with pagination and optional regex filtering             |
+| `pty_list`       | List all PTY sessions with status, PID, line count                          |
+| `pty_kill`       | Terminate a PTY, optionally cleanup the buffer                              |
+| `pty_server_url` | Get the URL of the running PTY web server instance                          |
 
 ## Web UI
 
@@ -90,14 +93,17 @@ This will:
 
 The web server provides a REST API for session management:
 
-| Method   | Endpoint                   | Description                      |
-| -------- | -------------------------- | -------------------------------- |
-| `GET`    | `/api/sessions`            | List all PTY sessions            |
-| `POST`   | `/api/sessions`            | Create a new PTY session         |
-| `GET`    | `/api/sessions/:id`        | Get session details              |
-| `GET`    | `/api/sessions/:id/output` | Get session output buffer        |
-| `DELETE` | `/api/sessions/:id`        | Kill and cleanup a session       |
-| `GET`    | `/health`                  | Server health check with metrics |
+| Method | Endpoint                         | Description                            |
+| ------ | -------------------------------- | -------------------------------------- |
+| `GET`  | `/api/sessions`                  | List all PTY sessions                  |
+| `POST` | `/api/sessions`                  | Create a new PTY session               |
+| `GET`  | `/api/sessions/:id`              | Get session details                    |
+| `POST` | `/api/sessions/:id/input`        | Send input to a session                |
+| `POST` | `/api/sessions/:id/kill`         | Kill and cleanup a session             |
+| `GET`  | `/api/sessions/:id/buffer/plain` | Get session output buffer (plain text) |
+| `GET`  | `/api/sessions/:id/buffer/raw`   | Get session output buffer (raw)        |
+| `POST` | `/api/sessions/clear`            | Clear all sessions                     |
+| `GET`  | `/health`                        | Server health check with metrics       |
 
 #### Session Creation
 
@@ -120,8 +126,10 @@ const ws = new WebSocket('ws://localhost:8766/ws')
 
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data)
-  if (data.type === 'data') {
-    console.log('New output:', data.data)
+  if (data.type === 'raw_data') {
+    console.log('New output:', data.rawData)
+  } else if (data.type === 'session_list') {
+    console.log('Session list:', data.sessions)
   }
 }
 ```
@@ -131,14 +139,14 @@ ws.onmessage = (event) => {
 For development with hot reloading:
 
 ```bash
-# Terminal 1: Start the backend server
-bun run dev:backend
-
-# Terminal 2: Start the React dev server
+# Terminal 1: Start the React dev server
 bun run dev
+
+# Terminal 2: Start the PTY server (in another terminal)
+bun run e2e/test-web-server.ts
 ```
 
-The React app will be available at `http://localhost:5173` with hot reloading.
+The React app will be available at `http://localhost:5173` with hot reloading, and the PTY server at `http://localhost:8766`.
 
 ## Usage Examples
 
@@ -257,6 +265,7 @@ This plugin respects OpenCode's [permission settings](https://opencode.ai/docs/p
 5. **Write**: Agent can send any input including escape sequences
 6. **Lifecycle**: Sessions track status (running/exited/killed), persist until cleanup
 7. **Notify**: When `notifyOnExit` is true, sends a message to the session when the process exits
+8. **Web UI**: React frontend connects via WebSocket for real-time updates
 
 ## Session Lifecycle
 
@@ -277,7 +286,7 @@ Use `pty_kill` with `cleanup=true` to remove completely.
 ## Local Development
 
 ```bash
-git clone https://github.com/shekohex/opencode-pty.git
+git clone https://github.com/MBanucu/opencode-pty.git
 cd opencode-pty
 bun install
 bun run typecheck  # Type check

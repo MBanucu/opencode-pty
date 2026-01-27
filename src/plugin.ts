@@ -16,25 +16,29 @@ interface SessionDeletedEvent {
     }
   }
 }
-const ptyServerUrlCommand = 'background-pty-server-url'
+const ptyServerUrlCommand = 'pty-server-url'
 
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initPermissions(client, directory)
   initManager(client)
 
   return {
-    "command.execute.before": async (input) => {
+    'command.execute.before': async (input) => {
       if (input.command === ptyServerUrlCommand) {
         const serverUrl = getServerUrl()
         client.session.prompt({
           path: { id: input.sessionID },
           body: {
-            parts: [{
-              type: 'text',
-              text: serverUrl ? `PTY Web Server URL: ${serverUrl}` : 'PTY Web Server is not running.',
-            }],
+            parts: [
+              {
+                type: 'text',
+                text: serverUrl
+                  ? `PTY Web Server URL: ${serverUrl}`
+                  : 'PTY Web Server is not running.',
+              },
+            ],
             noReply: true,
-          }
+          },
         })
         throw new Error('Command handled by PTY plugin')
       }

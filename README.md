@@ -63,6 +63,14 @@ opencode
 | `pty_kill`       | Terminate a PTY, optionally cleanup the buffer                              |
 | `pty_server_url` | Get the URL of the running PTY web server instance                          |
 
+## Slash Commands
+
+This plugin provides slash commands that can be used in OpenCode chat:
+
+| Command           | Description                                        |
+| ----------------- | -------------------------------------------------- |
+| `/pty-server-url` | Get the URL of the running PTY web server instance |
+
 ## Web UI
 
 This plugin includes a modern React-based web interface for monitoring and interacting with PTY sessions.

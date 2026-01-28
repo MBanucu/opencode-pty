@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server/server.ts'
 import { PTYManager } from '../src/plugin/pty/manager.ts'
+import { manager } from '../src/plugin/pty/manager.ts'
 
 describe.serial('Web Server', () => {
   const fakeClient = {
@@ -11,8 +12,6 @@ describe.serial('Web Server', () => {
     },
   } as any
 
-  let testManager: PTYManager
-
   beforeEach(() => {
     testManager = new PTYManager()
     testManager.init(fakeClient)
@@ -20,7 +19,7 @@ describe.serial('Web Server', () => {
 
   afterEach(() => {
     stopWebServer()
-    testManager.cleanupAll() // Ensure cleanup after each test
+    manager.clearAllSessions() // Ensure cleanup after each test
   })
 
   describe('Server Lifecycle', () => {
@@ -53,8 +52,8 @@ describe.serial('Web Server', () => {
     let serverUrl: string
 
     beforeEach(async () => {
-      testManager.cleanupAll() // Clean up any leftover sessions
-      serverUrl = await startWebServer({ port: 8771 }, testManager)
+      manager.clearAllSessions() // Clean up any leftover sessions
+      serverUrl = await startWebServer({ port: 8771 })
     })
 
     it('should serve built assets when NODE_ENV=test', async () => {
@@ -133,12 +132,30 @@ describe.serial('Web Server', () => {
 
     it('should return individual session', async () => {
       // Create a test session first
-      const session = testManager.spawn({
-        command: 'cat',
-        args: [],
+      const session = manager.spawn({
+        command: 'sleep',
+        args: ['1'],
         description: 'Test session',
         parentSessionId: 'test',
       })
+
+      console.log('Created session:', session)
+      const fullSession = manager.get(session.id)
+      console.log('Session from manager.get:', fullSession)
+
+      // Wait for PTY to start
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
+      console.log('Session response status:', response.status)
+      expect(response.status).toBe(200)
+
+      const sessionData = await response.json()
+      console.log('Session data:', sessionData)
+      expect(sessionData.id).toBe(session.id)
+      expect(sessionData.command).toBe('sleep')
+      expect(sessionData.args).toEqual(['1'])
+    })
 
       console.log('Created session:', session)
       const fullSession = testManager.get(session.id)
@@ -154,8 +171,8 @@ describe.serial('Web Server', () => {
       const sessionData = await response.json()
       console.log('Session data:', sessionData)
       expect(sessionData.id).toBe(session.id)
-      expect(sessionData.command).toBe('cat')
-      expect(sessionData.args).toEqual([])
+      expect(sessionData.command).toBe('sleep')
+      expect(sessionData.args).toEqual(['1'])
     })
 
     it('should return 404 for non-existent session', async () => {
@@ -168,7 +185,7 @@ describe.serial('Web Server', () => {
 
     it('should handle input to session', async () => {
       // Create a session to test input
-      const session = testManager.spawn({
+      const session = manager.spawn({
         command: 'cat',
         args: [],
         description: 'Test session',
@@ -194,11 +211,11 @@ describe.serial('Web Server', () => {
       expect(result).toHaveProperty('success', true)
 
       // Clean up
-      testManager.kill(session.id, true)
+      manager.kill(session.id, true)
     })
 
     it('should handle kill session', async () => {
-      const session = testManager.spawn({
+      const session = manager.spawn({
         command: 'sleep',
         args: ['1'],
         description: 'Test session',
@@ -224,8 +241,8 @@ describe.serial('Web Server', () => {
     it('should return session output', async () => {
       // Create a session that produces output
       const session = testManager.spawn({
-        command: 'echo',
-        args: ['line1\nline2\nline3'],
+        command: 'sh',
+        args: ['-c', 'echo "line1"; echo "line2"; echo "line3"'],
         description: 'Test session with output',
         parentSessionId: 'test-output',
       })

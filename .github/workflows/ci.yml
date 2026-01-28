@@ -12,8 +12,24 @@ permissions:
   actions: read
 
 jobs:
-  test:
+  list-tests:
     runs-on: ubuntu-24.04
+    outputs:
+      test_files: ${{ steps.list.outputs.test_files }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: List test files
+        id: list
+        run: echo "test_files=$(ls test/*.test.ts | jq -R . | jq -s . | jq -c .)" >> $GITHUB_OUTPUT
+
+  test:
+    needs: list-tests
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        test_file: ${{ fromJson(needs.list-tests.outputs.test_files) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -47,15 +63,15 @@ jobs:
       - name: Build
         run: bun run build:all:prod
 
-      - name: Run tests
-        run: bun test --concurrency=1
+      - name: Run test
+        run: bun test ${{ matrix.test_file }}
 
   dependency-review:
     runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4

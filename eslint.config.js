@@ -76,6 +76,18 @@ export default [
         HTMLDivElement: 'readonly',
         HTMLInputElement: 'readonly',
         confirm: 'readonly',
+        KeyboardEvent: 'readonly',
+        NodeJS: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['src/web/server/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: {
+        Request: 'readonly',
+        Headers: 'readonly',
+        TextEncoder: 'readonly',
       },
     },
   },
@@ -85,6 +97,7 @@ export default [
       'dist/',
       'playwright-report/',
       'test-results/',
+      'e2e/',
       '*.config.js',
       '*.config.ts',
       'bun.lock',

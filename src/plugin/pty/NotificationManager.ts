@@ -22,7 +22,9 @@ export class NotificationManager {
           parts: [{ type: 'text', text: message }],
         },
       })
-    } catch (err) {}
+    } catch (err) {
+      // Ignore notification errors
+    }
   }
 
   private buildExitNotification(session: PTYSession, exitCode: number): string {

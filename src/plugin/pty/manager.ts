@@ -23,7 +23,9 @@ function notifyRawOutput(sessionId: string, rawData: string): void {
   for (const callback of rawOutputCallbacks) {
     try {
       callback(sessionId, rawData)
-    } catch {}
+    } catch {
+      // Ignore callback errors
+    }
   }
 }
 

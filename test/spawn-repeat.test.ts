@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { initManager, manager, onRawOutput } from '../src/plugin/pty/manager.ts'
 
 describe('PTY Echo Behavior', () => {
@@ -19,54 +19,56 @@ describe('PTY Echo Behavior', () => {
     manager.clearAllSessions()
   })
 
-  it("should receive initial data reproducibly", async () => {
-    const start = Date.now();
-    const maxRuntime = 4000;
-    let runnings = 1;
+  it('should receive initial data reproducibly', async () => {
+    const start = Date.now()
+    const maxRuntime = 4000
+    let runnings = 1
     while (Date.now() - start < maxRuntime) {
-      console.log(`[TEST] Iteration ${runnings++}`);
+      console.log(`[TEST] Iteration ${runnings++}`)
       const { success, stderr } = Bun.spawnSync({
-        cmd: ["bun", "test", "--test-name-pattern", "should receive initial data once"],
-        stdout: "pipe",
-        stderr: "pipe",
-        env: { ...process.env, SYNC_TESTS: "1" },
-      });
-      expect(success, `stderr: ${stderr}`).toBe(true);
+        cmd: ['bun', 'test', '--test-name-pattern', 'should receive initial data once'],
+        stdout: 'pipe',
+        stderr: 'pipe',
+        env: { ...process.env, SYNC_TESTS: '1' },
+      })
+      expect(success, `stderr: ${stderr}`).toBe(true)
     }
-  });
-
-  it.skipIf(!process.env.SYNC_TESTS)("should receive initial data once", async () => {
-  const receivedOutputs: string[] = []
-
-  const promise = new Promise<void>((resolve) => {
-    // Subscribe to raw output events
-    onRawOutput((_sessionId, rawData) => {
-      receivedOutputs.push(rawData)
-      if (receivedOutputs.join('').includes('Hello World')) {
-        resolve()
-      }
-    })
-    setTimeout(resolve, 1000)
-  }).catch((e) => { console.error(e) })
-
-  // Spawn interactive bash session
-  const session = manager.spawn({
-    command: 'echo',
-    args: ['Hello World'],
-    description: 'Echo test session',
-    parentSessionId: 'test',
   })
 
-  await promise
+  it.skipIf(!process.env.SYNC_TESTS)('should receive initial data once', async () => {
+    const receivedOutputs: string[] = []
 
-  // Clean up
-  manager.kill(session.id, true)
+    const promise = new Promise<void>((resolve) => {
+      // Subscribe to raw output events
+      onRawOutput((_sessionId, rawData) => {
+        receivedOutputs.push(rawData)
+        if (receivedOutputs.join('').includes('Hello World')) {
+          resolve()
+        }
+      })
+      setTimeout(resolve, 1000)
+    }).catch((e) => {
+      console.error(e)
+    })
 
-  // Verify echo occurred
-  const allOutput = receivedOutputs.join('')
-  expect(allOutput).toContain('Hello World')
+    // Spawn interactive bash session
+    const session = manager.spawn({
+      command: 'echo',
+      args: ['Hello World'],
+      description: 'Echo test session',
+      parentSessionId: 'test',
+    })
 
-  // Should have received some output (prompt + echo)
-  expect(receivedOutputs.length).toBeGreaterThan(0)
-  });
+    await promise
+
+    // Clean up
+    manager.kill(session.id, true)
+
+    // Verify echo occurred
+    const allOutput = receivedOutputs.join('')
+    expect(allOutput).toContain('Hello World')
+
+    // Should have received some output (prompt + echo)
+    expect(receivedOutputs.length).toBeGreaterThan(0)
+  })
 })

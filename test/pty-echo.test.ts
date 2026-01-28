@@ -31,7 +31,9 @@ describe('PTY Echo Behavior', () => {
         }
       })
       setTimeout(resolve, 1000)
-    }).catch((e) => { console.error(e) })
+    }).catch((e) => {
+      console.error(e)
+    })
 
     // Spawn interactive bash session
     const session = manager.spawn({

@@ -1,20 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server/server.ts'
-import { PTYManager } from '../src/plugin/pty/manager.ts'
 import { manager } from '../src/plugin/pty/manager.ts'
 
 describe.serial('Web Server', () => {
-  const fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger - do nothing
-      },
-    },
-  } as any
-
   beforeEach(() => {
-    testManager = new PTYManager()
-    testManager.init(fakeClient)
+    // No setup needed for server lifecycle tests
   })
 
   afterEach(() => {
@@ -157,24 +147,6 @@ describe.serial('Web Server', () => {
       expect(sessionData.args).toEqual(['1'])
     })
 
-      console.log('Created session:', session)
-      const fullSession = testManager.get(session.id)
-      console.log('Session from manager.get:', fullSession)
-
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
-      console.log('Session response status:', response.status)
-      expect(response.status).toBe(200)
-
-      const sessionData = await response.json()
-      console.log('Session data:', sessionData)
-      expect(sessionData.id).toBe(session.id)
-      expect(sessionData.command).toBe('sleep')
-      expect(sessionData.args).toEqual(['1'])
-    })
-
     it('should return 404 for non-existent session', async () => {
       const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
       console.log('Testing non-existent session ID:', nonexistentId)
@@ -240,7 +212,7 @@ describe.serial('Web Server', () => {
 
     it('should return session output', async () => {
       // Create a session that produces output
-      const session = testManager.spawn({
+      const session = manager.spawn({
         command: 'sh',
         args: ['-c', 'echo "line1"; echo "line2"; echo "line3"'],
         description: 'Test session with output',

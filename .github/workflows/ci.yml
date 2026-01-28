@@ -27,9 +27,6 @@ jobs:
   test:
     needs: list-tests
     runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        test_file: ${{ fromJson(needs.list-tests.outputs.test_files) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -63,7 +60,7 @@ jobs:
         run: bun run build:all:prod
 
       - name: Run test
-        run: bun test ${{ matrix.test_file }}
+        run: bun test
 
   dependency-review:
     runs-on: ubuntu-24.04

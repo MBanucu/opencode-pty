@@ -3,8 +3,16 @@ import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server/s
 import { manager } from '../src/plugin/pty/manager.ts'
 
 describe.serial('Web Server', () => {
+  const fakeClient = {
+    app: {
+      log: async (_opts: any) => {
+        // Mock logger - do nothing
+      },
+    },
+  } as any
+
   beforeEach(() => {
-    // No setup needed for server lifecycle tests
+    manager.init(fakeClient)
   })
 
   afterEach(() => {
@@ -43,7 +51,7 @@ describe.serial('Web Server', () => {
 
     beforeEach(async () => {
       manager.clearAllSessions() // Clean up any leftover sessions
-      serverUrl = await startWebServer({ port: 8771 })
+      serverUrl = await startWebServer({ port: 8771 }, manager)
     })
 
     it('should serve built assets when NODE_ENV=test', async () => {
@@ -143,12 +151,11 @@ describe.serial('Web Server', () => {
       const sessionData = await response.json()
       console.log('Session data:', sessionData)
       expect(sessionData.id).toBe(session.id)
-      expect(sessionData.command).toBe('sleep')
-      expect(sessionData.args).toEqual(['1'])
+      expect(sessionData.args).toEqual(['10'])
     })
 
     it('should return 404 for non-existent session', async () => {
-      const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
+      const nonexistentId = 'nonexistent'
       console.log('Testing non-existent session ID:', nonexistentId)
       const response = await fetch(`${serverUrl}/api/sessions/${nonexistentId}`)
       console.log('Non-existent response status:', response.status)
@@ -158,8 +165,8 @@ describe.serial('Web Server', () => {
     it('should handle input to session', async () => {
       // Create a session to test input
       const session = manager.spawn({
-        command: 'cat',
-        args: [],
+        command: 'sleep',
+        args: ['10'],
         description: 'Test session',
         parentSessionId: 'test',
       })

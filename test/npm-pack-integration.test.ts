@@ -61,7 +61,7 @@ describe('npm pack integration', () => {
 
   it('packs, installs, and serves assets correctly', async () => {
     // 1) Create temp workspace
-    tempDir = mkdtempSync(join(tmpdir(), 'opencode-pty-'))
+    tempDir = mkdtempSync(join(tmpdir(), 'opencode-pty-test-'))
 
     // 2) Pack the package
     const pack = await run(['npm', 'pack'])
@@ -86,7 +86,7 @@ describe('npm pack integration', () => {
     copyFileSync(join(process.cwd(), 'test/start-server.ts'), join(tempDir, 'start-server.ts'))
 
     // Verify the package structure
-    const packageDir = join(tempDir, 'node_modules/opencode-pty')
+    const packageDir = join(tempDir, 'node_modules/opencode-pty-test')
     expect(existsSync(join(packageDir, 'src/plugin/pty/manager.ts'))).toBe(true)
     expect(existsSync(join(packageDir, 'dist/web/index.html'))).toBe(true)
     serverProcess = Bun.spawn(['bun', 'run', 'start-server.ts'], {

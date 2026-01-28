@@ -2,22 +2,22 @@
 
 This document is the authoritative and up-to-date guide for both agentic coding assistants and developers working with this repository. It contains essential information, conventions, troubleshooting, workflow guidance, and up-to-date instructions reflecting the current codebase and recommended practices.
 
-**opencode-pty** is an OpenCode/Bun plugin enabling interactive management of PTY (pseudo-terminal) sessions from both APIs and a modern web UI. It supports concurrent shell sessions, interactive input/output, real-time streaming, regex output filtering, buffer management, status/exits, permission-aware process handling, and agent/plugin extensibility.
+**opencode-pty-test** is an OpenCode/Bun plugin enabling interactive management of PTY (pseudo-terminal) sessions from both APIs and a modern web UI. It supports concurrent shell sessions, interactive input/output, real-time streaming, regex output filtering, buffer management, status/exits, permission-aware process handling, and agent/plugin extensibility.
 
 ## Quickstart
 
 ### For Users (Install / Upgrade)
 
-- Add `opencode-pty` to your OpenCode config in the `plugin` array:
+- Add `opencode-pty-test` to your OpenCode config in the `plugin` array:
   ```json
   {
     "$schema": "https://opencode.ai/config.json",
-    "plugin": ["opencode-pty"]
+    "plugin": ["opencode-pty-test"]
   }
   ```
 - To force an upgrade or clear a corrupted cache:
   ```sh
-  rm -rf ~/.cache/opencode/node_modules/opencode-pty # then rerun opencode
+  rm -rf ~/.cache/opencode/node_modules/opencode-pty-test # then rerun opencode
   ```
 - OpenCode will install/update plugins on the next run; plugins are not auto-updated.
 

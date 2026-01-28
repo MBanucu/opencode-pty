@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Session } from 'opencode-pty/shared/types'
+import type { Session } from 'opencode-pty-test/shared/types'
 import {
   WEBSOCKET_PING_INTERVAL,
   RETRY_DELAY,
   SKIP_AUTOSELECT_KEY,
-} from 'opencode-pty/shared/constants'
+} from 'opencode-pty-test/shared/constants'
 
 interface UseWebSocketOptions {
   activeSession: Session | null

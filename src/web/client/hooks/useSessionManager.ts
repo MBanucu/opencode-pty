@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { Session } from 'opencode-pty/shared/types'
+import type { Session } from 'opencode-pty-test/shared/types'
 
 interface UseSessionManagerOptions {
   activeSession: Session | null

@@ -1,4 +1,4 @@
-# opencode-pty
+# opencode-pty-test
 
 A plugin for [OpenCode](https://opencode.ai) that provides interactive PTY (pseudo-terminal) management, enabling the AI agent to run background processes, send interactive input, and read output on demand.
 
@@ -34,7 +34,7 @@ Add the plugin to your [OpenCode config](https://opencode.ai/docs/config/):
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-pty"]
+  "plugin": ["opencode-pty-test"]
 }
 ```
 
@@ -48,7 +48,7 @@ That's it. OpenCode will automatically install the plugin on next run.
 To get the latest version, clear the cached plugin and let OpenCode reinstall it:
 
 ```bash
-rm -rf ~/.cache/opencode/node_modules/opencode-pty
+rm -rf ~/.cache/opencode/node_modules/opencode-pty-test
 opencode
 ```
 
@@ -294,8 +294,8 @@ Use `pty_kill` with `cleanup=true` to remove completely.
 ## Local Development
 
 ```bash
-git clone https://github.com/MBanucu/opencode-pty.git
-cd opencode-pty
+git clone https://github.com/MBanucu/opencode-pty-test.git
+cd opencode-pty-test
 bun install
 bun run typecheck  # Type check
 bun run build      # Build the React app for production
@@ -307,7 +307,7 @@ To load a local checkout in OpenCode:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["file:///absolute/path/to/opencode-pty"]
+  "plugin": ["file:///absolute/path/to/opencode-pty-test"]
 }
 ```
 

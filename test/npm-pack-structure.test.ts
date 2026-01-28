@@ -2,7 +2,7 @@ import { describe, it, expect } from 'bun:test'
 
 // This test ensures `npm pack` (which triggers the package's `prepack` script)
 // produces a tarball that includes the built web UI (`dist/web/**`) and the
-// plugin bundle (`dist/opencode-pty.js`).
+// plugin bundle (`dist/opencode-pty-test.js`).
 
 async function run(cmd: string[], opts: { cwd?: string } = {}) {
   const proc = Bun.spawn(cmd, {
@@ -46,7 +46,7 @@ describe('npm pack structure', () => {
 
     // 3) Validate required files exist; NPM tarballs use 'package/' prefix
     expect(files).toContain('package/dist/web/index.html')
-    expect(files).toContain('package/dist/opencode-pty.js')
+    expect(files).toContain('package/dist/opencode-pty-test.js')
 
     // At least one hashed JS and CSS asset
     const hasJsAsset = files.some((f) => /package\/dist\/web\/assets\/[^/]+\.js$/.test(f))

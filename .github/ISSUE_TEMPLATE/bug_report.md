@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug with the opencode-pty plugin
+about: Report a bug with the opencode-pty-test plugin
 title: '[Bug]: '
 labels: ['bug']
 assignees: ''
@@ -42,7 +42,7 @@ A clear and concise description of what actually happens.
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-pty"],
+  "plugin": ["opencode-pty-test"],
   "permission": {
     // your permission config
   }

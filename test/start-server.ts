@@ -1,5 +1,5 @@
-import { initManager, manager } from 'opencode-pty/src/plugin/pty/manager'
-import { startWebServer } from 'opencode-pty/src/web/server/server'
+import { initManager, manager } from 'opencode-pty-test/src/plugin/pty/manager'
+import { startWebServer } from 'opencode-pty-test/src/web/server/server'
 
 // Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {

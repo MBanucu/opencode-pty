@@ -7,6 +7,15 @@ import { withSession } from './utils.ts'
 
 // Monkey-patch bun-pty to fix race condition in _startReadLoop
 // Temporary workaround until https://github.com/sursaone/bun-pty/pull/37 is merged
+import { semver } from 'bun'
+import { version as bunPtyVersion } from 'bun-pty/package.json'
+
+if (semver.order(bunPtyVersion, '0.4.8') > 0) {
+  throw new Error(
+    `bun-pty version ${bunPtyVersion} is too new for patching; remove the workaround.`
+  )
+}
+
 import { Terminal } from 'bun-pty'
 const originalStartReadLoop = (Terminal.prototype as any)._startReadLoop
 ;(Terminal.prototype as any)._startReadLoop = async function (...args: any[]) {

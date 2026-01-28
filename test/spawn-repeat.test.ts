@@ -24,14 +24,14 @@ describe('PTY Echo Behavior', () => {
     const maxRuntime = 4000
     let runnings = 1
     while (Date.now() - start < maxRuntime) {
-      console.log(`[TEST] Iteration ${runnings++}`)
+      runnings++
       const { success, stderr } = Bun.spawnSync({
-        cmd: ['bun', 'test', '--test-name-pattern', 'should receive initial data once'],
+        cmd: ['bun', 'test', 'spawn-repeat.test.ts', '--test-name-pattern', 'should receive initial data once'],
         stdout: 'pipe',
         stderr: 'pipe',
         env: { ...process.env, SYNC_TESTS: '1' },
       })
-      expect(success, `stderr: ${stderr}`).toBe(true)
+      expect(success, `[TEST] Iteration ${runnings}, stderr: ${stderr}`).toBe(true)
     }
   })
 

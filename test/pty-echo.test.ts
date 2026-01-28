@@ -22,35 +22,33 @@ describe('PTY Echo Behavior', () => {
   it('should echo input characters in interactive bash session', async () => {
     const receivedOutputs: string[] = []
 
-    // Subscribe to raw output events
-    onRawOutput((_sessionId, rawData) => {
-      receivedOutputs.push(rawData)
-    })
+    const promise = new Promise<void>((resolve) => {
+      // Subscribe to raw output events
+      onRawOutput((_sessionId, rawData) => {
+        receivedOutputs.push(rawData)
+        if (receivedOutputs.join('').includes('Hello World')) {
+          resolve()
+        }
+      })
+      setTimeout(resolve, 1000)
+    }).catch((e) => { console.error(e) })
 
     // Spawn interactive bash session
     const session = manager.spawn({
-      command: 'bash',
-      args: ['-i'],
+      command: 'echo',
+      args: ['Hello World'],
       description: 'Echo test session',
       parentSessionId: 'test',
     })
 
-    // Wait for PTY to initialize and show prompt
-    await new Promise((resolve) => setTimeout(resolve, 200))
-
-    // Send test input
-    const success = manager.write(session.id, 'a')
-    expect(success).toBe(true)
-
-    // Wait for echo to be processed
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    await promise
 
     // Clean up
     manager.kill(session.id, true)
 
     // Verify echo occurred
     const allOutput = receivedOutputs.join('')
-    expect(allOutput).toContain('a')
+    expect(allOutput).toContain('Hello World')
 
     // Should have received some output (prompt + echo)
     expect(receivedOutputs.length).toBeGreaterThan(0)

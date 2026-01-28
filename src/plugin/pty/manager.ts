@@ -5,6 +5,15 @@ import { OutputManager } from './OutputManager.ts'
 import { NotificationManager } from './NotificationManager.ts'
 import { withSession } from './utils.ts'
 
+// Monkey-patch bun-pty to fix race condition in _startReadLoop
+// Temporary workaround until https://github.com/sursaone/bun-pty/pull/37 is merged
+import { Terminal } from 'bun-pty'
+const originalStartReadLoop = (Terminal.prototype as any)._startReadLoop
+;(Terminal.prototype as any)._startReadLoop = async function (...args: any[]) {
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  return originalStartReadLoop.apply(this, args)
+}
+
 let onSessionUpdate: (() => void) | undefined
 
 export function setOnSessionUpdate(callback: () => void) {

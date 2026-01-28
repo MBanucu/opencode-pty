@@ -53,9 +53,8 @@ jobs:
       - name: Type check
         run: bun run typecheck
 
-      # big rework needed to fix lint issues
-      # - name: Lint
-      #   run: bun run lint
+      - name: Lint
+        run: bun run lint
 
       - name: Check formatting
         run: bun run format:check

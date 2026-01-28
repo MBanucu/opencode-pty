@@ -26,7 +26,13 @@ describe('PTY Echo Behavior', () => {
     while (Date.now() - start < maxRuntime) {
       runnings++
       const { success, stderr } = Bun.spawnSync({
-        cmd: ['bun', 'test', 'spawn-repeat.test.ts', '--test-name-pattern', 'should receive initial data once'],
+        cmd: [
+          'bun',
+          'test',
+          'spawn-repeat.test.ts',
+          '--test-name-pattern',
+          'should receive initial data once',
+        ],
         stdout: 'pipe',
         stderr: 'pipe',
         env: { ...process.env, SYNC_TESTS: '1' },

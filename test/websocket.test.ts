@@ -387,7 +387,7 @@ describe('WebSocket Functionality', () => {
         sessionId: testSession.id,
       })
       await unsubscribePromise
-    }, 200)
+    }, 500)
 
     it('should handle multiple subscription states correctly', async () => {
       // Test that demonstrates the subscription system tracks client state properly

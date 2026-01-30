@@ -19,6 +19,7 @@ export default [
         },
       },
       globals: {
+        setImmediate: 'readonly',
         console: 'readonly',
         process: 'readonly',
         Buffer: 'readonly',

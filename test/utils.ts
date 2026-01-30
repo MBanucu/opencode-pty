@@ -97,7 +97,7 @@ export class ManagedTestClient implements Disposable {
    */
   public async waitOpen() {
     while (this.ws.readyState !== WebSocket.OPEN) {
-      await new Promise<void>((resolve) => setTimeout(() => resolve(), 0))
+      await new Promise(setImmediate)
     }
   }
   public static async create(managedTestServer: ManagedTestServer) {

@@ -114,11 +114,11 @@ describe('Web Server Integration', () => {
       const testSessionId = crypto.randomUUID()
       console.log('[TEST] Generated session ID:', testSessionId)
 
-      const sessionRunningPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
+      const sessionExitedPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
         managedTestClient.sessionUpdateCallbacks.push((message) => {
           console.log('[TEST] Session update:', message.session.title, message.session.status)
-          if (message.session.title === testSessionId && message.session.status === 'running') {
-            console.log('[TEST] Session running detected')
+          if (message.session.title === testSessionId && message.session.status === 'exited') {
+            console.log('[TEST] Session exited detected')
             resolve(message)
           }
         })
@@ -133,8 +133,8 @@ describe('Web Server Integration', () => {
       })
       console.log('[TEST] Spawned session:', session.id)
 
-      console.log('[TEST] Waiting for session to be running...')
-      await sessionRunningPromise
+      console.log('[TEST] Waiting for session to exit...')
+      await sessionExitedPromise
 
       const response = await fetch(
         `${managedTestServer.server.server.url}/api/sessions/${session.id}/input`,

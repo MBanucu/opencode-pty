@@ -19,7 +19,13 @@ import { CallbackManager } from './CallbackManager.ts'
 export class PTYServer implements Disposable {
   public readonly server: Server<any>
   private readonly staticRoutes: Record<string, Response>
-  private static readonly wsEndpoint = '/ws'
+  public static readonly wsPath = '/ws'
+  public static readonly healthPath = '/health'
+  public static readonly apiBasePath = '/api/sessions'
+  public static readonly apiSessionPath = '/api/sessions/:id'
+  public static readonly apiSessionInputPath = '/api/sessions/:id/input'
+  public static readonly apiSessionRawBufferPath = '/api/sessions/:id/buffer/raw'
+  public static readonly apiSessionPlainBufferPath = '/api/sessions/:id/buffer/plain'
   private readonly stack = new DisposableStack()
 
   private constructor(staticRoutes: Record<string, Response>) {
@@ -45,24 +51,24 @@ export class PTYServer implements Disposable {
 
       routes: {
         ...this.staticRoutes,
-        [PTYServer.wsEndpoint]: (req: Request) => handleUpgrade(this.server, req),
-        '/health': () => handleHealth(this.server),
-        '/api/sessions': {
+        [PTYServer.wsPath]: (req: Request) => handleUpgrade(this.server, req),
+        [PTYServer.healthPath]: () => handleHealth(this.server),
+        [PTYServer.apiBasePath]: {
           GET: getSessions,
           POST: createSession,
           DELETE: clearSessions,
         },
-        '/api/sessions/:id': {
+        [PTYServer.apiSessionPath]: {
           GET: getSession,
           DELETE: killSession,
         },
-        '/api/sessions/:id/input': {
+        [PTYServer.apiSessionInputPath]: {
           POST: sendInput,
         },
-        '/api/sessions/:id/buffer/raw': {
+        [PTYServer.apiSessionRawBufferPath]: {
           GET: getRawBuffer,
         },
-        '/api/sessions/:id/buffer/plain': {
+        [PTYServer.apiSessionPlainBufferPath]: {
           GET: getPlainBuffer,
         },
       },
@@ -83,6 +89,6 @@ export class PTYServer implements Disposable {
   }
 
   public getWsUrl(): string {
-    return `${this.server.url.origin.replace(/^http/, "ws")}${PTYServer.wsEndpoint}`
+    return `${this.server.url.origin.replace(/^http/, "ws")}${PTYServer.wsPath}`
   }
 }

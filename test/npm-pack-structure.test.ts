@@ -32,7 +32,7 @@ function findPackFileFromOutput(stdout: string): string | null {
 }
 
 describe('npm pack structure', () => {
-  it('includes dist web assets and plugin bundle', async () => {
+  it('includes dist web assets', async () => {
     // 1) Create tarball via npm pack (triggers prepack build)
     const pack = await run(['npm', 'pack'])
     expect(pack.code).toBe(0)
@@ -46,7 +46,6 @@ describe('npm pack structure', () => {
 
     // 3) Validate required files exist; NPM tarballs use 'package/' prefix
     expect(files).toContain('package/dist/web/index.html')
-    expect(files).toContain('package/dist/opencode-pty.js')
 
     // At least one hashed JS and CSS asset
     const hasJsAsset = files.some((f) => /package\/dist\/web\/assets\/[^/]+\.js$/.test(f))

@@ -5,18 +5,12 @@ import {
   rawOutputCallbacks,
   registerRawOutputCallback,
 } from '../src/plugin/pty/manager.ts'
+import { OpencodeClient } from '@opencode-ai/sdk'
 
 describe('PTY Echo Behavior', () => {
-  const fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger
-      },
-    },
-  } as any
 
   beforeEach(() => {
-    initManager(fakeClient)
+    initManager(new OpencodeClient())
   })
 
   afterEach(() => {

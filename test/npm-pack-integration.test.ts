@@ -78,7 +78,6 @@ describe('npm pack integration', () => {
 
     // 3) Install in temp workspace
     const install = await run(['bun', 'install', tgzPath], { cwd: tempDir })
-    console.log('Installed package from', tgzPath, 'into', tempDir)
     expect(install.code).toBe(0)
 
     // Copy the server script to tempDir

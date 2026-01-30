@@ -68,7 +68,7 @@ describe('Web Server Integration', () => {
       ])
 
       const response = await fetch(`${managedTestServer.server.server.url}/api/sessions`)
-      const sessions = await response.json() as PTYSessionInfo[]
+      const sessions = (await response.json()) as PTYSessionInfo[]
       expect(sessions.length).toBeGreaterThanOrEqual(2)
 
       const sessionIds = sessions.map((s) => s.id)
@@ -166,7 +166,7 @@ describe('Web Server Integration', () => {
       ws.close()
 
       ptyServer[Symbol.dispose]()
-      
+
       const response = await fetch(`${ptyServer.server.url}/api/sessions`).catch(() => null)
       expect(response).toBeNull()
     })

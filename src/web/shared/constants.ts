@@ -1,7 +1,5 @@
 // Web-specific constants for the web server and related components
 
-export const DEFAULT_SERVER_PORT = 8765
-
 // WebSocket and session related constants
 export const WEBSOCKET_PING_INTERVAL = 30000
 export const WEBSOCKET_RECONNECT_DELAY = 100

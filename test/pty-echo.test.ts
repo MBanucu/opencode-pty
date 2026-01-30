@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { initManager, manager, onRawOutput } from '../src/plugin/pty/manager.ts'
+import { initManager, manager, registerRawOutputCallback } from '../src/plugin/pty/manager.ts'
 
 describe('PTY Echo Behavior', () => {
   const fakeClient = {
@@ -24,7 +24,7 @@ describe('PTY Echo Behavior', () => {
 
     const promise = new Promise<void>((resolve) => {
       // Subscribe to raw output events
-      onRawOutput((_sessionId, rawData) => {
+      registerRawOutputCallback((_sessionId, rawData) => {
         receivedOutputs.push(rawData)
         if (receivedOutputs.join('').includes('Hello World')) {
           resolve()

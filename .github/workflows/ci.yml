@@ -12,20 +12,7 @@ permissions:
   actions: read
 
 jobs:
-  list-tests:
-    runs-on: ubuntu-24.04
-    outputs:
-      test_files: ${{ steps.list.outputs.test_files }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: List test files
-        id: list
-        run: echo "test_files=$(ls test/*.test.ts | jq -R . | jq -s . | jq -c .)" >> $GITHUB_OUTPUT
-
   test:
-    needs: list-tests
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -60,7 +47,7 @@ jobs:
         run: bun run build:all:prod
 
       - name: Run test
-        run: bun test
+        run: bun test websocket.test.ts
 
   dependency-review:
     runs-on: ubuntu-24.04

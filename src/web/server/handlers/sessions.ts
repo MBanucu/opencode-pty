@@ -2,12 +2,12 @@ import { manager } from '../../../plugin/pty/manager.ts'
 import type { BunRequest } from 'bun'
 import { JsonResponse, ErrorResponse } from './responses.ts'
 
-export async function getSessions(): Promise<Response> {
+export function getSessions() {
   const sessions = manager.list()
   return new JsonResponse(sessions)
 }
 
-export async function createSession(req: Request): Promise<Response> {
+export async function createSession(req: Request) {
   try {
     const body = (await req.json()) as {
       command: string
@@ -32,12 +32,12 @@ export async function createSession(req: Request): Promise<Response> {
   }
 }
 
-export async function clearSessions(): Promise<Response> {
+export function clearSessions() {
   manager.clearAllSessions()
   return new JsonResponse({ success: true })
 }
 
-export async function getSession(req: BunRequest<'/api/sessions/:id'>): Promise<Response> {
+export function getSession(req: BunRequest<'/api/sessions/:id'>) {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
@@ -69,7 +69,7 @@ export async function sendInput(req: BunRequest<'/api/sessions/:id/input'>): Pro
   }
 }
 
-export async function killSession(req: BunRequest<'/api/sessions/:id/kill'>): Promise<Response> {
+export function killSession(req: BunRequest<'/api/sessions/:id/kill'>) {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
@@ -81,9 +81,9 @@ export async function killSession(req: BunRequest<'/api/sessions/:id/kill'>): Pr
   return new JsonResponse({ success: true })
 }
 
-export async function getRawBuffer(
+export function getRawBuffer(
   req: BunRequest<'/api/sessions/:id/buffer/raw'>
-): Promise<Response> {
+) {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
@@ -97,9 +97,9 @@ export async function getRawBuffer(
   return new JsonResponse(bufferData)
 }
 
-export async function getPlainBuffer(
+export function getPlainBuffer(
   req: BunRequest<'/api/sessions/:id/buffer/plain'>
-): Promise<Response> {
+) {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)

@@ -23,24 +23,50 @@ const originalStartReadLoop = (Terminal.prototype as any)._startReadLoop
   return originalStartReadLoop.apply(this, args)
 }
 
-let onSessionUpdate: (() => void) | undefined
+type SessionUpdateCallback = (session: PTYSessionInfo) => void
 
-export function setOnSessionUpdate(callback: () => void) {
-  onSessionUpdate = callback
+const sessionUpdateCallbacks: SessionUpdateCallback[] = []
+
+export function registerSessionUpdateCallback(callback: SessionUpdateCallback) {
+  sessionUpdateCallbacks.push(callback)
 }
 
-type RawOutputCallback = (sessionId: string, rawData: string) => void
+export function removeSessionUpdateCallback(callback: SessionUpdateCallback) {
+  const index = sessionUpdateCallbacks.indexOf(callback)
+  if (index !== -1) {
+    sessionUpdateCallbacks.splice(index, 1)
+  }
+}
+
+function notifySessionUpdate(session: PTYSessionInfo) {
+  for (const callback of sessionUpdateCallbacks) {
+    try {
+      callback(session)
+    } catch {
+      // Ignore callback errors
+    }
+  }
+}
+
+type RawOutputCallback = (session: PTYSessionInfo, rawData: string) => void
 
 const rawOutputCallbacks: RawOutputCallback[] = []
 
-export function onRawOutput(callback: RawOutputCallback): void {
+export function registerRawOutputCallback(callback: RawOutputCallback): void {
   rawOutputCallbacks.push(callback)
 }
 
-function notifyRawOutput(sessionId: string, rawData: string): void {
+export function removeRawOutputCallback(callback: RawOutputCallback): void {
+  const index = rawOutputCallbacks.indexOf(callback)
+  if (index !== -1) {
+    rawOutputCallbacks.splice(index, 1)
+  }
+}
+
+function notifyRawOutput(session: PTYSessionInfo, rawData: string): void {
   for (const callback of rawOutputCallbacks) {
     try {
-      callback(sessionId, rawData)
+      callback(session, rawData)
     } catch {
       // Ignore callback errors
     }
@@ -63,18 +89,17 @@ class PTYManager {
   spawn(opts: SpawnOptions): PTYSessionInfo {
     const session = this.lifecycleManager.spawn(
       opts,
-      (id, data) => {
-        notifyRawOutput(id, data)
+      (session, data) => {
+        notifyRawOutput(this.lifecycleManager.toInfo(session), data)
       },
-      async (id, exitCode) => {
-        if (onSessionUpdate) onSessionUpdate()
-        const session = this.lifecycleManager.getSession(id)
+      async (session, exitCode) => {
+        notifySessionUpdate(this.lifecycleManager.toInfo(session))
         if (session && session.notifyOnExit) {
           await this.notificationManager.sendExitNotification(session, exitCode || 0)
         }
       }
     )
-    if (onSessionUpdate) onSessionUpdate()
+    notifySessionUpdate(session)
     return session
   }
 
@@ -136,10 +161,6 @@ class PTYManager {
 
   cleanupBySession(parentSessionId: string): void {
     this.lifecycleManager.cleanupBySession(parentSessionId)
-  }
-
-  cleanupAll(): void {
-    this.lifecycleManager.cleanupAll()
   }
 }
 

@@ -56,12 +56,12 @@ export class SessionLifecycleManager {
 
   private setupEventHandlers(
     session: PTYSession,
-    onData: (id: string, data: string) => void,
-    onExit: (id: string, exitCode: number | null) => void
+    onData: (session: PTYSession, data: string) => void,
+    onExit: (session: PTYSession, exitCode: number | null) => void
   ): void {
     session.process!.onData((data: string) => {
       session.buffer.append(data)
-      onData(session.id, data)
+      onData(session, data)
     })
 
     session.process!.onExit(({ exitCode }) => {
@@ -72,14 +72,14 @@ export class SessionLifecycleManager {
         session.status = 'exited'
         session.exitCode = exitCode
       }
-      onExit(session.id, exitCode)
+      onExit(session, exitCode)
     })
   }
 
   spawn(
     opts: SpawnOptions,
-    onData: (id: string, data: string) => void,
-    onExit: (id: string, exitCode: number | null) => void
+    onData: (session: PTYSession, data: string) => void,
+    onExit: (session: PTYSession, exitCode: number | null) => void
   ): PTYSessionInfo {
     const session = this.createSessionObject(opts)
     this.spawnProcess(session)
@@ -127,10 +127,6 @@ export class SessionLifecycleManager {
         this.kill(id, true)
       }
     }
-  }
-
-  cleanupAll(): void {
-    this.clearAllSessionsInternal()
   }
 
   getSession(id: string): PTYSession | null {

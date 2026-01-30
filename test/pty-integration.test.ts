@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { startWebServer, stopWebServer } from '../src/web/server/server.ts'
+import { PTYServer } from '../src/web/server/server.ts'
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
 
 describe('PTY Manager Integration', () => {
@@ -11,18 +11,21 @@ describe('PTY Manager Integration', () => {
     },
   } as any
 
-  beforeEach(() => {
+  const server: PTYServer = new PTYServer()
+
+  beforeEach(async () => {
     initManager(fakeClient)
+    await server.startWebServer()
   })
 
-  afterEach(() => {
-    stopWebServer()
+  afterEach(async () => {
+    manager.clearAllSessions()
+    server.stopWebServer()
   })
 
   describe('Output Broadcasting', () => {
     it('should broadcast output to subscribed WebSocket clients', async () => {
-      await startWebServer({ port: 8775 })
-
+      console.log('spawning session')
       // Create a test session
       const session = manager.spawn({
         command: 'echo',
@@ -31,11 +34,8 @@ describe('PTY Manager Integration', () => {
         parentSessionId: 'test',
       })
 
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
       // Create WebSocket connection and subscribe
-      const ws = new WebSocket('ws://localhost:8775/ws')
+      const ws = new WebSocket(server.getWsUrl()!)
       const receivedMessages: any[] = []
 
       ws.onmessage = (event) => {
@@ -70,7 +70,6 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should not broadcast to unsubscribed clients', async () => {
-      await startWebServer({ port: 8776 })
 
       const session1 = manager.spawn({
         command: 'echo',
@@ -131,7 +130,6 @@ describe('PTY Manager Integration', () => {
 
   describe('Session Management Integration', () => {
     it('should provide session data in correct format', async () => {
-      await startWebServer({ port: 8777 })
 
       const session = manager.spawn({
         command: 'node',
@@ -156,7 +154,6 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should handle session lifecycle correctly', async () => {
-      await startWebServer({ port: 8778 })
 
       // Create session that exits quickly
       const session = manager.spawn({
@@ -177,7 +174,6 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should support session killing via API', async () => {
-      await startWebServer({ port: 8779 })
 
       // Create a long-running session
       const session = manager.spawn({

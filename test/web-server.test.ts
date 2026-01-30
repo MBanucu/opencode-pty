@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
 import {
   initManager,
   manager,
@@ -22,14 +22,14 @@ describe('Web Server', () => {
   let server: PTYServer
   let disposableStack: DisposableStack
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     disposableStack = new DisposableStack()
     initManager(fakeClient)
     server = await PTYServer.createServer()
     disposableStack.use(server)
   })
 
-  afterEach(() => {
+  afterAll(() => {
     manager.clearAllSessions()
     disposableStack.dispose()
     sessionUpdateCallbacks.length = 0

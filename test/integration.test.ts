@@ -1,29 +1,23 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { startWebServer, stopWebServer } from '../src/web/server/server.ts'
-import { initManager, manager } from '../src/plugin/pty/manager.ts'
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
+import { manager } from '../src/plugin/pty/manager.ts'
+import { ManagedTestServer } from './utils.ts'
+import { PTYServer } from '../src/web/server/server.ts'
 
 describe('Web Server Integration', () => {
-  const fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger
-      },
-    },
-  } as any
-
-  beforeEach(() => {
-    initManager(fakeClient)
+  let managedTestServer: ManagedTestServer
+  let disposableStack: DisposableStack
+  beforeAll(async () => {
+    disposableStack = new DisposableStack()
+    managedTestServer = await ManagedTestServer.create()
+    disposableStack.use(managedTestServer)
   })
 
-  afterEach(() => {
-    stopWebServer()
+  afterAll(() => {
+    disposableStack.dispose()
   })
 
   describe('Full User Workflow', () => {
     it('should handle multiple concurrent sessions and clients', async () => {
-      manager.clearAllSessions() // Clean up any leftover sessions
-      await startWebServer({ port: 8781 })
-
       // Create multiple sessions
       const session1 = manager.spawn({
         command: 'echo',
@@ -85,9 +79,6 @@ describe('Web Server Integration', () => {
     })
 
     it('should handle error conditions gracefully', async () => {
-      manager.clearAllSessions() // Clean up any leftover sessions
-      await startWebServer({ port: 8782 })
-
       // Test non-existent session
       let response = await fetch('http://localhost:8782/api/sessions/nonexistent')
       expect(response.status).toBe(404)
@@ -136,8 +127,6 @@ describe('Web Server Integration', () => {
 
   describe('Performance and Reliability', () => {
     it('should handle rapid API requests', async () => {
-      await startWebServer({ port: 8783 })
-
       // Create a session
       const session = manager.spawn({
         command: 'echo',
@@ -162,8 +151,7 @@ describe('Web Server Integration', () => {
     })
 
     it('should cleanup properly on server stop', async () => {
-      await startWebServer({ port: 8784 })
-
+      const ptyServer = await PTYServer.createServer()
       // Create session and WebSocket
       manager.spawn({
         command: 'echo',
@@ -181,7 +169,7 @@ describe('Web Server Integration', () => {
       })
 
       // Stop server
-      stopWebServer()
+      ptyServer[Symbol.dispose]()
 
       // Verify server is stopped (should fail to connect)
       const response = await fetch('http://localhost:8784/api/sessions').catch(() => null)

@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import type { PTYSessionInfo } from 'opencode-pty/shared/types'
-import {
-  WEBSOCKET_PING_INTERVAL,
-  RETRY_DELAY,
-  SKIP_AUTOSELECT_KEY,
-} from 'opencode-pty/shared/constants'
+import { RETRY_DELAY, SKIP_AUTOSELECT_KEY } from 'opencode-pty/shared/constants'
 
 interface UseWebSocketOptions {
   activeSession: PTYSessionInfo | null
@@ -17,7 +13,6 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
 
   const wsRef = useRef<WebSocket | null>(null)
   const activeSessionRef = useRef<PTYSessionInfo | null>(null)
-  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Keep ref in sync with activeSession
   useEffect(() => {
@@ -35,12 +30,6 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
       if (activeSessionRef.current) {
         ws.send(JSON.stringify({ type: 'subscribe', sessionId: activeSessionRef.current.id }))
       }
-      // Send ping every 30 seconds to keep connection alive
-      pingIntervalRef.current = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'ping' }))
-        }
-      }, WEBSOCKET_PING_INTERVAL)
     }
     ws.onmessage = (event) => {
       try {
@@ -86,11 +75,6 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
     }
     ws.onclose = () => {
       setConnected(false)
-      // Clear ping interval
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current)
-        pingIntervalRef.current = null
-      }
     }
     ws.onerror = () => {}
     wsRef.current = ws

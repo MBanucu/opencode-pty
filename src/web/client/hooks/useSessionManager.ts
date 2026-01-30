@@ -82,8 +82,8 @@ export function useSessionManager({
 
     try {
       const baseUrl = `${location.protocol}//${location.host}`
-      const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}/kill`, {
-        method: 'POST',
+      const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}`, {
+        method: 'DELETE',
       })
 
       if (response.ok) {

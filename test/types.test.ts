@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'bun:test'
-import { CustomError, type WSMessageClientSubscribeSession, type WSMessageServerData, type WSMessageServerError, type WSMessageServerSessionList } from '../src/web/shared/types.ts'
+import {
+  CustomError,
+  type WSMessageClientSubscribeSession,
+  type WSMessageServerError,
+  type WSMessageServerSessionList,
+} from '../src/web/shared/types.ts'
 import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
+import moment from 'moment'
 
 describe('Web Types', () => {
   describe('WSMessage', () => {
@@ -14,28 +20,6 @@ describe('Web Types', () => {
       expect(message.sessionId).toBe('pty_12345')
     })
 
-    it('should validate data message structure', () => {
-      const message: WSMessageServerData = {
-        type: 'data',
-        session: {
-          id: 'pty_12345',
-          title: 'Test Session',
-          command: 'echo',
-          status: 'running',
-          pid: 1234,
-          lineCount: 10,
-          createdAt: new Date(),
-          args: ['test'],
-          workdir: '/home/user',
-        },
-        data: ['test output', ''],
-      }
-
-      expect(message.type).toBe('data')
-      expect(message.session.id).toBe('pty_12345')
-      expect(message.data).toEqual(['test output', ''])
-    })
-
     it('should validate session_list message structure', () => {
       const sessions: PTYSessionInfo[] = [
         {
@@ -45,7 +29,7 @@ describe('Web Types', () => {
           status: 'running',
           pid: 1234,
           lineCount: 5,
-          createdAt: new Date(),
+          createdAt: moment().toISOString(true),
           args: ['hello'],
           workdir: '/home/user',
         },
@@ -81,7 +65,7 @@ describe('Web Types', () => {
         exitCode: 0,
         pid: 1234,
         lineCount: 2,
-        createdAt: new Date(),
+        createdAt: moment().toISOString(true),
         args: ['Hello, World!'],
         workdir: '/home/user',
       }
@@ -93,7 +77,7 @@ describe('Web Types', () => {
       expect(session.exitCode).toBe(0)
       expect(session.pid).toBe(1234)
       expect(session.lineCount).toBe(2)
-      expect(session.createdAt).toBeInstanceOf(Date)
+      expect(typeof session.createdAt).toBe('string')
     })
 
     it('should allow optional exitCode', () => {
@@ -104,7 +88,7 @@ describe('Web Types', () => {
         status: 'running',
         pid: 5678,
         lineCount: 0,
-        createdAt: new Date('2026-01-21T10:00:00.000Z'),
+        createdAt: moment('2026-01-21T10:00:00.000Z').toISOString(true),
         args: ['Hello, World!'],
         workdir: '/home/user',
       }

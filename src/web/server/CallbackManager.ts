@@ -21,7 +21,6 @@ export class CallbackManager implements Disposable {
 
   private rawOutputCallback = (session: PTYSessionInfo, rawData: string): void => {
     const message: WSMessageServerRawData = { type: 'raw_data', session, rawData }
-    // console.log('Publishing raw data for session:', session.id, 'Raw data:', rawData)
     this.server.publish(`session:${session.id}`, JSON.stringify(message))
   };
 

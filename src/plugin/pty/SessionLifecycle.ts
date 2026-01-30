@@ -2,6 +2,7 @@ import { spawn, type IPty } from 'bun-pty'
 import { RingBuffer } from './buffer.ts'
 import type { PTYSession, PTYSessionInfo, SpawnOptions } from './types.ts'
 import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS } from '../constants.ts'
+import moment from 'moment'
 
 const SESSION_ID_BYTE_LENGTH = 4
 
@@ -33,7 +34,7 @@ export class SessionLifecycleManager {
       env: opts.env,
       status: 'running',
       pid: 0, // will be set after spawn
-      createdAt: new Date(),
+      createdAt: moment(),
       parentSessionId: opts.parentSessionId,
       notifyOnExit: opts.notifyOnExit ?? false,
       buffer,
@@ -64,14 +65,17 @@ export class SessionLifecycleManager {
       onData(session, data)
     })
 
-    session.process!.onExit(({ exitCode }) => {
+    session.process!.onExit(({ exitCode, signal }) => {
       // Flush any remaining incomplete line in the buffer
       session.buffer.flush()
 
-      if (session.status === 'running') {
+      if (session.status === 'killing') {
+        session.status = 'killed'
+      } else {
         session.status = 'exited'
-        session.exitCode = exitCode
       }
+      session.exitCode = exitCode
+      session.exitSignal = signal
       onExit(session, exitCode)
     })
   }
@@ -95,12 +99,12 @@ export class SessionLifecycleManager {
     }
 
     if (session.status === 'running') {
+      session.status = 'killing'
       try {
         session.process!.kill()
       } catch {
         // Ignore kill errors
       }
-      session.status = 'killed'
     }
 
     if (cleanup) {
@@ -147,8 +151,9 @@ export class SessionLifecycleManager {
       workdir: session.workdir,
       status: session.status,
       exitCode: session.exitCode,
+      exitSignal: session.exitSignal,
       pid: session.pid,
-      createdAt: session.createdAt,
+      createdAt: session.createdAt.toISOString(true),
       lineCount: session.buffer.length,
     }
   }

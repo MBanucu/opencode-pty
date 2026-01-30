@@ -7,7 +7,7 @@ export function formatSessionInfo(session: PTYSessionInfo): string[] {
     `  Command: ${session.command} ${session.args.join(' ')}`,
     `  Status: ${session.status}${exitInfo}`,
     `  PID: ${session.pid} | Lines: ${session.lineCount} | Workdir: ${session.workdir}`,
-    `  Created: ${session.createdAt.toISOString()}`,
+    `  Created: ${session.createdAt}`,
     '',
   ]
 }

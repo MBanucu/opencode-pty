@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { initManager, manager, rawOutputCallbacks, registerRawOutputCallback } from '../src/plugin/pty/manager.ts'
+import {
+  initManager,
+  manager,
+  rawOutputCallbacks,
+  registerRawOutputCallback,
+} from '../src/plugin/pty/manager.ts'
 
 describe('PTY Echo Behavior', () => {
   const fakeClient = {
@@ -41,39 +46,42 @@ describe('PTY Echo Behavior', () => {
     }
   })
 
-  it.skipIf(!process.env.SYNC_TESTS)('should receive initial data once', async () => {
-    
-    const title = crypto.randomUUID()
-    // Subscribe to raw output events
-    const promise = new Promise<string>((resolve) => {
-      let rawDataTotal = ''
-      registerRawOutputCallback((session, rawData) => {
-        if (session.title !== title) return
-        rawDataTotal += rawData
-        if (rawData.includes('Hello World')) {
-          resolve(rawDataTotal)
-        }
+  it.skipIf(!process.env.SYNC_TESTS)(
+    'should receive initial data once',
+    async () => {
+      const title = crypto.randomUUID()
+      // Subscribe to raw output events
+      const promise = new Promise<string>((resolve) => {
+        let rawDataTotal = ''
+        registerRawOutputCallback((session, rawData) => {
+          if (session.title !== title) return
+          rawDataTotal += rawData
+          if (rawData.includes('Hello World')) {
+            resolve(rawDataTotal)
+          }
+        })
+      }).catch((e) => {
+        console.error(e)
       })
-    }).catch((e) => {
-      console.error(e)
-    })
 
-    // Spawn interactive bash session
-    const session = manager.spawn({
-      title: title,
-      command: 'echo',
-      args: ['Hello World'],
-      description: 'Echo test session',
-      parentSessionId: 'test',
-    })
+      // Spawn interactive bash session
+      const session = manager.spawn({
+        title: title,
+        command: 'echo',
+        args: ['Hello World'],
+        description: 'Echo test session',
+        parentSessionId: 'test',
+      })
 
-    const rawData = await promise
+      const rawData = await promise
 
-    // Clean up
-    manager.kill(session.id, true)
-    rawOutputCallbacks.length = 0
+      // Clean up
+      manager.kill(session.id, true)
+      rawOutputCallbacks.length = 0
 
-    // Verify echo occurred
-    expect(rawData).toContain('Hello World')
-  }, 1000)
+      // Verify echo occurred
+      expect(rawData).toContain('Hello World')
+    },
+    1000
+  )
 })

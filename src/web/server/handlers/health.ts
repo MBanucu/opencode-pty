@@ -1,3 +1,4 @@
+import moment from 'moment'
 import { manager } from '../../../plugin/pty/manager.ts'
 import { JsonResponse } from './responses.ts'
 
@@ -11,7 +12,7 @@ export function handleHealth(server: Bun.Server<any>) {
 
   const healthResponse = {
     status: 'healthy',
-    timestamp: new Date().toISOString(),
+    timestamp: moment().toISOString(true),
     uptime: process.uptime(),
     sessions: {
       total: totalSessions,

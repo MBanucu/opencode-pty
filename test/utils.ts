@@ -1,3 +1,4 @@
+import { OpencodeClient } from '@opencode-ai/sdk'
 import {
   initManager,
   manager,
@@ -129,16 +130,9 @@ export class ManagedTestServer implements Disposable {
     return new ManagedTestServer(server)
   }
 
-  private readonly fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger
-      },
-    },
-  } as any
-
   private constructor(server: PTYServer) {
-    initManager(this.fakeClient)
+    const client = new OpencodeClient()
+    initManager(client)
     this.server = server
     this.stack.use(this.server)
     this.sessionId = crypto.randomUUID()

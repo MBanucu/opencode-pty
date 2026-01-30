@@ -1,8 +1,6 @@
 import { test as base, type WorkerInfo } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
 
-const BASE_PORT = 8877
-
 async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
@@ -23,13 +21,13 @@ type WorkerFixtures = {
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   server: [
     async ({}, use, workerInfo: WorkerInfo) => {
-      const port = BASE_PORT + workerInfo.workerIndex
-      const url = `http://localhost:${port}`
+      const workerIndex = workerInfo.workerIndex
+      const portFilePath = `/tmp/test-server-port-${workerIndex}.txt`
 
-      const proc: ChildProcess = spawn('bun', ['run', 'e2e/test-web-server.ts', `--port=${port}`], {
+      const proc: ChildProcess = spawn('bun', ['run', 'e2e/test-web-server.ts'], {
         env: {
           ...process.env,
-          TEST_WORKER_INDEX: workerInfo.workerIndex.toString(),
+          TEST_WORKER_INDEX: workerIndex.toString(),
         },
         stdio: ['ignore', 'pipe', 'pipe'],
       })
@@ -43,16 +41,47 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       proc.on('exit', (_code, _signal) => {})
 
       proc.stderr?.on('data', (data) => {
-        console.error(`[W${workerInfo.workerIndex} ERR] ${data}`)
+        console.error(`[W${workerIndex} ERR] ${data}`)
       })
 
       proc.on('exit', (_code, _signal) => {})
 
       try {
-        await waitForServer(url, 15000) // Wait up to 15 seconds for server
-        await use({ baseURL: url, port })
+        // Wait for server to write port file
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            try {
+              Bun.file(portFilePath)
+                .exists()
+                .then((exists) => {
+                  if (exists) {
+                    clearInterval(checkInterval)
+                    resolve()
+                  }
+                })
+            } catch {}
+          }, 100)
+        })
+
+        // Read the actual URL from port file
+        const serverURLText = await Bun.file(portFilePath).text()
+        if (!serverURLText) {
+          throw new Error(`Port file is empty: ${portFilePath}`)
+        }
+        const serverURL = serverURLText.trim()
+
+        // Parse URL to extract port number
+        const urlMatch = serverURL.match(/http:\/\/localhost:(\d+)/)
+        if (!urlMatch) {
+          throw new Error(`Invalid port file format: ${serverURL}`)
+        }
+        const port = parseInt(urlMatch[1])
+        const baseURL = `http://localhost:${port}`
+
+        await waitForServer(baseURL, 15000)
+        await use({ baseURL, port })
       } catch (error) {
-        console.error(`[Worker ${workerInfo.workerIndex}] Failed to start server: ${error}`)
+        console.error(`[Worker ${workerIndex}] Failed to start server: ${error}`)
         throw error
       } finally {
         // Ensure process is killed

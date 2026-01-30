@@ -12,13 +12,13 @@ const server = await PTYServer.createServer()
 
 // Only log in non-test environments or when explicitly requested
 
-// Write port to file for tests to read
+// Write server URL to file for tests to read
 if (process.env.NODE_ENV === 'test') {
   const workerIndex = process.env.TEST_WORKER_INDEX || '0'
-  if (!server.server.port) {
-    throw new Error('Unix sockets not supported. File an issue if you need this feature.')
+  if (!server.server.url) {
+    throw new Error('Server URL not available. File an issue if you need this feature.')
   }
-  await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, server.server.port.toString())
+  await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, server.server.url.href)
 }
 
 // Health check for test mode

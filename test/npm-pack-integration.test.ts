@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'bun:test'
-import { mkdtempSync, rmSync, copyFileSync, existsSync } from 'fs'
+import { mkdtempSync, rmSync, copyFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
@@ -77,18 +77,23 @@ describe('npm pack integration', () => {
     const assetName = jsAsset!.replace('package/dist/web/assets/', '')
 
     // 3) Install in temp workspace
-    const install = await run(['npm', 'install', tgzPath], { cwd: tempDir })
+    const install = await run(['bun', 'install', tgzPath], { cwd: tempDir })
+    console.log('Installed package from', tgzPath, 'into', tempDir)
     expect(install.code).toBe(0)
 
     // Copy the server script to tempDir
-    copyFileSync(join(process.cwd(), 'test/start-server.ts'), join(tempDir, 'start-server.ts'))
+    mkdirSync(join(tempDir, 'test'))
+    copyFileSync(join(process.cwd(), 'test/start-server.ts'), join(tempDir, 'test', 'start-server.ts'))
 
     // Verify the package structure
     const packageDir = join(tempDir, 'node_modules/opencode-pty')
     expect(existsSync(join(packageDir, 'src/plugin/pty/manager.ts'))).toBe(true)
     expect(existsSync(join(packageDir, 'dist/web/index.html'))).toBe(true)
-    Bun.file('/tmp/test-server-port-0.txt').delete()
-    serverProcess = Bun.spawn(['bun', 'run', 'start-server.ts'], {
+    const portFile = join('/tmp', 'test-server-port-0.txt')
+    if (await Bun.file(portFile).exists()) {
+      await Bun.file(portFile).delete()
+    }
+    serverProcess = Bun.spawn(['bun', 'run', 'test/start-server.ts'], {
       cwd: tempDir,
       env: { ...process.env, NODE_ENV: 'test' },
       stdout: 'inherit',
@@ -103,12 +108,18 @@ describe('npm pack integration', () => {
 
       // Polling logic as a separate async function.
       const pollForFile = async () => {
-        while (!Bun.file('/tmp/test-server-port-0.txt').exists()) {
+        while (!await Bun.file(portFile).exists()) {
           await new Promise(setImmediate)
         }
-        const bytes = await Bun.file('/tmp/test-server-port-0.txt').bytes()
-        const port = parseInt(new TextDecoder().decode(bytes).trim(), 10)
-        return port
+        try {
+          const bytes = await Bun.file(portFile).bytes()
+          const port = parseInt(new TextDecoder().decode(bytes).trim(), 10)
+          console.log(`Detected server port: ${port}`)
+          return port
+        } catch(error) {
+          console.log(error)
+          return 0
+        }
       }
 
       // Race the timeout against the polling.

@@ -38,7 +38,7 @@
     "./shared/logger": "./src/web/shared/logger.ts",
     "./src/plugin/pty/manager": "./src/plugin/pty/manager.ts",
     "./src/plugin/logger": "./src/plugin/logger.ts",
-    "./src/web/server/server": "./src/web/server/server.ts"
+    "./server": "./src/web/server/server.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -91,8 +91,8 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "^1.1.31",
-    "@opencode-ai/sdk": "^1.1.31",
+    "@opencode-ai/plugin": "1.1.34",
+    "@opencode-ai/sdk": "1.1.34",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-serialize": "^0.14.0",
     "@xterm/xterm": "^6.0.0",

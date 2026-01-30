@@ -1,5 +1,5 @@
 import { initManager, manager } from 'opencode-pty/src/plugin/pty/manager'
-import { PTYServer } from '../src/web/server/server'
+import { PTYServer } from 'opencode-pty/server'
 import { OpencodeClient } from '@opencode-ai/sdk'
 
 // Set NODE_ENV if not set

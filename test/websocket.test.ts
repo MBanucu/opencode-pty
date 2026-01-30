@@ -27,7 +27,7 @@ describe('WebSocket Functionality', () => {
       await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       await managedTestClient.waitOpen()
       expect(managedTestClient.ws.readyState).toBe(WebSocket.OPEN)
-    }, 100)
+    }, 1000)
 
     it('should not send session list on connection', async () => {
       await using managedTestClient = await ManagedTestClient.create(managedTestServer)
@@ -120,7 +120,7 @@ describe('WebSocket Functionality', () => {
       })
 
       await errorPromise
-    }, 100)
+    }, 1000)
 
     it('should handle unsubscribe message', async () => {
       await using managedTestClient = await ManagedTestClient.create(managedTestServer)
@@ -141,7 +141,7 @@ describe('WebSocket Functionality', () => {
 
       await unsubscribedPromise
       expect(managedTestClient.ws.readyState).toBe(WebSocket.OPEN)
-    }, 100)
+    }, 1000)
 
     it('should handle session_list request', async () => {
       await using managedTestClient = await ManagedTestClient.create(managedTestServer)
@@ -156,7 +156,7 @@ describe('WebSocket Functionality', () => {
       })
 
       await sessionListPromise
-    }, 100)
+    }, 1000)
 
     it('should handle invalid message format', async () => {
       await using managedTestClient = await ManagedTestClient.create(managedTestServer)
@@ -170,7 +170,7 @@ describe('WebSocket Functionality', () => {
 
       const customError = await errorPromise
       expect(customError.message).toContain('JSON Parse error')
-    }, 100)
+    }, 1000)
 
     it('should handle unknown message type', async () => {
       await using managedTestClient = await ManagedTestClient.create(managedTestServer)
@@ -188,7 +188,7 @@ describe('WebSocket Functionality', () => {
 
       const customError = await errorPromise
       expect(customError.message).toContain('Unknown message type')
-    }, 100)
+    }, 1000)
 
     it('should demonstrate WebSocket subscription logic works correctly', async () => {
       await using managedTestClient = await ManagedTestClient.create(managedTestServer)

@@ -27,7 +27,7 @@ describe('PTY Echo Behavior', () => {
           resolve(receivedOutputs)
         }
       })
-      setTimeout(() => resolve("Timeout"), 1000)
+      setTimeout(() => resolve('Timeout'), 1000)
     }).catch((e) => {
       console.error(e)
     })
@@ -49,7 +49,7 @@ describe('PTY Echo Behavior', () => {
     // Verify echo occurred
     expect(allOutput).toContain('Hello World')
   })
-  
+
   it('should echo input characters in interactive bash session', async () => {
     const title = crypto.randomUUID()
     const promise = new Promise<string>((resolve) => {
@@ -62,7 +62,7 @@ describe('PTY Echo Behavior', () => {
           resolve(receivedOutputs)
         }
       })
-      setTimeout(() => resolve("Timeout"), 1000)
+      setTimeout(() => resolve('Timeout'), 1000)
     }).catch((e) => {
       console.error(e)
     })

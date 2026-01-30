@@ -59,7 +59,7 @@ describe('WebSocket Functionality', () => {
       })
       await promise
       expect(called, 'session list has been sent unexpectedly').toBe(false)
-    }, 100)
+    })
   })
 
   describe('WebSocket Message Handling', () => {

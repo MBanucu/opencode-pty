@@ -171,7 +171,7 @@ describe('PTY Tools', () => {
         ask: mock(async () => {}),
       }
 
-      await expect(ptyRead.execute(args, ctx)).rejects.toThrow("PTY session 'invalid-id' not found")
+      expect(ptyRead.execute(args, ctx)).rejects.toThrow("PTY session 'invalid-id' not found")
     })
 
     it('should throw for invalid regex', async () => {
@@ -185,7 +185,7 @@ describe('PTY Tools', () => {
         ask: mock(async () => {}),
       }
 
-      await expect(ptyRead.execute(args, ctx)).rejects.toThrow(
+      expect(ptyRead.execute(args, ctx)).rejects.toThrow(
         'Potentially dangerous regex pattern rejected'
       )
     })

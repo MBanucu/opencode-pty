@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect, afterAll, beforeAll } from 'bun:test'
 import {
   manager,
   registerRawOutputCallback,
@@ -6,34 +6,9 @@ import {
 } from '../src/plugin/pty/manager.ts'
 import { PTYServer } from '../src/web/server/server.ts'
 import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
-import { managedTestServer } from './utils.ts'
+import { ManagedTestServer } from './utils.ts'
 
 describe('Web Server', () => {
-  // const fakeClient = {
-  //   app: {
-  //     log: async (_opts: any) => {
-  //       // Mock logger - do nothing
-  //     },
-  //   },
-  // } as any
-
-  // let server: PTYServer
-  // let disposableStack: DisposableStack
-
-  // beforeAll(async () => {
-  //   disposableStack = new DisposableStack()
-  //   initManager(fakeClient)
-  //   server = await PTYServer.createServer()
-  //   disposableStack.use(server)
-  // })
-
-  // afterAll(() => {
-  //   manager.clearAllSessions()
-  //   disposableStack.dispose()
-  //   sessionUpdateCallbacks.length = 0
-  //   rawOutputCallbacks.length = 0
-  // })
-
   describe('Server Lifecycle', () => {
     it('should start server successfully', async () => {
       await using server = await PTYServer.createServer()
@@ -58,6 +33,19 @@ describe('Web Server', () => {
   })
 
   describe('HTTP Endpoints', () => {
+    let managedTestServer: ManagedTestServer
+    let disposableStack: DisposableStack
+
+    beforeAll(async () => {
+      disposableStack = new DisposableStack()
+      managedTestServer = await ManagedTestServer.create()
+      disposableStack.use(managedTestServer)
+    })
+
+    afterAll(() => {
+      disposableStack.dispose()
+    })
+
     it('should serve built assets', async () => {
       const response = await fetch(managedTestServer.server.server.url)
       expect(response.status).toBe(200)

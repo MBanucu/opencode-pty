@@ -15,6 +15,7 @@ import { buildStaticRoutes } from './handlers/static.ts'
 import { handleUpgrade } from './handlers/upgrade.ts'
 import { handleWebSocketMessage } from './handlers/websocket.ts'
 import { CallbackManager } from './CallbackManager.ts'
+import { initManager, manager, rawOutputCallbacks, sessionUpdateCallbacks } from '../../plugin/pty/manager.ts'
 
 export class PTYServer implements Disposable {
   public readonly server: Server<any>
@@ -37,9 +38,21 @@ export class PTYServer implements Disposable {
 
   [Symbol.dispose]() {
     this.stack.dispose()
+    manager.clearAllSessions()
+    sessionUpdateCallbacks.length = 0
+    rawOutputCallbacks.length = 0
   }
 
   public static async createServer(): Promise<PTYServer> {
+    const fakeClient = {
+      app: {
+        log: async (_opts: any) => {
+          // Mock logger - do nothing
+        },
+      },
+    } as any
+    initManager(fakeClient)
+
     const staticRoutes = await buildStaticRoutes()
 
     return new PTYServer(staticRoutes)

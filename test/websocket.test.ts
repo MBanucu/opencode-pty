@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
 import {
   manager,
 } from '../src/plugin/pty/manager.ts'
@@ -10,20 +10,30 @@ import {
   type WSMessageServerSubscribedSession,
   type WSMessageServerUnsubscribedSession,
 } from '../src/web/shared/types.ts'
-import { ManagedTestClient, managedTestServer } from './utils.ts'
+import { ManagedTestClient, ManagedTestServer } from './utils.ts'
 
 
 describe('WebSocket Functionality', () => {
+  let managedTestServer: ManagedTestServer
+  let disposableStack: DisposableStack
+  beforeAll(async () => {
+    managedTestServer = await ManagedTestServer.create()
+    disposableStack = new DisposableStack()
+    disposableStack.use(managedTestServer)
+  })
+  afterAll(() => {
+    disposableStack.dispose()
+  })
 
   describe('WebSocket Connection', () => {
     it('should accept WebSocket connections', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       await managedTestClient.waitOpen()
       expect(managedTestClient.ws.readyState).toBe(WebSocket.OPEN)
     }, 100)
 
     it('should not send session list on connection', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       let called = false
       managedTestClient.sessionListCallbacks.push((message: WSMessageServerSessionList) => {
         expect(message).toBeUndefined()
@@ -57,7 +67,7 @@ describe('WebSocket Functionality', () => {
 
   describe('WebSocket Message Handling', () => {
     it('should handle subscribe message', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       const title = crypto.randomUUID()
       const sessionRunningPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
         managedTestClient.sessionUpdateCallbacks.push((message) => {
@@ -97,7 +107,7 @@ describe('WebSocket Functionality', () => {
     }, 1000)
 
     it('should handle subscribe to non-existent session', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       const nonexistentSessionId = crypto.randomUUID()
       const errorPromise = new Promise<WSMessageServerError>((res) => {
         managedTestClient.errorCallbacks.push((message) => {
@@ -116,7 +126,7 @@ describe('WebSocket Functionality', () => {
     }, 100)
 
     it('should handle unsubscribe message', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       const sessionId = crypto.randomUUID()
 
       const unsubscribedPromise = new Promise<WSMessageServerUnsubscribedSession>((res) => {
@@ -137,7 +147,7 @@ describe('WebSocket Functionality', () => {
     }, 100)
 
     it('should handle session_list request', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       const sessionListPromise = new Promise<WSMessageServerSessionList>((res) => {
         managedTestClient.sessionListCallbacks.push((message) => {
           res(message)
@@ -152,7 +162,7 @@ describe('WebSocket Functionality', () => {
     }, 100)
 
     it('should handle invalid message format', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       const errorPromise = new Promise<CustomError>((res) => {
         managedTestClient.errorCallbacks.push((message) => {
           res(message.error)
@@ -166,7 +176,7 @@ describe('WebSocket Functionality', () => {
     }, 100)
 
     it('should handle unknown message type', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       const errorPromise = new Promise<CustomError>((res) => {
         managedTestClient.errorCallbacks.push((message) => {
           res(message.error)
@@ -184,7 +194,7 @@ describe('WebSocket Functionality', () => {
     }, 100)
 
     it('should demonstrate WebSocket subscription logic works correctly', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       const testSession = manager.spawn({
         command: 'bash',
         args: [],
@@ -253,7 +263,7 @@ describe('WebSocket Functionality', () => {
     }, 500)
 
     it('should handle multiple subscription states correctly', async () => {
-      await using managedTestClient = await ManagedTestClient.create()
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
       // Test that demonstrates the subscription system tracks client state properly
       // This is important because the UI relies on proper subscription management
       const errors: CustomError[] = []

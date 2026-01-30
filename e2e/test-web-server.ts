@@ -1,5 +1,5 @@
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
-import { startWebServer } from '../src/web/server/server.ts'
+import { PTYServer } from '../src/web/server/server.ts'
 
 const fakeClient = {
   app: {
@@ -8,50 +8,23 @@ const fakeClient = {
 } as any
 initManager(fakeClient)
 
-// Cleanup on process termination
-process.on('SIGTERM', cleanup)
-process.on('SIGINT', cleanup)
-
-function cleanup() {
-  manager.cleanupAll()
-  process.exit(0)
-}
-
-// Parse command line arguments
-import yargs from 'yargs'
-import { hideBin } from 'yargs/helpers'
-
-const argv = yargs(hideBin(process.argv))
-  .option('port', {
-    alias: 'p',
-    type: 'number',
-    description: 'Port to run the server on',
-    default: 8877,
-  })
-  .parseSync()
-
-let port = argv.port
-
-// For parallel workers, ensure unique start ports
-if (process.env.TEST_WORKER_INDEX) {
-  const workerIndex = parseInt(process.env.TEST_WORKER_INDEX, 10)
-  port = 8877 + workerIndex
-}
-
-await startWebServer({ port })
+const server = await PTYServer.createServer()
 
 // Only log in non-test environments or when explicitly requested
 
 // Write port to file for tests to read
 if (process.env.NODE_ENV === 'test') {
   const workerIndex = process.env.TEST_WORKER_INDEX || '0'
-  await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, port.toString())
+  if (!server.server.port) {
+    throw new Error('Unix sockets not supported. File an issue if you need this feature.')
+  }
+  await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, server.server.port.toString())
 }
 
 // Health check for test mode
 if (process.env.NODE_ENV === 'test') {
   try {
-    const response = await fetch(`http://localhost:${port}/api/sessions`)
+    const response = await fetch(`${server.server.url}/api/sessions`)
     if (!response.ok) {
       console.error('Server health check failed')
       process.exit(1)

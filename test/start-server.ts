@@ -1,17 +1,13 @@
 import { initManager, manager } from 'opencode-pty/src/plugin/pty/manager'
 import { PTYServer } from '../src/web/server/server'
+import { OpencodeClient } from '@opencode-ai/sdk'
 
 // Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {
   process.env.NODE_ENV = 'test'
 }
 
-const fakeClient = {
-  app: {
-    log: async (_opts: any) => {},
-  },
-} as any
-initManager(fakeClient)
+initManager(new OpencodeClient())
 
 const server = await PTYServer.createServer()
 
@@ -36,7 +32,9 @@ if (process.env.NODE_ENV === 'test') {
         break
       }
     } catch (error) {
-      // Server not ready yet
+      if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+        throw error
+      }
     }
     await new Promise((resolve) => setTimeout(resolve, 500))
     retries--

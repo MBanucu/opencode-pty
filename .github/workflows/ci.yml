@@ -13,6 +13,9 @@ permissions:
 
 jobs:
   test:
+    strategy:
+      matrix:
+        quality: [test, typecheck, lint, format]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -33,21 +36,26 @@ jobs:
 
       - name: Install dependencies
         run: bun install
-
-      - name: Type check
-        run: bun run typecheck
-
-      - name: Lint
-        run: bun run lint
-
-      - name: Check formatting
-        run: bun run format:check
-
+        
       - name: Build
+        if: matrix.quality == 'test'
         run: bun run build:all:prod
 
       - name: Run test
+        if: matrix.quality == 'test'
         run: bun test websocket.test.ts web-server.test.ts
+
+      - name: Type check
+        if: matrix.quality == 'typecheck'
+        run: bun run typecheck
+
+      - name: Lint
+        if: matrix.quality == 'lint'
+        run: bun run lint
+
+      - name: Check formatting
+        if: matrix.quality == 'format'
+        run: bun run format:check
 
   dependency-review:
     runs-on: ubuntu-24.04

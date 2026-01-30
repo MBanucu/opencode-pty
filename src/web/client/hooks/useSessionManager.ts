@@ -1,11 +1,10 @@
 import { useCallback } from 'react'
-import type { Session } from 'opencode-pty/shared/types'
+import type { PTYSessionInfo } from 'opencode-pty/shared/types'
 
 interface UseSessionManagerOptions {
-  activeSession: Session | null
-  setActiveSession: (session: Session | null) => void
+  activeSession: PTYSessionInfo | null
+  setActiveSession: (session: PTYSessionInfo | null) => void
   subscribeWithRetry: (sessionId: string) => void
-  onOutputUpdate?: (output: string[]) => void
   onRawOutputUpdate?: (rawOutput: string) => void
 }
 
@@ -13,18 +12,16 @@ export function useSessionManager({
   activeSession,
   setActiveSession,
   subscribeWithRetry,
-  onOutputUpdate,
   onRawOutputUpdate,
 }: UseSessionManagerOptions) {
   const handleSessionClick = useCallback(
-    async (session: Session) => {
+    async (session: PTYSessionInfo) => {
       try {
         // Validate session object first
         if (!session?.id) {
           return
         }
         setActiveSession(session)
-        onOutputUpdate?.([])
         onRawOutputUpdate?.('')
         // Subscribe to this session for live updates
         subscribeWithRetry(session.id)
@@ -41,16 +38,14 @@ export function useSessionManager({
           // Call callback with raw data
           onRawOutputUpdate?.(rawData.raw || '')
         } catch (fetchError) {
-          onOutputUpdate?.([])
           onRawOutputUpdate?.('')
         }
       } catch (error) {
         // Ensure UI remains stable
-        onOutputUpdate?.([])
         onRawOutputUpdate?.('')
       }
     },
-    [setActiveSession, subscribeWithRetry, onOutputUpdate, onRawOutputUpdate]
+    [setActiveSession, subscribeWithRetry, onRawOutputUpdate]
   )
 
   const handleSendInput = useCallback(
@@ -93,12 +88,11 @@ export function useSessionManager({
 
       if (response.ok) {
         setActiveSession(null)
-        onOutputUpdate?.([])
         onRawOutputUpdate?.('')
       }
       // eslint-disable-next-line no-empty
     } catch {}
-  }, [activeSession, setActiveSession, onOutputUpdate, onRawOutputUpdate])
+  }, [activeSession, setActiveSession, onRawOutputUpdate])
 
   return {
     handleSessionClick,

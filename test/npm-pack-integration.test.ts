@@ -114,15 +114,9 @@ describe('npm pack integration', () => {
         while (!(await Bun.file(portFile).exists())) {
           await new Promise(setImmediate)
         }
-        try {
-          const bytes = await Bun.file(portFile).bytes()
-          const port = parseInt(new TextDecoder().decode(bytes).trim(), 10)
-          console.log(`Detected server port: ${port}`)
-          return port
-        } catch (error) {
-          console.log(error)
-          return 0
-        }
+        const bytes = await Bun.file(portFile).bytes()
+        const port = parseInt(new TextDecoder().decode(bytes).trim(), 10)
+        return port
       }
 
       // Race the timeout against the polling.

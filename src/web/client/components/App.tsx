@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { Session } from 'opencode-pty/shared/types'
+import type { PTYSessionInfo } from 'opencode-pty/shared/types'
 
 import { useWebSocket } from '../hooks/useWebSocket.ts'
 import { useSessionManager } from '../hooks/useSessionManager.ts'
@@ -8,8 +8,8 @@ import { Sidebar } from './Sidebar.tsx'
 import { RawTerminal } from './TerminalRenderer.tsx'
 
 export function App() {
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [activeSession, setActiveSession] = useState<Session | null>(null)
+  const [sessions, setSessions] = useState<PTYSessionInfo[]>([])
+  const [activeSession, setActiveSession] = useState<PTYSessionInfo | null>(null)
   const [rawOutput, setRawOutput] = useState<string>('')
 
   const [connected, setConnected] = useState(false)
@@ -21,20 +21,23 @@ export function App() {
       setRawOutput((prev) => prev + rawData)
       setWsMessageCount((prev) => prev + 1)
     }, []),
-    onSessionList: useCallback((newSessions: Session[], autoSelected: Session | null) => {
-      setSessions(newSessions)
-      if (autoSelected) {
-        setActiveSession(autoSelected)
-        fetch(`${location.protocol}//${location.host}/api/sessions/${autoSelected.id}/buffer/raw`)
-          .then((response) => (response.ok ? response.json() : { raw: '' }))
-          .then((data) => {
-            setRawOutput(data.raw || '')
-          })
-          .catch(() => {
-            setRawOutput('')
-          })
-      }
-    }, []),
+    onSessionList: useCallback(
+      (newSessions: PTYSessionInfo[], autoSelected: PTYSessionInfo | null) => {
+        setSessions(newSessions)
+        if (autoSelected) {
+          setActiveSession(autoSelected)
+          fetch(`${location.protocol}//${location.host}/api/sessions/${autoSelected.id}/buffer/raw`)
+            .then((response) => (response.ok ? response.json() : { raw: '' }))
+            .then((data) => {
+              setRawOutput(data.raw || '')
+            })
+            .catch(() => {
+              setRawOutput('')
+            })
+        }
+      },
+      []
+    ),
   })
 
   // Update connected from wsConnected

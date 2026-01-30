@@ -1,4 +1,6 @@
-import type { PTYSessionInfo, SpawnOptions } from '../../plugin/pty/types'
+import type { PTYSessionInfo, PTYStatus, SpawnOptions } from '../../plugin/pty/types'
+
+export type { PTYSessionInfo, PTYStatus }
 
 export class CustomError extends Error {
   constructor(message: string) {
@@ -100,25 +102,4 @@ export interface WSMessageServerSessionUpdate extends WSMessageServer {
 export interface WSMessageServerError extends WSMessageServer {
   type: 'error'
   error: CustomError
-}
-
-// React component types
-export interface Session {
-  id: string
-  title: string
-  description?: string
-  command: string
-  status: 'running' | 'exited' | 'killed'
-  exitCode?: number
-  pid: number
-  lineCount: number
-  createdAt: string
-}
-
-export interface AppState {
-  sessions: Session[]
-  activeSession: Session | null
-  output: string[]
-  connected: boolean
-  inputValue: string
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Session } from 'opencode-pty/shared/types'
+import type { PTYSessionInfo } from 'opencode-pty/shared/types'
 import {
   WEBSOCKET_PING_INTERVAL,
   RETRY_DELAY,
@@ -7,16 +7,16 @@ import {
 } from 'opencode-pty/shared/constants'
 
 interface UseWebSocketOptions {
-  activeSession: Session | null
+  activeSession: PTYSessionInfo | null
   onRawData?: (rawData: string) => void
-  onSessionList: (sessions: Session[], autoSelected: Session | null) => void
+  onSessionList: (sessions: PTYSessionInfo[], autoSelected: PTYSessionInfo | null) => void
 }
 
 export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWebSocketOptions) {
   const [connected, setConnected] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
-  const activeSessionRef = useRef<Session | null>(null)
+  const activeSessionRef = useRef<PTYSessionInfo | null>(null)
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // Keep ref in sync with activeSession
@@ -49,9 +49,9 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
           const sessions = data.sessions || []
           // Auto-select first running session if none selected (skip in tests that need empty state)
           const shouldSkipAutoselect = localStorage.getItem(SKIP_AUTOSELECT_KEY) === 'true'
-          let autoSelected: Session | null = null
+          let autoSelected: PTYSessionInfo | null = null
           if (sessions.length > 0 && !activeSession && !shouldSkipAutoselect) {
-            const runningSession = sessions.find((s: Session) => s.status === 'running')
+            const runningSession = sessions.find((s: PTYSessionInfo) => s.status === 'running')
             autoSelected = runningSession || sessions[0]
             if (autoSelected) {
               activeSessionRef.current = autoSelected

@@ -119,6 +119,9 @@ describe('PTY Tools', () => {
         offset: 0,
       })
     })
+    afterEach(() => {
+      mock.restore()
+    })
 
     it('should read output without pattern', async () => {
       const args = { id: 'test-session-id' }

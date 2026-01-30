@@ -103,9 +103,16 @@ describe('PTY Tools', () => {
     beforeEach(() => {
       spyOn(manager, 'get').mockReturnValue({
         id: 'test-session-id',
+        title: 'Test Session',
+        description: 'A session for testing',
+        command: 'echo',
+        args: ['hello'],
+        workdir: '/tmp',
         status: 'running',
-        // other fields not needed for this test
-      } as any)
+        pid: 12345,
+        createdAt: moment().toISOString(true),
+        lineCount: 2,
+      })
       spyOn(manager, 'read').mockReturnValue({
         lines: ['line 1', 'line 2'],
         offset: 0,

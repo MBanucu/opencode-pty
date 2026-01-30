@@ -8,7 +8,6 @@ import {
 import { OpencodeClient } from '@opencode-ai/sdk'
 
 describe('PTY Echo Behavior', () => {
-
   beforeEach(() => {
     initManager(new OpencodeClient())
   })

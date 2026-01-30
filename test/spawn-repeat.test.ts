@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { initManager, manager, registerRawOutputCallback } from '../src/plugin/pty/manager.ts'
+import { initManager, manager, rawOutputCallbacks, registerRawOutputCallback } from '../src/plugin/pty/manager.ts'
 
 describe('PTY Echo Behavior', () => {
   const fakeClient = {
@@ -42,39 +42,38 @@ describe('PTY Echo Behavior', () => {
   })
 
   it.skipIf(!process.env.SYNC_TESTS)('should receive initial data once', async () => {
-    const receivedOutputs: string[] = []
-
-    const promise = new Promise<void>((resolve) => {
-      // Subscribe to raw output events
-      registerRawOutputCallback((_sessionId, rawData) => {
-        receivedOutputs.push(rawData)
-        if (receivedOutputs.join('').includes('Hello World')) {
-          resolve()
+    
+    const title = crypto.randomUUID()
+    // Subscribe to raw output events
+    const promise = new Promise<string>((resolve) => {
+      let rawDataTotal = ''
+      registerRawOutputCallback((session, rawData) => {
+        if (session.title !== title) return
+        rawDataTotal += rawData
+        if (rawData.includes('Hello World')) {
+          resolve(rawDataTotal)
         }
       })
-      setTimeout(resolve, 1000)
     }).catch((e) => {
       console.error(e)
     })
 
     // Spawn interactive bash session
     const session = manager.spawn({
+      title: title,
       command: 'echo',
       args: ['Hello World'],
       description: 'Echo test session',
       parentSessionId: 'test',
     })
 
-    await promise
+    const rawData = await promise
 
     // Clean up
     manager.kill(session.id, true)
+    rawOutputCallbacks.length = 0
 
     // Verify echo occurred
-    const allOutput = receivedOutputs.join('')
-    expect(allOutput).toContain('Hello World')
-
-    // Should have received some output (prompt + echo)
-    expect(receivedOutputs.length).toBeGreaterThan(0)
-  })
+    expect(rawData).toContain('Hello World')
+  }, 1000)
 })

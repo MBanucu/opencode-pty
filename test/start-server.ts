@@ -1,5 +1,5 @@
 import { initManager, manager } from 'opencode-pty/src/plugin/pty/manager'
-import { startWebServer } from 'opencode-pty/src/web/server/server'
+import { PTYServer } from '../src/web/server/server'
 
 // Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {
@@ -13,64 +13,17 @@ const fakeClient = {
 } as any
 initManager(fakeClient)
 
-// Cleanup on process termination
-process.on('SIGTERM', () => {
-  manager.cleanupAll()
-  process.exit(0)
-})
-
-process.on('SIGINT', () => {
-  manager.cleanupAll()
-  process.exit(0)
-})
-
-// Use the specified port after cleanup
-function findAvailablePort(port: number): number {
-  // Only kill processes if we're confident they belong to our test servers
-  // In parallel execution, avoid killing other workers' servers
-  if (process.env.TEST_WORKER_INDEX) {
-    // For parallel workers, assume the port is available since we assign unique ports
-    return port
-  }
-
-  // For single execution, clean up any stale processes
-  Bun.spawnSync(['sh', '-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`])
-  // Small delay to allow cleanup
-  Bun.sleepSync(200)
-  return port
-}
-
-// Parse command line arguments
-import yargs from 'yargs'
-import { hideBin } from 'yargs/helpers'
-
-const argv = yargs(hideBin(process.argv))
-  .option('port', {
-    alias: 'p',
-    type: 'number',
-    description: 'Port to run the server on',
-    default: 8877,
-  })
-  .parseSync()
-
-let basePort = argv.port
-
-// For parallel workers, ensure unique start ports
-if (process.env.TEST_WORKER_INDEX) {
-  const workerIndex = parseInt(process.env.TEST_WORKER_INDEX, 10)
-  basePort = 8877 + workerIndex
-}
-
-let port = findAvailablePort(basePort)
-
-await startWebServer({ port })
+const server = await PTYServer.createServer()
 
 // Only log in non-test environments or when explicitly requested
 
 // Write port to file for tests to read
 if (process.env.NODE_ENV === 'test') {
   const workerIndex = process.env.TEST_WORKER_INDEX || '0'
-  await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, port.toString())
+  if (!server.server.port) {
+    throw new Error('Unix sockets not supported. File an issue if you need this feature.')
+  }
+  await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, server.server.port.toString())
 }
 
 // Health check for test mode
@@ -78,7 +31,7 @@ if (process.env.NODE_ENV === 'test') {
   let retries = 20 // 10 seconds
   while (retries > 0) {
     try {
-      const response = await fetch(`http://localhost:${port}/api/sessions`)
+      const response = await fetch(`${server.server.url}/api/sessions`)
       if (response.ok) {
         break
       }

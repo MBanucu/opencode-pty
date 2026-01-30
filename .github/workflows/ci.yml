@@ -47,7 +47,7 @@ jobs:
         run: bun run build:all:prod
 
       - name: Run test
-        run: bun test websocket.test.ts
+        run: bun test websocket.test.ts web-server.test.ts
 
   dependency-review:
     runs-on: ubuntu-24.04

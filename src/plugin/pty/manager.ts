@@ -25,7 +25,7 @@ const originalStartReadLoop = (Terminal.prototype as any)._startReadLoop
 
 type SessionUpdateCallback = (session: PTYSessionInfo) => void
 
-const sessionUpdateCallbacks: SessionUpdateCallback[] = []
+export const sessionUpdateCallbacks: SessionUpdateCallback[] = []
 
 export function registerSessionUpdateCallback(callback: SessionUpdateCallback) {
   sessionUpdateCallbacks.push(callback)
@@ -50,7 +50,7 @@ function notifySessionUpdate(session: PTYSessionInfo) {
 
 type RawOutputCallback = (session: PTYSessionInfo, rawData: string) => void
 
-const rawOutputCallbacks: RawOutputCallback[] = []
+export const rawOutputCallbacks: RawOutputCallback[] = []
 
 export function registerRawOutputCallback(callback: RawOutputCallback): void {
   rawOutputCallbacks.push(callback)

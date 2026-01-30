@@ -1,11 +1,6 @@
 import { initManager, manager } from '../src/plugin/pty/manager.ts'
 import { startWebServer } from '../src/web/server/server.ts'
 
-// Set NODE_ENV if not set
-if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = 'test'
-}
-
 const fakeClient = {
   app: {
     log: async (_opts: any) => {},

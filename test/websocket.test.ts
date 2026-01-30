@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { PTYServer } from '../src/web/server/server.ts'
-import { initManager, manager } from '../src/plugin/pty/manager.ts'
+import { initManager, manager, rawOutputCallbacks, sessionUpdateCallbacks } from '../src/plugin/pty/manager.ts'
 import { CustomError, type WSMessageClientInput, type WSMessageClientSessionList, type WSMessageClientSpawnSession, type WSMessageClientSubscribeSession, type WSMessageClientUnsubscribeSession, type WSMessageServer, type WSMessageServerData, type WSMessageServerError, type WSMessageServerRawData, type WSMessageServerReadRawResponse, type WSMessageServerSessionList, type WSMessageServerSessionUpdate, type WSMessageServerSubscribedSession, type WSMessageServerUnsubscribedSession } from '../src/web/shared/types.ts';
 
 class ManagedTestObjects implements Disposable {
@@ -80,6 +80,8 @@ class ManagedTestObjects implements Disposable {
     this.ws.close();
     this.stack.dispose();
     manager.clearAllSessions()
+    sessionUpdateCallbacks.length = 0
+    rawOutputCallbacks.length = 0
   }
 
   public send(message: WSMessageClientInput | WSMessageClientSessionList | WSMessageClientSpawnSession | WSMessageClientSubscribeSession | WSMessageClientUnsubscribeSession) {

@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'bun:test'
-import type { WSMessage, SessionData, ServerConfig, WSClient } from '../src/web/shared/types.ts'
+import { CustomError, type WSMessageClientSubscribeSession, type WSMessageServerData, type WSMessageServerError, type WSMessageServerSessionList } from '../src/web/shared/types.ts'
+import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
 
 describe('Web Types', () => {
   describe('WSMessage', () => {
     it('should validate subscribe message structure', () => {
-      const message: WSMessage = {
+      const message: WSMessageClientSubscribeSession = {
         type: 'subscribe',
         sessionId: 'pty_12345',
       }
@@ -14,19 +15,29 @@ describe('Web Types', () => {
     })
 
     it('should validate data message structure', () => {
-      const message: WSMessage = {
+      const message: WSMessageServerData = {
         type: 'data',
-        sessionId: 'pty_12345',
+        session: {
+          id: 'pty_12345',
+          title: 'Test Session',
+          command: 'echo',
+          status: 'running',
+          pid: 1234,
+          lineCount: 10,
+          createdAt: new Date(),
+          args: ['test'],
+          workdir: '/home/user',
+        },
         data: ['test output', ''],
       }
 
       expect(message.type).toBe('data')
-      expect(message.sessionId).toBe('pty_12345')
+      expect(message.session.id).toBe('pty_12345')
       expect(message.data).toEqual(['test output', ''])
     })
 
     it('should validate session_list message structure', () => {
-      const sessions: SessionData[] = [
+      const sessions: PTYSessionInfo[] = [
         {
           id: 'pty_12345',
           title: 'Test Session',
@@ -34,11 +45,13 @@ describe('Web Types', () => {
           status: 'running',
           pid: 1234,
           lineCount: 5,
-          createdAt: '2026-01-21T10:00:00.000Z',
+          createdAt: new Date(),
+          args: ['hello'],
+          workdir: '/home/user',
         },
       ]
 
-      const message: WSMessage = {
+      const message: WSMessageServerSessionList = {
         type: 'session_list',
         sessions,
       }
@@ -48,19 +61,19 @@ describe('Web Types', () => {
     })
 
     it('should validate error message structure', () => {
-      const message: WSMessage = {
+      const message: WSMessageServerError = {
         type: 'error',
-        error: 'Session not found',
+        error: new CustomError('Session not found'),
       }
 
       expect(message.type).toBe('error')
-      expect(message.error).toBe('Session not found')
+      expect(message.error.message).toBe('Session not found')
     })
   })
 
   describe('SessionData', () => {
     it('should validate complete session data structure', () => {
-      const session: SessionData = {
+      const session: PTYSessionInfo = {
         id: 'pty_12345',
         title: 'Test Echo Session',
         command: 'echo',
@@ -68,7 +81,9 @@ describe('Web Types', () => {
         exitCode: 0,
         pid: 1234,
         lineCount: 2,
-        createdAt: '2026-01-21T10:00:00.000Z',
+        createdAt: new Date(),
+        args: ['Hello, World!'],
+        workdir: '/home/user',
       }
 
       expect(session.id).toBe('pty_12345')
@@ -78,62 +93,24 @@ describe('Web Types', () => {
       expect(session.exitCode).toBe(0)
       expect(session.pid).toBe(1234)
       expect(session.lineCount).toBe(2)
-      expect(session.createdAt).toBe('2026-01-21T10:00:00.000Z')
+      expect(session.createdAt).toBeInstanceOf(Date)
     })
 
     it('should allow optional exitCode', () => {
-      const session: SessionData = {
+      const session: PTYSessionInfo = {
         id: 'pty_67890',
         title: 'Running Session',
         command: 'sleep',
         status: 'running',
         pid: 5678,
         lineCount: 0,
-        createdAt: '2026-01-21T10:00:00.000Z',
+        createdAt: new Date('2026-01-21T10:00:00.000Z'),
+        args: ['Hello, World!'],
+        workdir: '/home/user',
       }
 
       expect(session.exitCode).toBeUndefined()
       expect(session.status).toBe('running')
-    })
-  })
-
-  describe('ServerConfig', () => {
-    it('should validate server configuration', () => {
-      const config: ServerConfig = {
-        port: 8765,
-        hostname: 'localhost',
-      }
-
-      expect(config.port).toBe(8765)
-      expect(config.hostname).toBe('localhost')
-    })
-  })
-
-  describe('WSClient', () => {
-    it('should validate WebSocket client structure', () => {
-      const mockWebSocket = {} as any // Mock WebSocket for testing
-
-      const client: WSClient = {
-        socket: mockWebSocket,
-        subscribedSessions: new Set(['pty_12345', 'pty_67890']),
-      }
-
-      expect(client.socket).toBe(mockWebSocket)
-      expect(client.subscribedSessions).toBeInstanceOf(Set)
-      expect(client.subscribedSessions.has('pty_12345')).toBe(true)
-      expect(client.subscribedSessions.has('pty_67890')).toBe(true)
-      expect(client.subscribedSessions.has('pty_99999')).toBe(false)
-    })
-
-    it('should handle empty subscriptions', () => {
-      const mockWebSocket = {} as any
-
-      const client: WSClient = {
-        socket: mockWebSocket,
-        subscribedSessions: new Set(),
-      }
-
-      expect(client.subscribedSessions.size).toBe(0)
     })
   })
 })

@@ -1,4 +1,3 @@
-import type { ServerWebSocket } from 'bun'
 import type { PTYSessionInfo, SpawnOptions } from '../../plugin/pty/types'
 
 export class CustomError extends Error {
@@ -108,11 +107,6 @@ export interface WSMessageServerSessionUpdate extends WSMessageServer {
 export interface WSMessageServerError extends WSMessageServer {
   type: 'error'
   error: CustomError
-}
-
-export interface WSClient {
-  socket: ServerWebSocket<WSClient>
-  subscribedSessions: Set<string>
 }
 
 // React component types

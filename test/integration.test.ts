@@ -121,6 +121,44 @@ describe('Web Server Integration', () => {
 
       await errorPromise
     })
+
+    it('should handle input to sleeping session', async () => {
+      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
+
+      const testSessionId = crypto.randomUUID()
+
+      const sessionRunningPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
+        managedTestClient.sessionUpdateCallbacks.push((message) => {
+          if (message.session.title === testSessionId && message.session.status === 'running') {
+            resolve(message)
+          }
+        })
+      })
+
+      const session = manager.spawn({
+        title: testSessionId,
+        command: 'sleep',
+        args: ['10'],
+        description: 'Sleep test session',
+        parentSessionId: managedTestServer.sessionId,
+      })
+
+      await sessionRunningPromise
+
+      const inputResponse = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}/input`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: 'input to sleeping process\n' }),
+        }
+      )
+
+      const inputResult = await inputResponse.json()
+      expect(inputResult).toHaveProperty('success')
+
+      manager.kill(session.id)
+    })
   })
 
   describe('Performance and Reliability', () => {

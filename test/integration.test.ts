@@ -144,7 +144,7 @@ describe('Web Server Integration', () => {
           body: JSON.stringify({ data: 'test input\n' }),
         }
       )
-      console.log('[TEST] Sent input to session, response status:', response.status)
+      console.log('[TEST] Sent input to session, response:', response)
 
       const result = await response.json()
       console.log('[TEST] Input API response:', result)

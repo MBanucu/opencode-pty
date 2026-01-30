@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock, spyOn, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach, mock, spyOn, afterEach, afterAll } from 'bun:test'
 import { ptySpawn } from '../src/plugin/pty/tools/spawn.ts'
 import { ptyRead } from '../src/plugin/pty/tools/read.ts'
 import { ptyList } from '../src/plugin/pty/tools/list.ts'
@@ -6,6 +6,9 @@ import { RingBuffer } from '../src/plugin/pty/buffer.ts'
 import { manager } from '../src/plugin/pty/manager.ts'
 
 describe('PTY Tools', () => {
+  afterAll(() => {
+    mock.restore()
+  })
   describe('ptySpawn', () => {
     beforeEach(() => {
       spyOn(manager, 'spawn').mockImplementation((opts) => ({

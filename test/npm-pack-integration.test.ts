@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'bun:test'
-import { mkdtempSync, rmSync, readFileSync, copyFileSync, existsSync } from 'fs'
+import { mkdtempSync, rmSync, copyFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
@@ -45,17 +45,15 @@ describe('npm pack integration', () => {
       try {
         rmSync(tempDir, { recursive: true, force: true })
       } catch (error) {
-        // Ignore cleanup errors
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+          throw error
+        }
       }
     }
 
     // Cleanup pack file
     if (packFile) {
-      try {
-        await run(['rm', '-f', packFile])
-      } catch (error) {
-        // Ignore cleanup errors
-      }
+      await run(['rm', '-f', packFile])
     }
   })
 
@@ -89,6 +87,7 @@ describe('npm pack integration', () => {
     const packageDir = join(tempDir, 'node_modules/opencode-pty')
     expect(existsSync(join(packageDir, 'src/plugin/pty/manager.ts'))).toBe(true)
     expect(existsSync(join(packageDir, 'dist/web/index.html'))).toBe(true)
+    Bun.file('/tmp/test-server-port-0.txt').delete()
     serverProcess = Bun.spawn(['bun', 'run', 'start-server.ts'], {
       cwd: tempDir,
       env: { ...process.env, NODE_ENV: 'test' },
@@ -96,32 +95,52 @@ describe('npm pack integration', () => {
       stderr: 'inherit',
     })
 
-    // Wait for port file to be written
-    let port: number | null = null
-    let retries = 20 // 10 seconds
-    while (retries > 0) {
-      try {
-        const portFile = readFileSync('/tmp/test-server-port-0.txt', 'utf8')
-        port = parseInt(portFile.trim(), 10)
-        if (!isNaN(port)) break
-      } catch (error) {
-        // File not ready yet
+    async function waitForPortFile() {
+      // Fallback timeout to resolve with 0 after 500ms.
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => resolve(0), 500)
+      })
+
+      // Polling logic as a separate async function.
+      const pollForFile = async () => {
+        while (!Bun.file('/tmp/test-server-port-0.txt').exists()) {
+          await new Promise(setImmediate)
+        }
+        const bytes = await Bun.file('/tmp/test-server-port-0.txt').bytes()
+        const port = parseInt(new TextDecoder().decode(bytes).trim(), 10)
+        return port
       }
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      retries--
+
+      // Race the timeout against the polling.
+      return await Promise.race([timeoutPromise, pollForFile()])
     }
-    expect(port).not.toBeNull()
+
+    async function waitWithRetry() {
+      let retries = 20
+      do {
+        const port = await waitForPortFile()
+        if (port !== 0) return port
+        await new Promise(setImmediate)
+        retries--
+      } while (retries > 0)
+      return 0
+    }
+
+    const port = await waitWithRetry()
+    expect(port).not.toBe(0)
 
     // Wait for server to be ready
-    retries = 20 // 10 seconds
+    let retries = 20 // 10 seconds
     while (retries > 0) {
       try {
         const response = await fetch(`http://localhost:${port}/api/sessions`)
         if (response.ok) break
       } catch (error) {
-        // Server not ready
+        if (!(error instanceof DOMException) || error.name !== 'AbortError') {
+          throw error
+        }
       }
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise(setImmediate)
       retries--
     }
     expect(retries).toBeGreaterThan(0) // Server should be ready

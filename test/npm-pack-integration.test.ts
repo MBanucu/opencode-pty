@@ -83,7 +83,10 @@ describe('npm pack integration', () => {
 
     // Copy the server script to tempDir
     mkdirSync(join(tempDir, 'test'))
-    copyFileSync(join(process.cwd(), 'test/start-server.ts'), join(tempDir, 'test', 'start-server.ts'))
+    copyFileSync(
+      join(process.cwd(), 'test/start-server.ts'),
+      join(tempDir, 'test', 'start-server.ts')
+    )
 
     // Verify the package structure
     const packageDir = join(tempDir, 'node_modules/opencode-pty')
@@ -108,7 +111,7 @@ describe('npm pack integration', () => {
 
       // Polling logic as a separate async function.
       const pollForFile = async () => {
-        while (!await Bun.file(portFile).exists()) {
+        while (!(await Bun.file(portFile).exists())) {
           await new Promise(setImmediate)
         }
         try {
@@ -116,7 +119,7 @@ describe('npm pack integration', () => {
           const port = parseInt(new TextDecoder().decode(bytes).trim(), 10)
           console.log(`Detected server port: ${port}`)
           return port
-        } catch(error) {
+        } catch (error) {
           console.log(error)
           return 0
         }

@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
-import {
-  manager,
-} from '../src/plugin/pty/manager.ts'
+import { manager } from '../src/plugin/pty/manager.ts'
 import {
   CustomError,
   type WSMessageServerError,
@@ -11,7 +9,6 @@ import {
   type WSMessageServerUnsubscribedSession,
 } from '../src/web/shared/types.ts'
 import { ManagedTestClient, ManagedTestServer } from './utils.ts'
-
 
 describe('WebSocket Functionality', () => {
   let managedTestServer: ManagedTestServer

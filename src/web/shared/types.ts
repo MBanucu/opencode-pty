@@ -58,7 +58,6 @@ export interface WSMessageServer {
   type:
     | 'subscribed'
     | 'unsubscribed'
-    | 'data'
     | 'raw_data'
     | 'readRawResponse'
     | 'session_list'
@@ -74,12 +73,6 @@ export interface WSMessageServerSubscribedSession extends WSMessageServer {
 export interface WSMessageServerUnsubscribedSession extends WSMessageServer {
   type: 'unsubscribed'
   sessionId: string
-}
-
-export interface WSMessageServerData extends WSMessageServer {
-  type: 'data'
-  session: PTYSessionInfo
-  data: string[]
 }
 
 export interface WSMessageServerRawData extends WSMessageServer {

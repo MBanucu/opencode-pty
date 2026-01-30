@@ -4,6 +4,7 @@ import { ptyRead } from '../src/plugin/pty/tools/read.ts'
 import { ptyList } from '../src/plugin/pty/tools/list.ts'
 import { RingBuffer } from '../src/plugin/pty/buffer.ts'
 import { manager } from '../src/plugin/pty/manager.ts'
+import moment from 'moment'
 
 describe('PTY Tools', () => {
   afterAll(() => {
@@ -19,7 +20,7 @@ describe('PTY Tools', () => {
         workdir: opts.workdir || '/tmp',
         pid: 12345,
         status: 'running',
-        createdAt: new Date(),
+        createdAt: moment().toISOString(true),
         lineCount: 0,
       }))
     })
@@ -206,7 +207,7 @@ describe('PTY Tools', () => {
           pid: 12345,
           lineCount: 10,
           workdir: '/tmp',
-          createdAt: new Date('2023-01-01T00:00:00Z'),
+          createdAt: moment('2023-01-01T00:00:00Z').toISOString(true),
         },
       ]
       spyOn(manager, 'list').mockReturnValue(mockSessions)

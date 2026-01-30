@@ -9,24 +9,32 @@ import {
   killSession,
   getRawBuffer,
   getPlainBuffer,
+  cleanupSession,
 } from './handlers/sessions.ts'
 
 import { buildStaticRoutes } from './handlers/static.ts'
 import { handleUpgrade } from './handlers/upgrade.ts'
 import { handleWebSocketMessage } from './handlers/websocket.ts'
 import { CallbackManager } from './CallbackManager.ts'
-import { initManager, manager, rawOutputCallbacks, sessionUpdateCallbacks } from '../../plugin/pty/manager.ts'
+import {
+  initManager,
+  manager,
+  rawOutputCallbacks,
+  sessionUpdateCallbacks,
+} from '../../plugin/pty/manager.ts'
+
+export const wsPath = '/ws'
+export const healthPath = '/health'
+export const apiBasePath = '/api/sessions'
+export const apiSessionPath = '/api/sessions/:id'
+export const apiSessionCleanupPath = '/api/sessions/:id/cleanup'
+export const apiSessionInputPath = '/api/sessions/:id/input'
+export const apiSessionRawBufferPath = '/api/sessions/:id/buffer/raw'
+export const apiSessionPlainBufferPath = '/api/sessions/:id/buffer/plain'
 
 export class PTYServer implements Disposable {
   public readonly server: Server<any>
   private readonly staticRoutes: Record<string, Response>
-  public static readonly wsPath = '/ws'
-  public static readonly healthPath = '/health'
-  public static readonly apiBasePath = '/api/sessions'
-  public static readonly apiSessionPath = '/api/sessions/:id'
-  public static readonly apiSessionInputPath = '/api/sessions/:id/input'
-  public static readonly apiSessionRawBufferPath = '/api/sessions/:id/buffer/raw'
-  public static readonly apiSessionPlainBufferPath = '/api/sessions/:id/buffer/plain'
   private readonly stack = new DisposableStack()
 
   private constructor(staticRoutes: Record<string, Response>) {
@@ -64,24 +72,27 @@ export class PTYServer implements Disposable {
 
       routes: {
         ...this.staticRoutes,
-        [PTYServer.wsPath]: (req: Request) => handleUpgrade(this.server, req),
-        [PTYServer.healthPath]: () => handleHealth(this.server),
-        [PTYServer.apiBasePath]: {
+        [wsPath]: (req: Request) => handleUpgrade(this.server, req),
+        [healthPath]: () => handleHealth(this.server),
+        [apiBasePath]: {
           GET: getSessions,
           POST: createSession,
           DELETE: clearSessions,
         },
-        [PTYServer.apiSessionPath]: {
+        [apiSessionPath]: {
           GET: getSession,
           DELETE: killSession,
         },
-        [PTYServer.apiSessionInputPath]: {
+        [apiSessionCleanupPath]: {
+          DELETE: cleanupSession,
+        },
+        [apiSessionInputPath]: {
           POST: sendInput,
         },
-        [PTYServer.apiSessionRawBufferPath]: {
+        [apiSessionRawBufferPath]: {
           GET: getRawBuffer,
         },
-        [PTYServer.apiSessionPlainBufferPath]: {
+        [apiSessionPlainBufferPath]: {
           GET: getPlainBuffer,
         },
       },
@@ -102,6 +113,25 @@ export class PTYServer implements Disposable {
   }
 
   public getWsUrl(): string {
-    return `${this.server.url.origin.replace(/^http/, 'ws')}${PTYServer.wsPath}`
+    return `${this.server.url.origin.replace(/^http/, 'ws')}${wsPath}`
   }
+}
+
+let globalServer: PTYServer | undefined
+
+export async function startWebServer(options?: { port?: number }): Promise<string> {
+  globalServer = await PTYServer.createServer()
+  if (options?.port) {
+    // Note: Since port is 0, we can't change it, but for compatibility, ignore
+  }
+  return globalServer.server.url.toString()
+}
+
+export function getServerUrl(): string | undefined {
+  return globalServer?.server.url.toString()
+}
+
+export function stopWebServer(): void {
+  globalServer?.[Symbol.dispose]()
+  globalServer = undefined
 }

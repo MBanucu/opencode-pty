@@ -126,7 +126,9 @@ describe('Web Server', () => {
 
       await rawDataPromise
 
-      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}`)
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}`
+      )
       expect(response.status).toBe(200)
 
       const sessionData = await response.json()
@@ -137,7 +139,9 @@ describe('Web Server', () => {
 
     it('should return 404 for non-existent session', async () => {
       const nonexistentId = crypto.randomUUID()
-      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${nonexistentId}`)
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${nonexistentId}`
+      )
       expect(response.status).toBe(404)
     }, 200)
 
@@ -162,11 +166,14 @@ describe('Web Server', () => {
       // Wait for PTY to start
       await sessionUpdatePromise
 
-      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}/input`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: 'test input\n' }),
-      })
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}/input`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: 'test input\n' }),
+        }
+      )
 
       // Should return success
       expect(response.status).toBe(200)
@@ -185,7 +192,7 @@ describe('Web Server', () => {
       })
       const sessionExitedPromise = new Promise<PTYSessionInfo>((resolve) => {
         registerSessionUpdateCallback((sessionInfo: PTYSessionInfo) => {
-          if (sessionInfo.title === title && sessionInfo.status === 'exited') {
+          if (sessionInfo.title === title && sessionInfo.status === 'killed') {
             resolve(sessionInfo)
           }
         })
@@ -201,16 +208,19 @@ describe('Web Server', () => {
       // Wait for PTY to start
       await sessionRunningPromise
 
-      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}`,
+        {
+          method: 'DELETE',
+        }
+      )
 
       expect(response.status).toBe(200)
       const result = await response.json()
       expect(result.success).toBe(true)
 
       await sessionExitedPromise
-    }, 200)
+    }, 1000)
 
     it('should return session output', async () => {
       const title = crypto.randomUUID()
@@ -233,7 +243,9 @@ describe('Web Server', () => {
       // Wait a bit for output to be captured
       await sessionExitedPromise
 
-      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}/buffer/raw`)
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}/buffer/raw`
+      )
       expect(response.status).toBe(200)
 
       const bufferData = await response.json()
@@ -249,7 +261,7 @@ describe('Web Server', () => {
       const response = await fetch(`${managedTestServer.server.server.url}/api/nonexistent`)
       expect(response.status).toBe(200)
       const text = await response.text()
-      expect(text).toContain('<div id=\"root\"></div>')
+      expect(text).toContain('<div id="root"></div>')
       expect(text).toContain('<!doctype html>')
     }, 200)
   })

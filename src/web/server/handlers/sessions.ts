@@ -1,6 +1,13 @@
 import { manager } from '../../../plugin/pty/manager.ts'
 import type { BunRequest } from 'bun'
 import { JsonResponse, ErrorResponse } from './responses.ts'
+import {
+  apiSessionCleanupPath,
+  apiSessionInputPath,
+  apiSessionPath,
+  apiSessionPlainBufferPath,
+  apiSessionRawBufferPath,
+} from '../server.ts'
 
 export function getSessions() {
   const sessions = manager.list()
@@ -37,29 +44,21 @@ export function clearSessions() {
   return new JsonResponse({ success: true })
 }
 
-export function getSession(req: BunRequest<'/api/sessions/:id'>) {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
-  }
-  const session = manager.get(sessionId)
+export function getSession(req: BunRequest<typeof apiSessionPath>) {
+  const session = manager.get(req.params.id)
   if (!session) {
     return new ErrorResponse('Session not found', 404)
   }
   return new JsonResponse(session)
 }
 
-export async function sendInput(req: BunRequest<'/api/sessions/:id/input'>): Promise<Response> {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
-  }
+export async function sendInput(req: BunRequest<typeof apiSessionInputPath>): Promise<Response> {
   try {
     const body = (await req.json()) as { data: string }
     if (!body.data || typeof body.data !== 'string') {
       return new ErrorResponse('Data field is required and must be a string', 400)
     }
-    const success = manager.write(sessionId, body.data)
+    const success = manager.write(req.params.id, body.data)
     if (!success) {
       return new ErrorResponse('Failed to write to session', 400)
     }
@@ -69,25 +68,25 @@ export async function sendInput(req: BunRequest<'/api/sessions/:id/input'>): Pro
   }
 }
 
-export function killSession(req: BunRequest<'/api/sessions/:id/kill'>) {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
-  }
-  const success = manager.kill(sessionId)
+export function cleanupSession(req: BunRequest<typeof apiSessionCleanupPath>) {
+  console.log('Cleaning up session', req.params.id)
+  const success = manager.kill(req.params.id, true)
   if (!success) {
     return new ErrorResponse('Failed to kill session', 400)
   }
   return new JsonResponse({ success: true })
 }
 
-export function getRawBuffer(req: BunRequest<'/api/sessions/:id/buffer/raw'>) {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
+export function killSession(req: BunRequest<typeof apiSessionPath>) {
+  const success = manager.kill(req.params.id)
+  if (!success) {
+    return new ErrorResponse('Failed to kill session', 400)
   }
+  return new JsonResponse({ success: true })
+}
 
-  const bufferData = manager.getRawBuffer(sessionId)
+export function getRawBuffer(req: BunRequest<typeof apiSessionRawBufferPath>) {
+  const bufferData = manager.getRawBuffer(req.params.id)
   if (!bufferData) {
     return new ErrorResponse('Session not found', 404)
   }
@@ -95,13 +94,8 @@ export function getRawBuffer(req: BunRequest<'/api/sessions/:id/buffer/raw'>) {
   return new JsonResponse(bufferData)
 }
 
-export function getPlainBuffer(req: BunRequest<'/api/sessions/:id/buffer/plain'>) {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
-  }
-
-  const bufferData = manager.getRawBuffer(sessionId)
+export function getPlainBuffer(req: BunRequest<typeof apiSessionPlainBufferPath>) {
+  const bufferData = manager.getRawBuffer(req.params.id)
   if (!bufferData) {
     return new ErrorResponse('Session not found', 404)
   }

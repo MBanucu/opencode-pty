@@ -44,7 +44,6 @@ jobs:
 
       - name: Run test
         if: matrix.quality == 'test'
-        # run: bun test --concurrent websocket.test.ts web-server.test.ts types.test.ts spawn-repeat.test.ts
         run: bun test --concurrent websocket.test.ts web-server.test.ts types.test.ts spawn-repeat.test.ts pty-tools.test.ts
 
       - name: Type check

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock, spyOn, afterEach, afterAll } from 'bun:test'
+import { describe, it, expect, beforeEach, mock, spyOn, afterAll } from 'bun:test'
 import { ptySpawn } from '../src/plugin/pty/tools/spawn.ts'
 import { ptyRead } from '../src/plugin/pty/tools/read.ts'
 import { ptyList } from '../src/plugin/pty/tools/list.ts'
@@ -22,9 +22,6 @@ describe('PTY Tools', () => {
         createdAt: new Date(),
         lineCount: 0,
       }))
-    })
-    afterEach(() => {
-      mock.restore()
     })
 
     it('should spawn a PTY session with minimal args', async () => {
@@ -121,9 +118,6 @@ describe('PTY Tools', () => {
         hasMore: false,
         offset: 0,
       })
-    })
-    afterEach(() => {
-      mock.restore()
     })
 
     it('should read output without pattern', async () => {

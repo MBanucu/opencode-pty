@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { initManager, manager, rawOutputCallbacks, registerRawOutputCallback, registerSessionUpdateCallback, sessionUpdateCallbacks } from '../src/plugin/pty/manager.ts'
+import {
+  initManager,
+  manager,
+  rawOutputCallbacks,
+  registerRawOutputCallback,
+  registerSessionUpdateCallback,
+  sessionUpdateCallbacks,
+} from '../src/plugin/pty/manager.ts'
 import { PTYServer } from '../src/web/server/server.ts'
 import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
 
@@ -118,7 +125,7 @@ describe('Web Server', () => {
         parentSessionId: 'test',
       })
       const rawDataPromise = new Promise<string>((resolve) => {
-        let rawDataTotal = ""
+        let rawDataTotal = ''
         registerRawOutputCallback((sessionInfo: PTYSessionInfo, rawData: string) => {
           if (sessionInfo.id === session.id) {
             rawDataTotal += rawData

@@ -70,7 +70,6 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should not broadcast to unsubscribed clients', async () => {
-
       const session1 = manager.spawn({
         command: 'echo',
         args: ['session1'],
@@ -130,7 +129,6 @@ describe('PTY Manager Integration', () => {
 
   describe('Session Management Integration', () => {
     it('should provide session data in correct format', async () => {
-
       const session = manager.spawn({
         command: 'node',
         args: ['-e', "console.log('test')"],
@@ -154,7 +152,6 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should handle session lifecycle correctly', async () => {
-
       // Create session that exits quickly
       const session = manager.spawn({
         command: 'echo',
@@ -174,7 +171,6 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should support session killing via API', async () => {
-
       // Create a long-running session
       const session = manager.spawn({
         command: 'sleep',

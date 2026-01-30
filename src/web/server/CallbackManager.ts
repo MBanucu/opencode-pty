@@ -1,6 +1,11 @@
-import { registerRawOutputCallback, registerSessionUpdateCallback, removeRawOutputCallback, removeSessionUpdateCallback } from "../../plugin/pty/manager"
-import type { PTYSessionInfo } from "../../plugin/pty/types"
-import type { WSMessageServerSessionUpdate, WSMessageServerRawData } from "../shared/types"
+import {
+  registerRawOutputCallback,
+  registerSessionUpdateCallback,
+  removeRawOutputCallback,
+  removeSessionUpdateCallback,
+} from '../../plugin/pty/manager'
+import type { PTYSessionInfo } from '../../plugin/pty/types'
+import type { WSMessageServerSessionUpdate, WSMessageServerRawData } from '../shared/types'
 
 export class CallbackManager implements Disposable {
   constructor(private server: Bun.Server<any>) {
@@ -18,7 +23,7 @@ export class CallbackManager implements Disposable {
     const message: WSMessageServerRawData = { type: 'raw_data', session, rawData }
     // console.log('Publishing raw data for session:', session.id, 'Raw data:', rawData)
     this.server.publish(`session:${session.id}`, JSON.stringify(message))
-  }
+  };
 
   [Symbol.dispose]() {
     removeSessionUpdateCallback(this.sessionUpdateCallback)

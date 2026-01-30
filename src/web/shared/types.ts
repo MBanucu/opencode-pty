@@ -3,21 +3,21 @@ import type { PTYSessionInfo, SpawnOptions } from '../../plugin/pty/types'
 
 export class CustomError extends Error {
   constructor(message: string) {
-    super(message);
+    super(message)
   }
 
-  override name = 'CustomError';
-  prettyPrintColor: string = Bun.inspect(this, { colors: true, depth: 10 });
-  prettyPrintNoColor: string = Bun.stripANSI(this.prettyPrintColor);
+  override name = 'CustomError'
+  prettyPrintColor: string = Bun.inspect(this, { colors: true, depth: 10 })
+  prettyPrintNoColor: string = Bun.stripANSI(this.prettyPrintColor)
 
   toJSON() {
-    const obj: Record<string, unknown> = {};
+    const obj: Record<string, unknown> = {}
     // Include all own properties, including non-enumerable ones like 'message' and 'stack'
     // prettyPrintColor and prettyPrintNoColor are now included automatically as strings
     Object.getOwnPropertyNames(this).forEach((key) => {
-      obj[key] = (this as any)[key];
-    });
-    return obj;
+      obj[key] = (this as any)[key]
+    })
+    return obj
   }
 }
 
@@ -56,7 +56,15 @@ export interface WSMessageClientReadRaw extends WSMessageClient {
 }
 
 export interface WSMessageServer {
-  type: 'subscribed' | 'unsubscribed' | 'data' | 'raw_data' | 'readRawResponse' | 'session_list' | 'session_update' | 'error'
+  type:
+    | 'subscribed'
+    | 'unsubscribed'
+    | 'data'
+    | 'raw_data'
+    | 'readRawResponse'
+    | 'session_list'
+    | 'session_update'
+    | 'error'
 }
 
 export interface WSMessageServerSubscribedSession extends WSMessageServer {

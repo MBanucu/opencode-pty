@@ -81,9 +81,7 @@ export function killSession(req: BunRequest<'/api/sessions/:id/kill'>) {
   return new JsonResponse({ success: true })
 }
 
-export function getRawBuffer(
-  req: BunRequest<'/api/sessions/:id/buffer/raw'>
-) {
+export function getRawBuffer(req: BunRequest<'/api/sessions/:id/buffer/raw'>) {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)
@@ -97,9 +95,7 @@ export function getRawBuffer(
   return new JsonResponse(bufferData)
 }
 
-export function getPlainBuffer(
-  req: BunRequest<'/api/sessions/:id/buffer/plain'>
-) {
+export function getPlainBuffer(req: BunRequest<'/api/sessions/:id/buffer/plain'>) {
   const sessionId = req.params.id
   if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
     return new ErrorResponse('Invalid session ID', 400)

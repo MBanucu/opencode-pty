@@ -75,13 +75,13 @@ export class PTYServer implements Disposable {
 
       websocket: {
         perMessageDeflate: true,
-        open: ws => ws.subscribe('sessions:update'),
+        open: (ws) => ws.subscribe('sessions:update'),
         message: handleWebSocketMessage,
         close: (ws) => {
-          ws.subscriptions.forEach(topic => {
+          ws.subscriptions.forEach((topic) => {
             ws.unsubscribe(topic)
           })
-        }
+        },
       },
 
       fetch: () => new Response(null, { status: 302, headers: { Location: '/index.html' } }),
@@ -89,6 +89,6 @@ export class PTYServer implements Disposable {
   }
 
   public getWsUrl(): string {
-    return `${this.server.url.origin.replace(/^http/, "ws")}${PTYServer.wsPath}`
+    return `${this.server.url.origin.replace(/^http/, 'ws')}${PTYServer.wsPath}`
   }
 }

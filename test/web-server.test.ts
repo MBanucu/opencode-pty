@@ -1,40 +1,38 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
+import { describe, it, expect } from 'bun:test'
 import {
-  initManager,
   manager,
-  rawOutputCallbacks,
   registerRawOutputCallback,
   registerSessionUpdateCallback,
-  sessionUpdateCallbacks,
 } from '../src/plugin/pty/manager.ts'
 import { PTYServer } from '../src/web/server/server.ts'
 import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
+import { managedTestServer } from './utils.ts'
 
 describe('Web Server', () => {
-  const fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger - do nothing
-      },
-    },
-  } as any
+  // const fakeClient = {
+  //   app: {
+  //     log: async (_opts: any) => {
+  //       // Mock logger - do nothing
+  //     },
+  //   },
+  // } as any
 
-  let server: PTYServer
-  let disposableStack: DisposableStack
+  // let server: PTYServer
+  // let disposableStack: DisposableStack
 
-  beforeAll(async () => {
-    disposableStack = new DisposableStack()
-    initManager(fakeClient)
-    server = await PTYServer.createServer()
-    disposableStack.use(server)
-  })
+  // beforeAll(async () => {
+  //   disposableStack = new DisposableStack()
+  //   initManager(fakeClient)
+  //   server = await PTYServer.createServer()
+  //   disposableStack.use(server)
+  // })
 
-  afterAll(() => {
-    manager.clearAllSessions()
-    disposableStack.dispose()
-    sessionUpdateCallbacks.length = 0
-    rawOutputCallbacks.length = 0
-  })
+  // afterAll(() => {
+  //   manager.clearAllSessions()
+  //   disposableStack.dispose()
+  //   sessionUpdateCallbacks.length = 0
+  //   rawOutputCallbacks.length = 0
+  // })
 
   describe('Server Lifecycle', () => {
     it('should start server successfully', async () => {
@@ -61,7 +59,7 @@ describe('Web Server', () => {
 
   describe('HTTP Endpoints', () => {
     it('should serve built assets', async () => {
-      const response = await fetch(server.server.url)
+      const response = await fetch(managedTestServer.server.server.url)
       expect(response.status).toBe(200)
       const html = await response.text()
 
@@ -84,13 +82,13 @@ describe('Web Server', () => {
       }
 
       const jsAsset = jsMatch[1]
-      const jsResponse = await fetch(`${server.server.url}/assets/${jsAsset}`)
+      const jsResponse = await fetch(`${managedTestServer.server.server.url}/assets/${jsAsset}`)
       expect(jsResponse.status).toBe(200)
       const ct = jsResponse.headers.get('content-type')
       expect((ct || '').toLowerCase()).toMatch(/^(application|text)\/javascript(;.*)?$/)
 
       const cssAsset = cssMatch[1]
-      const cssResponse = await fetch(`${server.server.url}/assets/${cssAsset}`)
+      const cssResponse = await fetch(`${managedTestServer.server.server.url}/assets/${cssAsset}`)
       expect(cssResponse.status).toBe(200)
       expect((cssResponse.headers.get('content-type') || '').toLowerCase()).toMatch(
         /^text\/css(;.*)?$/
@@ -98,7 +96,7 @@ describe('Web Server', () => {
     })
 
     it('should serve HTML on root path', async () => {
-      const response = await fetch(server.server.url)
+      const response = await fetch(managedTestServer.server.server.url)
       expect(response.status).toBe(200)
       expect(response.headers.get('content-type')).toContain('text/html')
 
@@ -108,7 +106,7 @@ describe('Web Server', () => {
     })
 
     it('should return sessions list', async () => {
-      const response = await fetch(`${server.server.url}/api/sessions`)
+      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions`)
       expect(response.status).toBe(200)
       expect(response.headers.get('content-type')).toContain('application/json')
 
@@ -140,7 +138,7 @@ describe('Web Server', () => {
 
       await rawDataPromise
 
-      const response = await fetch(`${server.server.url}/api/sessions/${session.id}`)
+      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}`)
       expect(response.status).toBe(200)
 
       const sessionData = await response.json()
@@ -151,7 +149,7 @@ describe('Web Server', () => {
 
     it('should return 404 for non-existent session', async () => {
       const nonexistentId = crypto.randomUUID()
-      const response = await fetch(`${server.server.url}/api/sessions/${nonexistentId}`)
+      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${nonexistentId}`)
       expect(response.status).toBe(404)
     }, 200)
 
@@ -176,7 +174,7 @@ describe('Web Server', () => {
       // Wait for PTY to start
       await sessionUpdatePromise
 
-      const response = await fetch(`${server.server.url}/api/sessions/${session.id}/input`, {
+      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}/input`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: 'test input\n' }),
@@ -215,7 +213,7 @@ describe('Web Server', () => {
       // Wait for PTY to start
       await sessionRunningPromise
 
-      const response = await fetch(`${server.server.url}/api/sessions/${session.id}`, {
+      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}`, {
         method: 'DELETE',
       })
 
@@ -247,7 +245,7 @@ describe('Web Server', () => {
       // Wait a bit for output to be captured
       await sessionExitedPromise
 
-      const response = await fetch(`${server.server.url}/api/sessions/${session.id}/buffer/raw`)
+      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}/buffer/raw`)
       expect(response.status).toBe(200)
 
       const bufferData = await response.json()
@@ -260,7 +258,7 @@ describe('Web Server', () => {
     })
 
     it('should return index.html for non-existent endpoints', async () => {
-      const response = await fetch(`${server.server.url}/api/nonexistent`)
+      const response = await fetch(`${managedTestServer.server.server.url}/api/nonexistent`)
       expect(response.status).toBe(200)
       const text = await response.text()
       expect(text).toContain('<div id=\"root\"></div>')

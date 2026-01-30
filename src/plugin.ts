@@ -6,7 +6,7 @@ import { ptyWrite } from './plugin/pty/tools/write.ts'
 import { ptyRead } from './plugin/pty/tools/read.ts'
 import { ptyList } from './plugin/pty/tools/list.ts'
 import { ptyKill } from './plugin/pty/tools/kill.ts'
-import { getServerUrl, startWebServer } from './web/server/server.ts'
+import { PTYServer } from './web/server/server.ts'
 
 interface SessionDeletedEvent {
   type: 'session.deleted'
@@ -21,11 +21,12 @@ const ptyServerUrlCommand = 'pty-server-url'
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initPermissions(client, directory)
   initManager(client)
+  const ptyServer = await PTYServer.createServer()
 
   return {
     'command.execute.before': async (input) => {
       if (input.command === ptyServerUrlCommand) {
-        const serverUrl = getServerUrl()
+        const serverUrl = ptyServer.server.url.toString()
         client.session.prompt({
           path: { id: input.sessionID },
           body: {
@@ -54,7 +55,7 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       if (!input.command) {
         input.command = {}
       }
-      const serverUrl = await startWebServer()
+      const serverUrl = ptyServer.server.url.toString()
       input.command[ptyServerUrlCommand] = {
         template: `${serverUrl}`,
         description: 'print link to PTY web server',

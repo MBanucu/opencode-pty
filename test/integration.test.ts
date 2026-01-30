@@ -21,7 +21,7 @@ describe('Web Server Integration', () => {
 
   describe('Full User Workflow', () => {
     it('should handle multiple concurrent sessions and clients', async () => {
-      manager.cleanupAll() // Clean up any leftover sessions
+      manager.clearAllSessions() // Clean up any leftover sessions
       await startWebServer({ port: 8781 })
 
       // Create multiple sessions
@@ -85,7 +85,7 @@ describe('Web Server Integration', () => {
     })
 
     it('should handle error conditions gracefully', async () => {
-      manager.cleanupAll() // Clean up any leftover sessions
+      manager.clearAllSessions() // Clean up any leftover sessions
       await startWebServer({ port: 8782 })
 
       // Test non-existent session

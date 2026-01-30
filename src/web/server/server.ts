@@ -116,3 +116,22 @@ export class PTYServer implements Disposable {
     return `${this.server.url.origin.replace(/^http/, 'ws')}${wsPath}`
   }
 }
+
+let globalServer: PTYServer | undefined
+
+export async function startWebServer(options?: { port?: number }): Promise<string> {
+  globalServer = await PTYServer.createServer()
+  if (options?.port) {
+    // Note: Since port is 0, we can't change it, but for compatibility, ignore
+  }
+  return globalServer.server.url.toString()
+}
+
+export function getServerUrl(): string | undefined {
+  return globalServer?.server.url.toString()
+}
+
+export function stopWebServer(): void {
+  globalServer?.[Symbol.dispose]()
+  globalServer = undefined
+}

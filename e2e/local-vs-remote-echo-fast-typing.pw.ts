@@ -6,7 +6,7 @@ extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typ
     'should demonstrate local vs remote echo behavior with fast typing',
     async ({ page, server }) => {
       // Clear any existing sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await page.request.delete(server.baseURL + '/api/sessions')
 
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')

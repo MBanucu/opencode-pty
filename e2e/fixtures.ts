@@ -84,6 +84,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         const baseURL = `http://localhost:${port}`
 
         await waitForServer(baseURL, 15000)
+
+        // Clear any leftover sessions from previous test runs
+        try {
+          await fetch(`${baseURL}/api/sessions`, { method: 'DELETE' })
+        } catch (error) {
+          // Ignore clear errors during startup
+          console.log(`[Worker ${workerIndex}] Could not clear sessions during startup: ${error}`)
+        }
+
         await use({ baseURL, port })
       } catch (error) {
         console.error(`[Worker ${workerIndex}] Failed to start server: ${error}`)

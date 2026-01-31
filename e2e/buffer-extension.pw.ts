@@ -9,7 +9,7 @@ async function setupSession(
   server: { baseURL: string; port: number },
   description: string
 ): Promise<string> {
-  await page.request.post(server.baseURL + '/api/sessions/clear')
+  await page.request.delete(server.baseURL + '/api/sessions')
   const createResp = await page.request.post(server.baseURL + '/api/sessions', {
     data: { command: 'bash', args: ['-i'], description },
   })

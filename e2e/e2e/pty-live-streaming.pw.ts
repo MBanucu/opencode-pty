@@ -12,7 +12,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.goto(server.baseURL + '/')
 
       // Ensure clean state - clear any existing sessions from previous tests
-      const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+      const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
       expect(clearResponse.status()).toBe(200)
       // Wait until sessions are actually cleared
       await page.waitForFunction(async (baseURL) => {
@@ -108,7 +108,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.goto(server.baseURL + '/')
 
       // Ensure clean state for this test
-      const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+      const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
       expect(clearResponse.status()).toBe(200)
       // Wait until sessions are actually cleared
       await page.waitForFunction(async (baseURL) => {

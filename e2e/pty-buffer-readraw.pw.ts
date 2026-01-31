@@ -1,7 +1,7 @@
 import { test as extendedTest, expect } from './fixtures'
 
 async function clearAllSessions(page: any, server: any) {
-  await page.request.post(server.baseURL + '/api/sessions/clear')
+  await page.request.delete(server.baseURL + '/api/sessions')
 }
 
 async function createSession(

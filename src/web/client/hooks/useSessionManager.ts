@@ -1,6 +1,8 @@
 import { useCallback } from 'react'
 import type { PTYSessionInfo } from 'opencode-pty/shared/types'
 
+import { RouteBuilder } from '../../shared/RouteBuilder'
+
 interface UseSessionManagerOptions {
   activeSession: PTYSessionInfo | null
   setActiveSession: (session: PTYSessionInfo | null) => void
@@ -30,7 +32,9 @@ export function useSessionManager({
           const baseUrl = `${location.protocol}//${location.host}`
 
           // Fetch raw buffer data only (processed output endpoint removed)
-          const rawResponse = await fetch(`${baseUrl}/api/sessions/${session.id}/buffer/raw`)
+          const rawResponse = await fetch(
+            `${baseUrl}${RouteBuilder.session(session.id).rawBuffer()}`
+          )
 
           // Process response with graceful error handling
           const rawData = rawResponse.ok ? await rawResponse.json() : { raw: '' }
@@ -56,7 +60,7 @@ export function useSessionManager({
 
       try {
         const baseUrl = `${location.protocol}//${location.host}`
-        await fetch(`${baseUrl}/api/sessions/${activeSession.id}/input`, {
+        await fetch(`${baseUrl}${RouteBuilder.session(activeSession.id).input()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data }),
@@ -82,7 +86,7 @@ export function useSessionManager({
 
     try {
       const baseUrl = `${location.protocol}//${location.host}`
-      const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}`, {
+      const response = await fetch(`${baseUrl}${RouteBuilder.session(activeSession.id).get()}`, {
         method: 'DELETE',
       })
 

@@ -8,6 +8,8 @@ import type {
 } from '../../shared/types'
 import { RETRY_DELAY, SKIP_AUTOSELECT_KEY } from 'opencode-pty/shared/constants'
 
+import { RouteBuilder } from '../../shared/RouteBuilder'
+
 interface UseWebSocketOptions {
   activeSession: PTYSessionInfo | null
   onRawData?: (rawData: string) => void
@@ -33,7 +35,9 @@ export function useWebSocket({
 
   // Connect to WebSocket on mount
   useEffect(() => {
-    const ws = new WebSocket(`ws://${location.host}/ws`)
+    const ws = new WebSocket(
+      `${RouteBuilder.websocket()}`.replace(/^\/ws/, `ws://${location.host}/ws`)
+    )
     ws.onopen = () => {
       setConnected(true)
       // Request initial session list

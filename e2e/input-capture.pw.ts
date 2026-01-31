@@ -4,7 +4,7 @@ extendedTest.describe('PTY Input Capture', () => {
   extendedTest(
     'should capture and send printable character input (letters)',
     async ({ page, server }) => {
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await page.request.delete(server.baseURL + '/api/sessions')
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
         ;(window as any).inputRequests = []
@@ -55,7 +55,7 @@ extendedTest.describe('PTY Input Capture', () => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await page.request.post(server.baseURL + '/api/sessions/clear')
+    await page.request.delete(server.baseURL + '/api/sessions')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     await page.request.post(server.baseURL + '/api/sessions', {
@@ -98,7 +98,7 @@ extendedTest.describe('PTY Input Capture', () => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await page.request.post(server.baseURL + '/api/sessions/clear')
+    await page.request.delete(server.baseURL + '/api/sessions')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     await page.request.post(server.baseURL + '/api/sessions', {
@@ -151,7 +151,7 @@ extendedTest.describe('PTY Input Capture', () => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await page.request.post(server.baseURL + '/api/sessions/clear')
+    await page.request.delete(server.baseURL + '/api/sessions')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     await page.request.post(server.baseURL + '/api/sessions', {
@@ -198,7 +198,7 @@ extendedTest.describe('PTY Input Capture', () => {
       ;(window as any).inputRequests = []
       ;(window as any).killRequests = []
     })
-    await page.request.post(server.baseURL + '/api/sessions/clear')
+    await page.request.delete(server.baseURL + '/api/sessions')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     page.on('dialog', (dialog) => dialog.accept())
@@ -272,7 +272,7 @@ extendedTest.describe('PTY Input Capture', () => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await page.request.post(server.baseURL + '/api/sessions/clear')
+    await page.request.delete(server.baseURL + '/api/sessions')
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     page.on('dialog', (dialog) => dialog.accept())
@@ -317,7 +317,7 @@ extendedTest.describe('PTY Input Capture', () => {
         localStorage.setItem('skip-autoselect', 'true')
         ;(window as any).inputRequests = []
       })
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await page.request.delete(server.baseURL + '/api/sessions')
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
       await page.request.post(server.baseURL + '/api/sessions', {

@@ -3,7 +3,7 @@ import { test as extendedTest, expect } from '../fixtures'
 extendedTest.describe('App Component', () => {
   extendedTest('renders the PTY Sessions title', async ({ page, server }) => {
     // Ensure clean state for parallel execution
-    const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+    const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
     expect(clearResponse.status()).toBe(200)
 
     await page.goto(server.baseURL + '/')
@@ -17,7 +17,7 @@ extendedTest.describe('App Component', () => {
 
   extendedTest('receives WebSocket session_list messages', async ({ page, server }) => {
     // Clear any existing sessions for clean state
-    await page.request.post(server.baseURL + '/api/sessions/clear')
+    await page.request.delete(server.baseURL + '/api/sessions')
 
     // Navigate to page and wait for WebSocket connection
     await page.goto(server.baseURL + '/')
@@ -41,7 +41,7 @@ extendedTest.describe('App Component', () => {
 
   extendedTest('shows no active sessions message when empty', async ({ page, server }) => {
     // Clear any existing sessions
-    const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+    const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
     expect(clearResponse.status()).toBe(200)
 
     await page.goto(server.baseURL + '/')
@@ -53,7 +53,7 @@ extendedTest.describe('App Component', () => {
 
   extendedTest('shows empty state when no session is selected', async ({ page, server }) => {
     // Clear any existing sessions
-    const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+    const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
     expect(clearResponse.status()).toBe(200)
 
     await page.goto(server.baseURL + '/')
@@ -92,7 +92,7 @@ extendedTest.describe('App Component', () => {
         await page.goto(server.baseURL + '/')
 
         // Clear any existing sessions for clean test state
-        await page.request.post(server.baseURL + '/api/sessions/clear')
+        await page.request.delete(server.baseURL + '/api/sessions')
 
         // Create a test session that produces continuous output
         const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
@@ -213,7 +213,7 @@ extendedTest.describe('App Component', () => {
         await page.goto(server.baseURL + '/')
 
         // Clear any existing sessions for clean test state
-        await page.request.post(server.baseURL + '/api/sessions/clear')
+        await page.request.delete(server.baseURL + '/api/sessions')
 
         // Create first session
         await page.request.post(server.baseURL + '/api/sessions', {
@@ -288,7 +288,7 @@ extendedTest.describe('App Component', () => {
       await page.goto(server.baseURL + '/')
 
       // Clear any existing sessions for clean test state
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await page.request.delete(server.baseURL + '/api/sessions')
 
       // Create a streaming session
       await page.request.post(server.baseURL + '/api/sessions', {

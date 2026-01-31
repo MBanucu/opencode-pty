@@ -7,7 +7,7 @@ import {
   apiSessionPath,
   apiSessionPlainBufferPath,
   apiSessionRawBufferPath,
-} from '../server.ts'
+} from '../../shared/routes.ts'
 
 export function getSessions() {
   const sessions = manager.list()

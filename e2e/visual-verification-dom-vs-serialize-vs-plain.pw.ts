@@ -5,20 +5,18 @@ import {
   waitForTerminalRegex,
 } from './xterm-test-helpers'
 import { test as extendedTest, expect } from './fixtures'
-import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe(
   'Xterm Content Extraction - Visual Verification (DOM vs Serialize vs Plain API)',
   () => {
     extendedTest(
       'should provide visual verification of DOM vs SerializeAddon vs Plain API extraction in bash -c',
-      async ({ page, server }) => {
-        const apiClient = createApiClient(server.baseURL)
+      async ({ page, server, api }) => {
         // Clear any existing sessions for isolation
-        await apiClient.sessions.clear()
+        await api.sessions.clear()
 
         // Setup session with ANSI-rich content
-        const session = await apiClient.sessions.create({
+        const session = await api.sessions.create({
           command: 'bash',
           args: [
             '-c',
@@ -40,7 +38,7 @@ extendedTest.describe(
         const serializeStrippedContent = bunStripANSI(
           await getSerializedContentByXtermSerializeAddon(page)
         ).split('\n')
-        const plainData = await apiClient.session.buffer.plain({ id: session.id })
+        const plainData = await api.session.buffer.plain({ id: session.id })
         const plainApiContent = plainData.plain.split('\n')
 
         // Only print concise message if key discrepancies (ignoring trivial \r/empty lines)

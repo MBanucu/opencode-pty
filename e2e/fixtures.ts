@@ -77,8 +77,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         const serverURLText = await Bun.file(portFilePath).text()
         const serverURL = serverURLText.trim()
 
-        console.log(`[Worker ${workerIndex}] Read server URL from port file: ${serverURL}`)
-
         // Parse URL to extract port number
         const urlMatch = serverURL.match(/http:\/\/localhost:(\d+)/)
         if (!urlMatch) {

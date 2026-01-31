@@ -1,31 +1,26 @@
-import { createApiClient } from '../helpers/apiClient'
-import { RouteBuilder } from '../../src/web/shared/RouteBuilder'
 import { test as extendedTest } from '../fixtures'
 import { expect } from '@playwright/test'
 
 extendedTest.describe('PTY Live Streaming', () => {
   extendedTest(
     'should preserve and display complete historical output buffer',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
-
+    async ({ page, api }) => {
       // This test verifies that historical data (produced before UI connects) is preserved and loaded
       // when connecting to a running PTY session. This is crucial for users who reconnect to long-running sessions.
 
       // Navigate to the web UI first
-      await page.goto(server.baseURL + '/')
+      await page.goto(page.url())
 
       // Ensure clean state - clear any existing sessions from previous tests
-      await apiClient.sessions.clear()
+      await api.sessions.clear()
       // Wait until sessions are actually cleared
-      await page.waitForFunction(async (url: string) => {
-        const resp = await fetch(url)
-        const list = await resp.json()
-        return Array.isArray(list) && list.length === 0
-      }, server.baseURL + RouteBuilder.sessions.list())
+      await page.waitForFunction(async () => {
+        const sessions = await api.sessions.list()
+        return Array.isArray(sessions) && sessions.length === 0
+      })
 
       // Create a fresh session that produces identifiable historical output
-      const session = await apiClient.sessions.create({
+      const session = await api.sessions.create({
         command: 'bash',
         args: [
           '-c',
@@ -36,16 +31,12 @@ extendedTest.describe('PTY Live Streaming', () => {
 
       // Wait for session to produce historical output (before UI connects)
       // Wait until required historical buffer marker appears in raw output
-      await page.waitForFunction(
-        async (url: string) => {
-          const resp = await fetch(url)
-          const bufferData = await resp.json()
-          return bufferData.raw && bufferData.raw.includes('=== END HISTORICAL ===')
-        },
-        server.baseURL + RouteBuilder.session.rawBuffer({ id: session.id })
-      )
+      await page.waitForFunction(async (sessionId: string) => {
+        const bufferData = await api.session.buffer.raw({ id: sessionId })
+        return bufferData.raw && bufferData.raw.includes('=== END HISTORICAL ===')
+      }, session.id)
 
-      // Check session status via API to ensure it's running (using apiClient)
+      // Check session status via API to ensure it's running (using api)
       expect(session.status).toBe('running')
 
       // Now connect via UI and check that historical data is loaded
@@ -73,7 +64,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.waitForSelector('[data-testid="test-output"] .output-line', { timeout: 5000 })
 
       // Verify the API returns the expected historical data
-      const bufferData = await apiClient.session.buffer.raw({ id: session.id })
+      const bufferData = await api.session.buffer.raw({ id: session.id })
       expect(bufferData.raw).toBeDefined()
       expect(typeof bufferData.raw).toBe('string')
       expect(bufferData.raw.length).toBeGreaterThan(0)
@@ -93,24 +84,22 @@ extendedTest.describe('PTY Live Streaming', () => {
 
   extendedTest(
     'should receive live WebSocket updates from running PTY session',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
+    async ({ page, api }) => {
       // Navigate to the web UI
-      await page.goto(server.baseURL + '/')
+      await page.goto(page.url())
 
       // Ensure clean state for this test
-      await apiClient.sessions.clear()
+      await api.sessions.clear()
       // Wait until sessions are actually cleared
-      await page.waitForFunction(async (url: string) => {
-        const resp = await fetch(url)
-        const list = await resp.json()
-        return Array.isArray(list) && list.length === 0
-      }, server.baseURL + RouteBuilder.sessions.list())
+      await page.waitForFunction(async () => {
+        const sessions = await api.sessions.list()
+        return Array.isArray(sessions) && sessions.length === 0
+      })
 
       // Create a fresh session for this test
-      const initialSessions = await apiClient.sessions.list()
+      const initialSessions = await api.sessions.list()
       if (initialSessions.length === 0) {
-        await apiClient.sessions.create({
+        await api.sessions.create({
           command: 'bash',
           args: [
             '-c',
@@ -120,16 +109,15 @@ extendedTest.describe('PTY Live Streaming', () => {
         })
         // Wait a bit for the session to start and reload to get updated session list
         // Wait until running session is available in API
-        await page.waitForFunction(async (url: string) => {
-          const resp = await fetch(url)
-          const sessions = await resp.json()
+        await page.waitForFunction(async () => {
+          const sessions = await api.sessions.list()
           return (
             Array.isArray(sessions) &&
             sessions.some(
               (s: any) => s.description === 'Live streaming test session' && s.status === 'running'
             )
           )
-        }, server.baseURL + RouteBuilder.sessions.list())
+        })
       }
 
       // Wait for sessions to load

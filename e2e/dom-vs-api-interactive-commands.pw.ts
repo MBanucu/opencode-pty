@@ -1,20 +1,18 @@
 import { test as extendedTest, expect } from './fixtures'
 import { waitForTerminalRegex } from './xterm-test-helpers'
-import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should compare DOM scraping vs Terminal API with interactive commands',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
+    async ({ page, server, api }) => {
       // Clear any existing sessions
-      await apiClient.sessions.clear()
+      await api.sessions.clear()
 
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create interactive bash session
-      await apiClient.sessions.create({
+      await api.sessions.create({
         command: 'bash',
         args: ['-i'],
         description: 'Interactive command comparison test',

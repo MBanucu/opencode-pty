@@ -1,20 +1,18 @@
 import { getTerminalPlainText } from './xterm-test-helpers'
 import { test as extendedTest, expect } from './fixtures'
-import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typing)', () => {
   extendedTest(
     'should demonstrate local vs remote echo behavior with fast typing',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
+    async ({ page, server, api }) => {
       // Clear any existing sessions
-      await apiClient.sessions.clear()
+      await api.sessions.clear()
 
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create interactive bash session
-      const session = await apiClient.sessions.create({
+      const session = await api.sessions.create({
         command: 'bash',
         args: ['-i'],
         description: 'Local vs remote echo test',
@@ -43,7 +41,7 @@ extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typ
       const domLines = echoObservations[echoObservations.length - 1] || []
 
       // Get plain buffer from API
-      const plainData = await apiClient.session.buffer.plain({ id: session.id })
+      const plainData = await api.session.buffer.plain({ id: session.id })
       const plainBuffer = plainData.plain
 
       // Analysis

@@ -1,19 +1,17 @@
 import { test as extendedTest, expect } from './fixtures'
-import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should extract terminal content using SerializeAddon from command output',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
+    async ({ page, server, api }) => {
       // Clear any existing sessions
-      await apiClient.sessions.clear()
+      await api.sessions.clear()
 
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a session that runs a command and produces output
-      await apiClient.sessions.create({
+      await api.sessions.create({
         command: 'echo',
         args: ['Hello from manual buffer test'],
         description: 'Manual buffer test',

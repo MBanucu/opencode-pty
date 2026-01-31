@@ -5,17 +5,15 @@ import {
   waitForTerminalRegex,
 } from './xterm-test-helpers'
 import { test as extendedTest, expect } from './fixtures'
-import { createApiClient } from './helpers/apiClient'
 
 extendedTest(
   'should assert exactly 2 "$" prompts appear and verify 4 extraction methods match (ignoring \\r) with echo "Hello World"',
-  async ({ page, server }) => {
-    const apiClient = createApiClient(server.baseURL)
+  async ({ page, server, api }) => {
     // Clear sessions for state isolation
-    await apiClient.sessions.clear()
+    await api.sessions.clear()
 
     // Setup session with echo command
-    const session = await apiClient.sessions.create({
+    const session = await api.sessions.create({
       command: 'bash',
       args: ['-i'],
       description: 'Echo "Hello World" test',
@@ -34,7 +32,7 @@ extendedTest(
     // Send echo command
     await page.locator('.terminal.xterm').click()
     // Try backend direct input for control comparison
-    await apiClient.session.input({ id: session.id }, { data: 'echo "Hello World"\r' })
+    await api.session.input({ id: session.id }, { data: 'echo "Hello World"\r' })
     await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld') // Event-driven: output arrived
 
     // === EXTRACTION METHODS ===
@@ -48,7 +46,7 @@ extendedTest(
     const domContent = await getTerminalPlainText(page)
 
     // API
-    const plainData = await apiClient.session.buffer.plain({ id: session.id })
+    const plainData = await api.session.buffer.plain({ id: session.id })
     const plainApiContent = plainData.plain.split('\n')
 
     // === VISUAL VERIFICATION LOGGING ===

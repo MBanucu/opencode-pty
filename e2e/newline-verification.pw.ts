@@ -1,5 +1,4 @@
 import { test as extendedTest, expect } from './fixtures'
-import { createApiClient } from './helpers/apiClient'
 import { waitForTerminalRegex, getTerminalPlainText } from './xterm-test-helpers'
 
 const findLastNonEmptyLineIndex = (lines: string[]): number => {
@@ -12,13 +11,12 @@ const findLastNonEmptyLineIndex = (lines: string[]): number => {
 }
 
 extendedTest.describe('Xterm Newline Handling', () => {
-  extendedTest('should capture typed character in xterm display', async ({ page, server }) => {
-    const apiClient = createApiClient(server.baseURL)
+  extendedTest('should capture typed character in xterm display', async ({ page, server, api }) => {
     // Clear any existing sessions
-    await apiClient.sessions.clear()
+    await api.sessions.clear()
 
     // Create interactive bash session
-    await apiClient.sessions.create({
+    await api.sessions.create({
       command: 'bash',
       args: ['-i'],
       description: 'Simple typing test session',
@@ -52,13 +50,12 @@ extendedTest.describe('Xterm Newline Handling', () => {
 
   extendedTest(
     'should not add extra newlines when running echo command',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
+    async ({ page, server, api }) => {
       // Clear any existing sessions
-      await apiClient.sessions.clear()
+      await api.sessions.clear()
 
       // Create interactive bash session
-      await apiClient.sessions.create({
+      await api.sessions.create({
         command: 'bash',
         args: ['-i'],
         description: 'PTY Buffer readRaw() Function',

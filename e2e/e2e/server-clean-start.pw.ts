@@ -1,18 +1,16 @@
 import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
-import { createApiClient } from '../helpers/apiClient'
+import type { PTYSessionInfo } from '../../src/plugin/pty/types'
 
 extendedTest.describe('Server Clean Start', () => {
-  extendedTest('should start with empty session list via API', async ({ request, server }) => {
+  extendedTest('should start with empty session list via API', async ({ api }) => {
     // Clear any existing sessions first
-    await request.delete(server.baseURL + '/api/sessions')
+    await api.sessions.clear()
 
     // Wait for sessions to actually be cleared (retry up to 5 times)
-    let sessions = []
+    let sessions: PTYSessionInfo[] = []
     for (let i = 0; i < 5; i++) {
-      const response = await request.get(server.baseURL + '/api/sessions')
-      expect(response.ok()).toBe(true)
-      sessions = await response.json()
+      sessions = await api.sessions.list()
       if (sessions.length === 0) break
       // Wait a bit before retrying
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -23,13 +21,12 @@ extendedTest.describe('Server Clean Start', () => {
     expect(sessions.length).toBe(0)
   })
 
-  extendedTest('should start with empty session list via browser', async ({ page, server }) => {
-    const apiClient = createApiClient(server.baseURL)
+  extendedTest('should start with empty session list via browser', async ({ page, api }) => {
     // Navigate to the web UI
-    await page.goto(server.baseURL + '/')
+    await page.goto(page.url())
 
     // Clear any existing sessions from previous tests
-    await apiClient.sessions.clear()
+    await api.sessions.clear()
 
     // Wait for sessions to actually be cleared in the UI (retry up to 5 times)
     for (let i = 0; i < 5; i++) {

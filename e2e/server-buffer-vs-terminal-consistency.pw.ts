@@ -1,20 +1,18 @@
 import { test as extendedTest, expect } from './fixtures'
-import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should verify server buffer consistency with terminal display',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
+    async ({ page, server, api }) => {
       // Clear any existing sessions
-      await apiClient.sessions.clear()
+      await api.sessions.clear()
 
       await page.goto(server.baseURL)
 
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a session that runs a command and produces output
-      const session = await apiClient.sessions.create({
+      const session = await api.sessions.create({
         command: 'bash',
         args: ['-c', 'echo "Hello from consistency test" && sleep 1'],
         description: 'Buffer consistency test',
@@ -53,7 +51,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
       })
 
       // Get server buffer content via API
-      const bufferData = await apiClient.session.buffer.raw({ id: sessionId })
+      const bufferData = await api.session.buffer.raw({ id: sessionId })
 
       // Verify server buffer contains the expected content
       expect(bufferData.raw.length).toBeGreaterThan(0)

@@ -1,20 +1,18 @@
 import { test as extendedTest, expect } from './fixtures'
 import { waitForTerminalRegex } from './xterm-test-helpers'
-import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should validate DOM scraping against xterm.js Terminal API',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
+    async ({ page, server, api }) => {
       // Clear any existing sessions
-      await apiClient.sessions.clear()
+      await api.sessions.clear()
 
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a session and run some commands to generate content
-      await apiClient.sessions.create({
+      await api.sessions.create({
         command: 'bash',
         args: ['-c', 'echo "Line 1" && echo "Line 2" && echo "Line 3"'],
         description: 'Content extraction validation test',

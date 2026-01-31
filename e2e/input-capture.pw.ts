@@ -1,19 +1,17 @@
 import { test as extendedTest, expect } from './fixtures'
-import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('PTY Input Capture', () => {
   extendedTest(
     'should capture and send printable character input (letters)',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
-      await apiClient.sessions.clear()
+    async ({ page, api }) => {
+      await api.sessions.clear()
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
         ;(window as any).inputRequests = []
       })
-      await page.goto(server.baseURL)
+      await page.goto(page.url())
       await page.waitForSelector('h1:has-text("PTY Sessions")')
-      await apiClient.sessions.create({
+      await api.sessions.create({
         command: 'bash',
         args: ['-i'],
         description: 'Input test session',
@@ -50,16 +48,15 @@ extendedTest.describe('PTY Input Capture', () => {
     }
   )
 
-  extendedTest('should capture spacebar input', async ({ page, server }) => {
-    const apiClient = createApiClient(server.baseURL)
+  extendedTest('should capture spacebar input', async ({ page, api }) => {
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await apiClient.sessions.clear()
-    await page.goto(server.baseURL)
+    await api.sessions.clear()
+    await page.goto(page.url())
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-    await apiClient.sessions.create({
+    await api.sessions.create({
       command: 'bash',
       args: ['-i'],
       description: 'Space test session',
@@ -92,16 +89,15 @@ extendedTest.describe('PTY Input Capture', () => {
     expect(inputRequests.filter((req) => req === ' ')).toHaveLength(1)
   })
 
-  extendedTest('should capture "ls" command with Enter key', async ({ page, server }) => {
-    const apiClient = createApiClient(server.baseURL)
+  extendedTest('should capture "ls" command with Enter key', async ({ page, api }) => {
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await apiClient.sessions.clear()
-    await page.goto(server.baseURL)
+    await api.sessions.clear()
+    await page.goto(page.url())
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-    await apiClient.sessions.create({
+    await api.sessions.create({
       command: 'bash',
       args: ['-i'],
       description: 'ls command test session',
@@ -144,16 +140,15 @@ extendedTest.describe('PTY Input Capture', () => {
     expect(inputRequests.some((chr) => chr === '\n' || chr === '\r')).toBeTruthy()
   })
 
-  extendedTest('should send backspace sequences', async ({ page, server }) => {
-    const apiClient = createApiClient(server.baseURL)
+  extendedTest('should send backspace sequences', async ({ page, api }) => {
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await apiClient.sessions.clear()
-    await page.goto(server.baseURL)
+    await api.sessions.clear()
+    await page.goto(page.url())
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-    await apiClient.sessions.create({
+    await api.sessions.create({
       command: 'bash',
       args: ['-i'],
       description: 'Backspace test session',
@@ -189,18 +184,17 @@ extendedTest.describe('PTY Input Capture', () => {
     expect(inputRequests.some((req) => req === '\x7f' || req === '\b')).toBe(true)
   })
 
-  extendedTest('should handle Ctrl+C interrupt', async ({ page, server }) => {
-    const apiClient = createApiClient(server.baseURL)
+  extendedTest('should handle Ctrl+C interrupt', async ({ page, api }) => {
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
       ;(window as any).killRequests = []
     })
-    await apiClient.sessions.clear()
-    await page.goto(server.baseURL)
+    await api.sessions.clear()
+    await page.goto(page.url())
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     page.on('dialog', (dialog) => dialog.accept())
-    await apiClient.sessions.create({
+    await api.sessions.create({
       command: 'bash',
       args: ['-i'],
       description: 'Ctrl+C test session',
@@ -263,17 +257,16 @@ extendedTest.describe('PTY Input Capture', () => {
     expect(killRequests.length).toBeGreaterThan(0)
   })
 
-  extendedTest('should not capture input when session is inactive', async ({ page, server }) => {
-    const apiClient = createApiClient(server.baseURL)
+  extendedTest('should not capture input when session is inactive', async ({ page, api }) => {
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await apiClient.sessions.clear()
-    await page.goto(server.baseURL)
+    await api.sessions.clear()
+    await page.goto(page.url())
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     page.on('dialog', (dialog) => dialog.accept())
-    await apiClient.sessions.create({
+    await api.sessions.create({
       command: 'bash',
       args: ['-c', 'echo "Ready for input"'],
       description: 'Inactive session test',
@@ -307,16 +300,15 @@ extendedTest.describe('PTY Input Capture', () => {
 
   extendedTest(
     'should display "Hello World" twice when running echo command',
-    async ({ page, server }) => {
-      const apiClient = createApiClient(server.baseURL)
+    async ({ page, api }) => {
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
         ;(window as any).inputRequests = []
       })
-      await apiClient.sessions.clear()
-      await page.goto(server.baseURL)
+      await api.sessions.clear()
+      await page.goto(page.url())
       await page.waitForSelector('h1:has-text("PTY Sessions")')
-      await apiClient.sessions.create({
+      await api.sessions.create({
         command: 'bash',
         args: ['-c', "echo 'Hello World'"],
         description: 'Echo test session',

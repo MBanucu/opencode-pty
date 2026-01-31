@@ -1,11 +1,49 @@
-// Shared route path constants used by both server and client
-// These define the URL patterns for the web API
+// Structured route definitions with paths, methods, and type information
+// Used by both server and client for type-safe API interactions
 
-export const wsPath = '/ws'
-export const healthPath = '/health'
-export const apiBasePath = '/api/sessions'
-export const apiSessionPath = '/api/sessions/:id'
-export const apiSessionCleanupPath = '/api/sessions/:id/cleanup'
-export const apiSessionInputPath = '/api/sessions/:id/input'
-export const apiSessionRawBufferPath = '/api/sessions/:id/buffer/raw'
-export const apiSessionPlainBufferPath = '/api/sessions/:id/buffer/plain'
+export const routes = {
+  websocket: {
+    path: '/ws',
+    methods: ['GET'] as const,
+  },
+  health: {
+    path: '/health',
+    methods: ['GET'] as const,
+  },
+  sessions: {
+    path: '/api/sessions',
+    methods: ['GET', 'POST', 'DELETE'] as const,
+  },
+  session: {
+    path: '/api/sessions/:id',
+    methods: ['GET', 'DELETE'] as const,
+    input: {
+      path: '/api/sessions/:id/input',
+      methods: ['POST'] as const,
+    },
+    cleanup: {
+      path: '/api/sessions/:id/cleanup',
+      methods: ['DELETE'] as const,
+    },
+    buffer: {
+      raw: {
+        path: '/api/sessions/:id/buffer/raw',
+        methods: ['GET'] as const,
+      },
+      plain: {
+        path: '/api/sessions/:id/buffer/plain',
+        methods: ['GET'] as const,
+      },
+    },
+  },
+} as const
+
+// Backward compatibility exports
+export const wsPath = routes.websocket.path
+export const healthPath = routes.health.path
+export const apiBasePath = routes.sessions.path
+export const apiSessionPath = routes.session.path
+export const apiSessionCleanupPath = routes.session.cleanup.path
+export const apiSessionInputPath = routes.session.input.path
+export const apiSessionRawBufferPath = routes.session.buffer.raw.path
+export const apiSessionPlainBufferPath = routes.session.buffer.plain.path

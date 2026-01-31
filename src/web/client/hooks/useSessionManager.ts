@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import type { PTYSessionInfo } from 'opencode-pty/shared/types'
 
-import { RouteBuilder } from '../../shared/RouteBuilder'
+import { api } from '../../shared/apiClient'
 
 interface UseSessionManagerOptions {
   activeSession: PTYSessionInfo | null
@@ -29,15 +29,10 @@ export function useSessionManager({
         subscribeWithRetry(session.id)
 
         try {
-          const baseUrl = `${location.protocol}//${location.host}`
-
           // Fetch raw buffer data only (processed output endpoint removed)
-          const rawResponse = await fetch(
-            `${baseUrl}${RouteBuilder.session.rawBuffer({ id: session.id })}`
-          )
-
-          // Process response with graceful error handling
-          const rawData = rawResponse.ok ? await rawResponse.json() : { raw: '' }
+          const rawData = await api.session.buffer
+            .raw({ id: session.id })
+            .catch(() => ({ raw: '' }))
 
           // Call callback with raw data
           onRawOutputUpdate?.(rawData.raw || '')
@@ -59,12 +54,7 @@ export function useSessionManager({
       }
 
       try {
-        const baseUrl = `${location.protocol}//${location.host}`
-        await fetch(`${baseUrl}${RouteBuilder.session.input({ id: activeSession.id })}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data }),
-        })
+        await api.session.input({ id: activeSession.id }, { data })
         // eslint-disable-next-line no-empty
       } catch {}
     },
@@ -85,15 +75,10 @@ export function useSessionManager({
     }
 
     try {
-      const baseUrl = `${location.protocol}//${location.host}`
-      const response = await fetch(
-        `${baseUrl}${RouteBuilder.session.get({ id: activeSession.id })}`,
-        {
-          method: 'DELETE',
-        }
-      )
+      await api.session.kill({ id: activeSession.id })
 
-      if (response.ok) {
+      if (true) {
+        // API returns success, so always set to null
         setActiveSession(null)
         onRawOutputUpdate?.('')
       }

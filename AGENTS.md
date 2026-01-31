@@ -47,6 +47,28 @@ This document is the authoritative and up-to-date guide for both agentic coding 
 - `e2e/` — End-to-end (Playwright) tests, for web UI/session validation
 - Use camelCase for function/variable names; PascalCase for types/classes; UPPER_CASE for constants; kebab-case for directories.
 
+## Terminal System Architecture
+
+### Core Components
+
+- **`RawTerminal` Component** (`src/web/client/components/TerminalRenderer.tsx`): Single React component handling all terminal rendering and input. Uses xterm.js for terminal emulation with optimized diff-based updates.
+- **`useWebSocket` Hook** (`src/web/client/hooks/useWebSocket.ts`): Manages WebSocket connections, handles incoming messages (raw_data, session_update, session_list), and routes data to appropriate handlers.
+- **`useSessionManager` Hook** (`src/web/client/hooks/useSessionManager.ts`): Handles session lifecycle, input sending, and session switching with buffer fetching.
+- **PTY Manager** (`src/plugin/pty/manager.ts`): Server-side session management, process spawning, and buffer operations.
+
+### Data Flow
+
+1. **Input Flow**: User types → `RawTerminal.onData` → `handleSendInput` → POST `/api/sessions/:id/input` → WebSocket `raw_data` message → `onRawData` callback → `rawOutput` state update → `TerminalRenderer.componentDidUpdate` → xterm.js display
+2. **Output Flow**: PTY process output → `SessionLifecycle.onData` → buffer append → WebSocket `raw_data` message → `onRawData` → display update
+3. **Session Switching**: Click session → `handleSessionClick` → fetch buffer → replace `rawOutput` state → clear and rewrite terminal
+
+### Key Design Decisions
+
+- **No Local Echo**: Input is sent directly to PTY process; PTY handles all echoing to prevent double characters
+- **Diff-Based Updates**: Terminal only writes changed content for performance
+- **Single Component**: Simplified from inheritance hierarchy to single `RawTerminal` class
+- **WebSocket-Driven**: Real-time updates via WebSocket messages rather than polling
+
 ---
 
 ## Core Commands & Scripts
@@ -191,6 +213,7 @@ This document is the authoritative and up-to-date guide for both agentic coding 
       - Provide short waits (e.g. `waitForTimeout(400)`) after input to ensure the terminal buffer updates.
       - See `e2e/pty-buffer-readraw.pw.ts` line 200+ for the pattern: output the buffer (`console.log`) before and after typing in the terminal, and check that inputs appear as expected.
     - If output is missing or the test is flaky, confirm correct timing, selector, and input sequence by comparing to the robust minimal test (see isolation test, same file, line 54+).
+  - **Buffer Extension Tests**: Recent fixes ensure proper testing of interactive PTY sessions. Tests now use `bash -i` for true interactive sessions and verify that typed input appears in server buffers via WebSocket updates.
 
 ---
 

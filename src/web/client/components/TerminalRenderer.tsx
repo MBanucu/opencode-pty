@@ -112,9 +112,7 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
         // Ctrl+C
         onInterrupt?.()
       } else {
-        // Local echo: write the input to terminal immediately for visual feedback
-        term.write(data)
-        // Send all other input to PTY server
+        // Send input to PTY server (PTY will echo back for interactive sessions)
         onSendInput?.(data)
       }
     }

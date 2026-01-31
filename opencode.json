@@ -1,7 +1,17 @@
 {
-    "$schema": "https://opencode.ai/config.json",
-    "instructions": [
-        "AGENTS.md",
-        "README.md",
-    ]
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    ".opencode/agents/docs/index.md",
+    ".opencode/agents/docs/quickstart.md",
+    ".opencode/agents/docs/architecture.md",
+    ".opencode/agents/docs/commands.md",
+    ".opencode/agents/docs/code-style.md",
+    ".opencode/agents/docs/testing.md",
+    ".opencode/agents/docs/security.md",
+    ".opencode/agents/docs/dependencies.md",
+    ".opencode/agents/docs/release.md",
+    ".opencode/agents/docs/contributing.md",
+    ".opencode/agents/docs/troubleshooting.md",
+    "README.md"
+  ]
 }

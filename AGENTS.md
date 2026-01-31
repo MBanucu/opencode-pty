@@ -217,6 +217,37 @@ This document is the authoritative and up-to-date guide for both agentic coding 
 
 ---
 
+### Terminal E2E Testing Policy
+
+**Canonical Assertion Source:**  
+All assertions in end-to-end (E2E) tests involving PTY or xterm.js terminal output **MUST** use the canonical helper:
+
+- `getSerializedContentByXtermSerializeAddon(page)` (see `e2e/xterm-test-helpers.ts`)
+- Optionally stripping ANSI with `bunStripANSI()` if comparing plain strings/lines.
+
+**What is Prohibited:**
+
+- ❌ DOM scraping of `.xterm` contents for test assertions (e.g., querying for DOM nodes/spans and asserting text/prompt lines)
+- ❌ Relying on prompt regexes/matches (e.g., counting `$` prompts by scraping or by line rules)
+- ❌ Any assertion on terminal output that is based on DOM visual state or prompt-matching rather than the raw buffer
+
+**Debug/Manual Reporting:**
+
+- You MAY use `getTerminalPlainText(page)`/DOM scraping only for debug or manual reporting/logging, **never as a test oracle** for pass/fail.
+- Visual verification/console output is allowed for troubleshooting but must not drive assertion logic or test results.
+
+**Why:**
+
+- DOM structure and prompt lines are browser/shell/environment-dependent and introduce test flakiness.
+- SerializeAddon provides robust and platform-stable buffer output, reflecting the true logical state.
+
+**Enforcement:**
+
+- All PRs/commits adding or modifying terminal E2E tests will be rejected if they use DOM scraping, prompt regex counting, or prompt-matching as a required assertion.
+- Legacy test code must be refactored to comply.
+
+---
+
 ## Security Best Practices
 
 ### Input Validation

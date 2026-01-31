@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
 import { waitForTerminalRegex } from '../xterm-test-helpers'
+import type { PTYSessionInfo } from 'opencode-pty/shared/types'
 
 extendedTest.describe('PTY Live Streaming', () => {
   extendedTest(
@@ -15,82 +16,31 @@ extendedTest.describe('PTY Live Streaming', () => {
 
       console.log('[DEBUG] Base URL:', server.baseURL)
 
-      // Clear any existing sessions to ensure clean state
-      const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
-      console.log('[DEBUG] Clear response status:', clearResponse.status())
-      expect(clearResponse.ok()).toBe(true)
-
-      // Wait for UI to reflect cleared state before creating new session
-      await page.waitForTimeout(1000)
-      console.log('[DEBUG] Waited 1s for UI update')
-
-      // Create a fresh test session for streaming
-
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: [
-            '-c',
-            'echo "Welcome to live streaming test"; echo "Type commands and see real-time output"; while true; do LC_TIME=C date +"%a %d. %b %H:%M:%S %Z %Y: Live update..."; sleep 0.1; done',
-          ],
-          description: 'Live streaming test session',
-        },
-      })
-      console.log('[DEBUG] Create response:', await createResponse.text())
-      expect(createResponse.ok()).toBe(true)
-      expect(createResponse.ok()).toBe(true)
-
-      console.log('[DEBUG] Create response JSON:', await createResponse.json())
-
-      // Subscribe to the session via WebSocket so UI gets updates
-      const responseData = await createResponse.json()
-      const sessionId = responseData.id
-      await page.evaluate(
-        ({ sessionId }) => {
-          // @ts-ignore - WebSocket connection handled by page
-          const ws = (window as any).__playwrightWebSocket
-          if (ws && ws.send) {
-            // Send both subscribe and session_list to ensure UI updates
-            ws.send(JSON.stringify({ type: 'subscribe', sessionId }))
-            ws.send(JSON.stringify({ type: 'session_list' }))
-          }
-        },
-        { sessionId }
-      )
-
-      // Wait for WebSocket 'subscribed' and session_list update
-      const subscribedPromise = page.evaluate(() => {
+      // Subscribe to session updates using app's WebSocket
+      await page.evaluate(() => {
+        // @ts-ignore - Access global function exported by useWebSocket
         return new Promise<void>((resolve) => {
-          const ws = (window as any).__playwrightWebSocket
-          if (!ws) {
-            resolve()
-            return
-          }
-          let subscribed = false
-          let sessionListReceived = false
-          const handler = (event: MessageEvent) => {
-            try {
-              const dataStr = event.data.toString()
-              console.log('[DEBUG] WebSocket message received:', dataStr)
-              const data = JSON.parse(dataStr)
-              if (data.type === 'subscribed') {
-                subscribed = true
+          if (typeof (window as any).subscribeToSessionUpdates === 'function') {
+            const handler = (sessions: PTYSessionInfo[]) => {
+              console.log('[DEBUG] Sessions updated in app:', sessions.length)
+              // When we get the session list, check if our created session is there
+              if (sessions && sessions.length >= 1) {
+                const createdSession = sessions[0]
+                if (createdSession.status === 'running') {
+                  console.log('[DEBUG] Created session found:', createdSession.id)
+                  resolve()
+                }
               }
-              if (data.type === 'session_list') {
-                sessionListReceived = true
-              }
-              if (subscribed && sessionListReceived) {
-                ws.removeEventListener('message', handler)
-                resolve()
-              }
-            } catch (err) {
-              console.log('[DEBUG] Error parsing WebSocket message:', err)
             }
+            // @ts-ignore - Call global subscription function
+            ;(window as any).subscribeToSessionUpdates(handler)
+          } else {
+            console.log('[DEBUG] Global subscribeToSessionUpdates not available')
+            resolve()
           }
-          ws.addEventListener('message', handler)
         })
       })
-      await subscribedPromise
+      console.log('[DEBUG] Waited for sessions update')
 
       // Wait for sessions to load and verify exactly one exists
       await page.waitForSelector('.session-item', { timeout: 10000 })

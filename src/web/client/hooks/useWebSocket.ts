@@ -22,6 +22,7 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
   // Connect to WebSocket on mount
   useEffect(() => {
     const ws = new WebSocket(`ws://${location.host}/ws`)
+    wsRef.current = ws
     ws.onopen = () => {
       setConnected(true)
       // Request initial session list
@@ -42,26 +43,6 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
           if (sessions.length > 0 && !activeSession && !shouldSkipAutoselect) {
             const runningSession = sessions.find((s: PTYSessionInfo) => s.status === 'running')
             autoSelected = runningSession || sessions[0]
-            if (autoSelected) {
-              activeSessionRef.current = autoSelected
-              // Subscribe to the auto-selected session for live updates
-              const readyState = wsRef.current?.readyState
-
-              if (readyState === WebSocket.OPEN && wsRef.current) {
-                wsRef.current.send(
-                  JSON.stringify({ type: 'subscribe', sessionId: autoSelected!.id })
-                )
-              } else {
-                setTimeout(() => {
-                  const retryReadyState = wsRef.current?.readyState
-                  if (retryReadyState === WebSocket.OPEN && wsRef.current) {
-                    wsRef.current.send(
-                      JSON.stringify({ type: 'subscribe', sessionId: autoSelected!.id })
-                    )
-                  }
-                }, RETRY_DELAY)
-              }
-            }
           }
           onSessionList(sessions, autoSelected)
         } else if (data.type === 'raw_data') {
@@ -70,7 +51,6 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
             onRawData?.(data.rawData)
           }
         }
-        // eslint-disable-next-line no-empty
       } catch {}
     }
     ws.onclose = () => {
@@ -101,3 +81,12 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
 
   return { connected, subscribe, subscribeWithRetry }
 }
+
+// Export global subscription function for E2E tests
+// E2E tests can call this to subscribe to session updates
+// without creating a separate WebSocket connection
+export declare function subscribeToSessionUpdates(callback: (sessions: PTYSessionInfo[]) => void): void
+declare global {
+  subscribeToSessionUpdates: (sessions: PTYSessionInfo[]) => void
+}
+globalThis.subscribeToSessionUpdates = callback

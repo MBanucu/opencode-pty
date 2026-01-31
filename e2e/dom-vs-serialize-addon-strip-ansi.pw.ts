@@ -5,9 +5,6 @@ extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should compare DOM scraping vs SerializeAddon with strip-ansi',
     async ({ page, api }) => {
-      // Clear any existing sessions
-      await api.sessions.clear()
-
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create interactive bash session

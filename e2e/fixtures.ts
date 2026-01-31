@@ -17,6 +17,7 @@ async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
 
 type TestFixtures = {
   api: ReturnType<typeof createApiClient>
+  autoCleanup: void
 }
 type WorkerFixtures = {
   server: { baseURL: string; port: number }
@@ -123,14 +124,22 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: 'worker', auto: true },
   ],
 
+  // Auto fixture that clears sessions before every test
+  autoCleanup: [
+    async ({ server }, use) => {
+      const api = createApiClient(server.baseURL)
+      try {
+        await api.sessions.clear()
+      } catch (error) {
+        console.warn('Could not clear sessions before test:', error)
+      }
+      await use(undefined)
+    },
+    { auto: true },
+  ],
+
   api: async ({ server }, use) => {
     const api = createApiClient(server.baseURL)
-    // Clear sessions before each test for clean state
-    try {
-      await api.sessions.clear()
-    } catch (error) {
-      console.warn('Could not clear sessions before test:', error)
-    }
     await use(api)
   },
 

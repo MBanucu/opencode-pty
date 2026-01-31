@@ -10,7 +10,6 @@ async function setupSession(
   api: ReturnType<typeof createApiClient>,
   description: string
 ): Promise<string> {
-  await api.sessions.clear()
   const session = await api.sessions.create({ command: 'bash', args: ['-i'], description })
   const { id } = session
   await page.waitForSelector('h1:has-text("PTY Sessions")')

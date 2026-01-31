@@ -6,10 +6,6 @@ import {
 } from './xterm-test-helpers'
 import { createApiClient } from './helpers/apiClient'
 
-async function clearAllSessions(api: ReturnType<typeof createApiClient>) {
-  await api.sessions.clear()
-}
-
 async function createSession(
   api: ReturnType<typeof createApiClient>,
   {
@@ -51,7 +47,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should allow basic terminal input and output (minimal isolation check)',
     async ({ page, api }) => {
-      await clearAllSessions(api)
       const desc = 'basic input test session'
       await createSession(api, {
         command: 'bash',
@@ -84,7 +79,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should verify buffer preserves newline characters in PTY output',
     async ({ page, api }) => {
-      await clearAllSessions(api)
       const sessionId = await createSession(api, {
         command: 'bash',
         args: ['-c', 'printf "line1\nline2\nline3\n"'],
@@ -117,7 +111,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   })
 
   extendedTest('should expose raw buffer data via API endpoint', async ({ page, api }) => {
-    await clearAllSessions(api)
     const sessionId = await createSession(api, {
       command: 'bash',
       args: ['-c', 'printf "api\ntest\ndata\n"'],
@@ -140,7 +133,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   })
 
   extendedTest('should expose plain text buffer data via API endpoint', async ({ page, api }) => {
-    await clearAllSessions(api)
     const sessionId = await createSession(api, {
       command: 'bash',
       args: ['-c', 'echo -e "\x1b[31mRed text\x1b[0m and \x1b[32mgreen text\x1b[0m"'],
@@ -167,7 +159,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   })
 
   extendedTest('should extract plain text content using SerializeAddon', async ({ page, api }) => {
-    await clearAllSessions(api)
     await createSession(api, {
       command: 'echo',
       args: ['Hello World'],
@@ -187,7 +178,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should match API plain buffer with SerializeAddon for interactive input',
     async ({ page, api }) => {
-      await clearAllSessions(api)
       await createSession(api, {
         command: 'bash',
         args: ['-i'],
@@ -233,7 +223,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should compare API plain text with SerializeAddon for initial bash state',
     async ({ page, api }) => {
-      await clearAllSessions(api)
       const sessionId = await createSession(api, {
         command: 'bash',
         args: ['-i'],
@@ -260,7 +249,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should compare API plain text with SerializeAddon for cat command',
     async ({ page, api }) => {
-      await clearAllSessions(api)
       const sessionId = await createSession(api, {
         command: 'cat',
         args: ['-i'],
@@ -285,7 +273,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should prevent double-echo by comparing terminal content before and after input',
     async ({ page, api }) => {
-      await clearAllSessions(api)
       await createSession(api, {
         command: 'bash',
         args: ['-i'],
@@ -315,7 +302,6 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   )
 
   extendedTest('should clear terminal content when switching sessions', async ({ page, api }) => {
-    await clearAllSessions(api)
     await createSession(api, {
       command: 'echo',
       args: ['SESSION_ONE_CONTENT'],

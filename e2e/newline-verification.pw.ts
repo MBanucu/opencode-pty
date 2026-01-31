@@ -12,9 +12,6 @@ const findLastNonEmptyLineIndex = (lines: string[]): number => {
 
 extendedTest.describe('Xterm Newline Handling', () => {
   extendedTest('should capture typed character in xterm display', async ({ page, api }) => {
-    // Clear any existing sessions
-    await api.sessions.clear()
-
     // Create interactive bash session
     await api.sessions.create({
       command: 'bash',
@@ -48,9 +45,6 @@ extendedTest.describe('Xterm Newline Handling', () => {
   })
 
   extendedTest('should not add extra newlines when running echo command', async ({ page, api }) => {
-    // Clear any existing sessions
-    await api.sessions.clear()
-
     // Create interactive bash session
     await api.sessions.create({
       command: 'bash',

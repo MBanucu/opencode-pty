@@ -5,9 +5,6 @@ extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should compare DOM scraping vs Terminal API with interactive commands',
     async ({ page, api }) => {
-      // Clear any existing sessions
-      await api.sessions.clear()
-
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create interactive bash session

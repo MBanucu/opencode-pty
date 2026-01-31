@@ -4,8 +4,6 @@ extendedTest.describe('WebSocket Raw Data Counter', () => {
   extendedTest(
     'increments WS raw_data counter when typing in xterm (input echo)',
     async ({ page, api }) => {
-      // Clear existing sessions and set up clean state
-      await api.sessions.clear()
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
       })

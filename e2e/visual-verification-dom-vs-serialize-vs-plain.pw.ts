@@ -12,9 +12,6 @@ extendedTest.describe(
     extendedTest(
       'should provide visual verification of DOM vs SerializeAddon vs Plain API extraction in bash -c',
       async ({ page, api }) => {
-        // Clear any existing sessions for isolation
-        await api.sessions.clear()
-
         // Setup session with ANSI-rich content
         const session = await api.sessions.create({
           command: 'bash',

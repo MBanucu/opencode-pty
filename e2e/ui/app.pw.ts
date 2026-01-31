@@ -29,10 +29,7 @@ extendedTest.describe('App Component', () => {
     expect(sessionText).toContain('Test session for WebSocket check')
   })
 
-  extendedTest('shows no active sessions message when empty', async ({ page, api }) => {
-    // Clear any existing sessions
-    await api.sessions.clear()
-
+  extendedTest('shows no active sessions message when empty', async ({ page }) => {
     await expect(page.getByText('● Connected')).toBeVisible()
 
     // Now check that "No active sessions" appears in the sidebar
@@ -40,9 +37,6 @@ extendedTest.describe('App Component', () => {
   })
 
   extendedTest('shows empty state when no session is selected', async ({ page, api }) => {
-    // Clear any existing sessions
-    await api.sessions.clear()
-
     // Set skip autoselect to prevent automatic selection
     await page.evaluate(() => {
       localStorage.setItem('skip-autoselect', 'true')
@@ -69,9 +63,6 @@ extendedTest.describe('App Component', () => {
       'increments WS message counter when receiving data for active session',
       async ({ page, api }) => {
         extendedTest.setTimeout(15000) // Increase timeout for slow session startup
-
-        // Clear any existing sessions for clean test state
-        await api.sessions.clear()
 
         // Create a test session that produces continuous output
         await api.sessions.create({
@@ -107,7 +98,6 @@ extendedTest.describe('App Component', () => {
 
         // Check session status
         const sessions = await api.sessions.list()
-        console.log('All sessions after creation:', sessions)
 
         if (sessions.length > 0) {
           console.log('First session status:', sessions[0]?.status)
@@ -176,9 +166,6 @@ extendedTest.describe('App Component', () => {
         // Log all console messages for debugging
         page.on('console', () => {})
 
-        // Clear any existing sessions for clean test state
-        await api.sessions.clear()
-
         // Create first session
         await api.sessions.create({
           command: 'bash',
@@ -244,9 +231,6 @@ extendedTest.describe('App Component', () => {
     extendedTest('maintains WS counter state during page refresh', async ({ page, api }) => {
       // Log all console messages for debugging
       page.on('console', () => {})
-
-      // Clear any existing sessions for clean test state
-      await api.sessions.clear()
 
       // Create a streaming session
       await api.sessions.create({

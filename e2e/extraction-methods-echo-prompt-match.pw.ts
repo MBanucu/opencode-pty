@@ -9,9 +9,6 @@ import { test as extendedTest, expect } from './fixtures'
 extendedTest(
   'should assert exactly 2 "$" prompts appear and verify 4 extraction methods match (ignoring \\r) with echo "Hello World"',
   async ({ page, api }) => {
-    // Clear sessions for state isolation
-    await api.sessions.clear()
-
     // Setup session with echo command
     const session = await api.sessions.create({
       command: 'bash',

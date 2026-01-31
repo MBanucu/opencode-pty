@@ -4,11 +4,11 @@ extendedTest.describe('PTY Input Capture', () => {
   extendedTest(
     'should capture and send printable character input (letters)',
     async ({ page, api }) => {
-      await api.sessions.clear()
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
         ;(window as any).inputRequests = []
       })
+      await page.reload()
       await page.waitForSelector('h1:has-text("PTY Sessions")')
       await api.sessions.create({
         command: 'bash',
@@ -52,7 +52,7 @@ extendedTest.describe('PTY Input Capture', () => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await api.sessions.clear()
+    await page.reload()
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     await api.sessions.create({
       command: 'bash',
@@ -92,7 +92,7 @@ extendedTest.describe('PTY Input Capture', () => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await api.sessions.clear()
+    await page.reload()
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     await api.sessions.create({
       command: 'bash',
@@ -142,7 +142,7 @@ extendedTest.describe('PTY Input Capture', () => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await api.sessions.clear()
+    await page.reload()
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     await api.sessions.create({
       command: 'bash',
@@ -184,9 +184,8 @@ extendedTest.describe('PTY Input Capture', () => {
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
-      ;(window as any).killRequests = []
     })
-    await api.sessions.clear()
+    await page.reload()
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     page.on('dialog', (dialog) => dialog.accept())
     await api.sessions.create({
@@ -209,17 +208,7 @@ extendedTest.describe('PTY Input Capture', () => {
       }
       await route.continue()
     })
-    const killRequests: string[] = []
-    await page.route('**/api/sessions/*/kill', async (route) => {
-      if (route.request().method() === 'POST') {
-        killRequests.push('kill')
-        await page.evaluate(() => {
-          ;(window as any).killRequests = (window as any).killRequests || []
-          ;(window as any).killRequests.push('kill')
-        })
-      }
-      await route.continue()
-    })
+
     await page.waitForSelector('.xterm', { timeout: 5000 })
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('hello')
@@ -239,17 +228,8 @@ extendedTest.describe('PTY Input Capture', () => {
       timeout: 500,
     })
     await page.keyboard.press('Control+c')
-    await page.waitForFunction(
-      () => {
-        // Accept kill POST for Ctrl+C
-        return (
-          Array.isArray((window as any).killRequests) && (window as any).killRequests.length > 0
-        )
-      },
-      undefined,
-      { timeout: 2000 }
-    )
-    expect(killRequests.length).toBeGreaterThan(0)
+    // Verify session was killed (status changes from running to exited/killed)
+    await page.waitForSelector('.status-badge:not(.status-running)', { timeout: 5000 })
   })
 
   extendedTest('should not capture input when session is inactive', async ({ page, api }) => {
@@ -257,7 +237,7 @@ extendedTest.describe('PTY Input Capture', () => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await api.sessions.clear()
+    await page.reload()
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     page.on('dialog', (dialog) => dialog.accept())
     await api.sessions.create({
@@ -270,10 +250,8 @@ extendedTest.describe('PTY Input Capture', () => {
     await page.waitForSelector('.output-container', { timeout: 5000 })
     await page.waitForSelector('.xterm', { timeout: 5000 })
     await page.locator('.kill-btn').click()
-    await page.waitForSelector(
-      '.empty-state:has-text("Select a session from the sidebar to view its output")',
-      { timeout: 5000 }
-    )
+    // After killing, session state should show non-running status in sidebar
+    await page.waitForSelector('.status-badge:not(.status-running)', { timeout: 5000 })
     const inputRequests: string[] = []
     await page.route('**/api/sessions/*/input', async (route) => {
       const request = route.request()
@@ -299,7 +277,7 @@ extendedTest.describe('PTY Input Capture', () => {
         localStorage.setItem('skip-autoselect', 'true')
         ;(window as any).inputRequests = []
       })
-      await api.sessions.clear()
+      await page.reload()
       await page.waitForSelector('h1:has-text("PTY Sessions")')
       await api.sessions.create({
         command: 'bash',

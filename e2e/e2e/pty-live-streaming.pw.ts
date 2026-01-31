@@ -1,7 +1,6 @@
 import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
 import { waitForTerminalRegex } from '../xterm-test-helpers'
-import type { PTYSessionInfo } from 'opencode-pty/shared/types'
 
 extendedTest.describe('PTY Live Streaming', () => {
   extendedTest(
@@ -15,32 +14,6 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.goto(server.baseURL + '/')
 
       console.log('[DEBUG] Base URL:', server.baseURL)
-
-      // Subscribe to session updates using app's WebSocket
-      await page.evaluate(() => {
-        // @ts-ignore - Access global function exported by useWebSocket
-        return new Promise<void>((resolve) => {
-          if (typeof (window as any).subscribeToSessionUpdates === 'function') {
-            const handler = (sessions: PTYSessionInfo[]) => {
-              console.log('[DEBUG] Sessions updated in app:', sessions.length)
-              // When we get the session list, check if our created session is there
-              if (sessions && sessions.length >= 1) {
-                const createdSession = sessions[0]
-                if (createdSession.status === 'running') {
-                  console.log('[DEBUG] Created session found:', createdSession.id)
-                  resolve()
-                }
-              }
-            }
-            // @ts-ignore - Call global subscription function
-            ;(window as any).subscribeToSessionUpdates(handler)
-          } else {
-            console.log('[DEBUG] Global subscribeToSessionUpdates not available')
-            resolve()
-          }
-        })
-      })
-      console.log('[DEBUG] Waited for sessions update')
 
       // Wait for sessions to load and verify exactly one exists
       await page.waitForSelector('.session-item', { timeout: 10000 })
@@ -268,11 +241,11 @@ extendedTest.describe('PTY Live Streaming', () => {
       expect(initialCount).toBeGreaterThan(0)
 
       // Check the debug info
-      const debugInfo = await page.locator('.output-container').textContent()
+      const debugInfo = await page.locator('[data-testid="debug-info"]').textContent()
       const debugText = (debugInfo || '') as string
 
-      // Extract WS message count
-      const wsMatch = debugText.match(/WS messages: (\d+)/)
+      // Extract WS raw_data message count
+      const wsMatch = debugText.match(/WS raw_data: (\d+)/)
       const initialWsMessages = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
 
       // Wait for at least 1 WebSocket streaming update
@@ -283,7 +256,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       while (attempts < maxAttempts && currentWsMessages < initialWsMessages + 1) {
         await page.waitForTimeout(100)
         const currentDebugText = (await debugElement.textContent()) || ''
-        const currentWsMatch = currentDebugText.match(/WS messages: (\d+)/)
+        const currentWsMatch = currentDebugText.match(/WS raw_data: (\d+)/)
         currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0
         if (attempts % 10 === 0) {
           // Log every second

@@ -68,6 +68,7 @@ extendedTest.describe('PTY Live Streaming', () => {
           let sessionListReceived = false
           const handler = (event: MessageEvent) => {
             const data = JSON.parse(event.data)
+            console.log('[DEBUG] WebSocket message received:', data)
             if (data.type === 'subscribed') {
               subscribed = true
             }

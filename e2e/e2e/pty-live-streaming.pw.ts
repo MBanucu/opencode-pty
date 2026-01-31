@@ -6,8 +6,6 @@ extendedTest.describe('PTY Live Streaming', () => {
   extendedTest(
     'should load historical buffered output when connecting to running PTY session',
     async ({ page, server }) => {
-      page.on('console', () => {})
-
       // Navigate to the web UI (test server should be running)
       await page.goto(server.baseURL + '/')
 
@@ -67,17 +65,22 @@ extendedTest.describe('PTY Live Streaming', () => {
           let subscribed = false
           let sessionListReceived = false
           const handler = (event: MessageEvent) => {
-            const data = JSON.parse(event.data)
-            console.log('[DEBUG] WebSocket message received:', data)
-            if (data.type === 'subscribed') {
-              subscribed = true
-            }
-            if (data.type === 'session_list') {
-              sessionListReceived = true
-            }
-            if (subscribed && sessionListReceived) {
-              ws.removeEventListener('message', handler)
-              resolve()
+            try {
+              const dataStr = event.data.toString()
+              console.log('[DEBUG] WebSocket message received:', dataStr)
+              const data = JSON.parse(dataStr)
+              if (data.type === 'subscribed') {
+                subscribed = true
+              }
+              if (data.type === 'session_list') {
+                sessionListReceived = true
+              }
+              if (subscribed && sessionListReceived) {
+                ws.removeEventListener('message', handler)
+                resolve()
+              }
+            } catch (err) {
+              console.log('[DEBUG] Error parsing WebSocket message:', err)
             }
           }
           ws.addEventListener('message', handler)

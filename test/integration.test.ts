@@ -20,8 +20,12 @@ describe('Web Server Integration', () => {
 
   describe('Full User Workflow', () => {
     it('should handle multiple concurrent sessions and clients', async () => {
-      await using managedTestClient1 = await ManagedTestClient.create(managedTestServer)
-      await using managedTestClient2 = await ManagedTestClient.create(managedTestServer)
+      await using managedTestClient1 = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
+      await using managedTestClient2 = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
 
       const title1 = crypto.randomUUID()
       const title2 = crypto.randomUUID()
@@ -77,7 +81,9 @@ describe('Web Server Integration', () => {
     })
 
     it('should handle error conditions gracefully', async () => {
-      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
 
       const testSessionId = crypto.randomUUID()
 
@@ -123,7 +129,9 @@ describe('Web Server Integration', () => {
     })
 
     it('should handle input to sleeping session', async () => {
-      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
 
       const testSessionId = crypto.randomUUID()
 

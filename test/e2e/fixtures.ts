@@ -10,7 +10,9 @@ async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(1000) })
       if (res.ok) return
-    } catch {}
+    } catch {
+      // ignore errors
+    }
     await new Promise((r) => setTimeout(r, 400))
   }
   throw new Error(`Server did not become ready at ${url} within ${timeoutMs}ms`)
@@ -27,7 +29,7 @@ type WorkerFixtures = {
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   server: [
-    async ({}, use, workerInfo: WorkerInfo) => {
+    async ({}, fixtureUse, workerInfo: WorkerInfo) => {
       const workerIndex = workerInfo.workerIndex
       const portFilePath = `/tmp/test-server-port-${workerIndex}.txt`
 
@@ -35,7 +37,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       try {
         const file = Bun.file(portFilePath)
         await file.delete()
-      } catch {}
+      } catch {
+        // ignore errors
+      }
 
       const proc: ChildProcess = spawn('bun', ['run', 'test/e2e/test-web-server.ts'], {
         env: {
@@ -74,7 +78,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
                     resolve()
                   }
                 })
-            } catch {}
+            } catch {
+              // ignore errors
+            }
           }, 100)
         })
 
@@ -101,7 +107,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
           console.log(`[Worker ${workerIndex}] Could not clear sessions during startup: ${error}`)
         }
 
-        await use({ baseURL, port })
+        await fixtureUse({ baseURL, port })
       } catch (error) {
         console.error(`[Worker ${workerIndex}] Failed to start server: ${error}`)
         throw error
@@ -130,35 +136,35 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
   // Auto fixture that clears sessions before every test
   autoCleanup: [
-    async ({ server }, use) => {
+    async ({ server }, fixtureUse) => {
       const api = createApiClient(server.baseURL)
       try {
         await api.sessions.clear()
       } catch (error) {
         console.warn('Could not clear sessions before test:', error)
       }
-      await use(undefined)
+      await fixtureUse(undefined)
     },
     { auto: true },
   ],
 
-  api: async ({ server }, use) => {
+  api: async ({ server }, fixtureUse) => {
     const api = createApiClient(server.baseURL)
-    await use(api)
+    await fixtureUse(api)
   },
 
   // WebSocket client fixture for event-driven testing
-  wsClient: async ({ server }, use) => {
+  wsClient: async ({ server }, fixtureUse) => {
     const wsUrl = `${server.baseURL.replace(/^http/, 'ws')}/ws`
     await using client = await ManagedTestClient.create(wsUrl)
-    await use(client)
+    await fixtureUse(client)
   },
 
   // Extend page fixture to automatically navigate to server URL and wait for readiness
-  page: async ({ page, server }, use) => {
+  page: async ({ page, server }, fixtureUse) => {
     await page.goto(server.baseURL)
     await page.waitForLoadState('networkidle')
-    await use(page)
+    await fixtureUse(page)
   },
 })
 

@@ -110,7 +110,11 @@ export class ManagedTestClient implements Disposable {
   /**
    * Verify that a specific character appears in raw_data events within timeout
    */
-  async verifyCharacterInEvents(sessionId: string, chars: string, timeout = 5000): Promise<boolean> {
+  async verifyCharacterInEvents(
+    sessionId: string,
+    chars: string,
+    timeout = 5000
+  ): Promise<boolean> {
     return new Promise((resolve) => {
       const timeoutId = setTimeout(() => {
         resolve(false)
@@ -127,7 +131,6 @@ export class ManagedTestClient implements Disposable {
       })
     })
   }
-
 
   public send(
     message:

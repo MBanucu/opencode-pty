@@ -19,7 +19,9 @@ describe('PTY Manager Integration', () => {
 
   describe('Output Broadcasting', () => {
     it('should broadcast raw output to subscribed WebSocket clients', async () => {
-      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
       const title = crypto.randomUUID()
       const dataReceivedPromise = new Promise<string>((resolve) => {
         let dataTotal = ''
@@ -47,8 +49,12 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should not broadcast to unsubscribed clients', async () => {
-      await using managedTestClient1 = await ManagedTestClient.create(managedTestServer)
-      await using managedTestClient2 = await ManagedTestClient.create(managedTestServer)
+      await using managedTestClient1 = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
+      await using managedTestClient2 = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
       const title1 = crypto.randomUUID()
       const title2 = crypto.randomUUID()
       const dataReceivedPromise1 = new Promise<string>((resolve) => {
@@ -107,7 +113,9 @@ describe('PTY Manager Integration', () => {
 
   describe('Session Management Integration', () => {
     it('should provide session data in correct format', async () => {
-      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
       const title = crypto.randomUUID()
       const sessionInfoPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
         managedTestClient.sessionUpdateCallbacks.push((message) => {
@@ -154,7 +162,9 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should handle session lifecycle correctly', async () => {
-      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
       const title = crypto.randomUUID()
       const sessionExitedPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
         managedTestClient.sessionUpdateCallbacks.push((message) => {
@@ -191,7 +201,9 @@ describe('PTY Manager Integration', () => {
     })
 
     it('should support session cleanup via API', async () => {
-      await using managedTestClient = await ManagedTestClient.create(managedTestServer)
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
       const title = crypto.randomUUID()
       const sessionKilledPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
         managedTestClient.sessionUpdateCallbacks.push((message) => {

@@ -58,7 +58,8 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
         // Simple ANSI stripper for browser context
         function stripAnsi(str: string): string {
-          return str.replace(/\x1B(?:[@-Z\\^-`]|[ -/]|[[-`])[ -~]*/g, '')
+          // eslint-disable-next-line no-control-regex
+          return str.replace(/\u001B(?:[@-Z\\^-`]|[ -/]|[[-`])[ -~]*/g, '')
         }
 
         const clean = stripAnsi(raw)

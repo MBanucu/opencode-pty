@@ -9,7 +9,6 @@ try {
     bunStripANSI = Bun.stripANSI
   } else {
     // Note: dynamic import only relevant in Bun, for typing only in Node
-    // @ts-ignore
     const bunModule = await import('bun')
     bunStripANSI = bunModule.stripANSI
   }
@@ -99,6 +98,7 @@ export const waitForTerminalRegex = async (
       const serializeAddon = (window as any).xtermSerializeAddon
       function stripAnsi(str: string) {
         return str.replace(
+          // eslint-disable-next-line no-control-regex
           /[\u001B\u009B][[()#;?]*(?:(?:[a-zA-Z\d]*(?:;[a-zA-Z\d]*)*)?\u0007|(?:\d{1,4}(?:;\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~])/g,
           ''
         )

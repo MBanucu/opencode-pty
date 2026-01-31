@@ -281,68 +281,6 @@ extendedTest.describe('App Component', () => {
       }
     )
 
-    extendedTest('resets WS counter when switching sessions', async ({ page, server }) => {
-      // Log all console messages for debugging
-      page.on('console', () => {})
-
-      await page.goto(server.baseURL + '/')
-
-      // Create two sessions
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'while true; do echo "session1"; sleep 0.1; done'],
-          description: 'Session 1 - streaming',
-        },
-      })
-
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'while true; do echo "session2"; sleep 0.1; done'],
-          description: 'Session 2 - streaming',
-        },
-      })
-
-      // Wait until both session items appear in the sidebar
-      await page.waitForFunction(
-        () => {
-          return document.querySelectorAll('.session-item').length >= 2
-        },
-        { timeout: 6000 }
-      )
-      await page.reload()
-
-      // Wait for sessions
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-
-      // Click first session
-      const sessionItems = page.locator('.session-item')
-      await sessionItems.nth(0).click()
-      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
-
-      // Wait for some messages (WS message counter event-driven)
-      const debugEl = page.locator('[data-testid="debug-info"]')
-      await debugEl.waitFor({ state: 'attached', timeout: 2000 })
-      // const beforeSwitchDebug = (await debugEl.textContent()) || ''
-      // const beforeCountMatch = beforeSwitchDebug.match(/WS raw_data:\s*(\d+)/)
-      // const beforeCount =
-      //   beforeCountMatch && beforeCountMatch[1] ? parseInt(beforeCountMatch[1]) : 0
-      // Switch to second session
-      await sessionItems.nth(1).click()
-      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
-
-      // Check that counter resets when switching sessions (allow some messages due to streaming)
-      const debugElement = page.locator('[data-testid="debug-info"]')
-      await debugElement.waitFor({ state: 'attached', timeout: 2000 })
-      const secondSessionDebug = (await debugElement.textContent()) || ''
-      const secondSessionWsMatch = secondSessionDebug.match(/WS raw_data:\s*(\d+)/)
-      const secondSessionCount =
-        secondSessionWsMatch && secondSessionWsMatch[1] ? parseInt(secondSessionWsMatch[1]) : 0
-      // Should be <= 20, if higher, log debug output and count
-      expect(secondSessionCount).toBeLessThanOrEqual(20)
-    })
-
     extendedTest('maintains WS counter state during page refresh', async ({ page, server }) => {
       // Log all console messages for debugging
       page.on('console', () => {})

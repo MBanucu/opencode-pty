@@ -43,7 +43,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "typecheck:watch": "tsc --noEmit --watch",
-    "test:e2e": "bun run build:dev && PW_DISABLE_TS_ESM=1 NODE_ENV=test bun --bun playwright test",
+    "test:e2e": "PW_DISABLE_TS_ESM=1 NODE_ENV=test bun --bun playwright test",
     "test:all": "bun run test && bun run test:e2e",
     "dev": "vite --host",
     "dev:server": "bun run e2e/test-web-server.ts",

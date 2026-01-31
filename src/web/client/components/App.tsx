@@ -19,7 +19,10 @@ export function App() {
   const { connected: wsConnected, subscribeWithRetry } = useWebSocket({
     activeSession,
     onRawData: useCallback((rawData: string) => {
-      setRawOutput((prev) => prev + rawData)
+      setRawOutput((prev) => {
+        const newOutput = prev + rawData
+        return newOutput
+      })
       setWsMessageCount((prev) => prev + 1)
     }, []),
     onSessionList: useCallback(

@@ -104,9 +104,6 @@ extendedTest.describe('PTY Live Streaming', () => {
   extendedTest(
     'should receive live WebSocket updates from running PTY session',
     async ({ page, server }) => {
-      // Listen to page console for debugging
-      page.on('console', () => {})
-
       // Navigate to the web UI
       await page.goto(server.baseURL + '/')
 

@@ -1,10 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
+import { resolve } from 'path'
 
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
 
 export default defineConfig({
+  globalSetup: resolve(__dirname, 'e2e/global-setup.ts'),
   testDir: './e2e',
   testMatch: '**/*.pw.ts',
   /* Run tests in files in parallel */

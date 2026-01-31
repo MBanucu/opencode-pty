@@ -112,25 +112,14 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
         // Ctrl+C
         onInterrupt?.()
       } else {
-        // Regular character input - let PTY handle echo, no local echo
+        // Local echo: write the input to terminal immediately for visual feedback
+        term.write(data)
+        // Send all other input to PTY server
         onSendInput?.(data)
       }
     }
 
-    const handleKey = (event: { key: string; domEvent: KeyboardEvent }) => {
-      const { key, domEvent } = event
-      if (key === 'Enter') {
-        domEvent.preventDefault()
-        handleData('\r')
-      } else if (key === 'Backspace') {
-        domEvent.preventDefault()
-        term.write('\b \b')
-        onSendInput?.('\b')
-      }
-    }
-
     term.onData(handleData)
-    term.onKey(handleKey)
   }
 
   override render() {

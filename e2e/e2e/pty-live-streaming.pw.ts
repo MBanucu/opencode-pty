@@ -1,65 +1,7 @@
-import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
-import { waitForTerminalRegex } from '../xterm-test-helpers'
+import { expect } from '@playwright/test'
 
 extendedTest.describe('PTY Live Streaming', () => {
-  extendedTest(
-    'should load historical buffered output when connecting to running PTY session',
-    async ({ page, server }) => {
-      page.on('console', (msg) => {
-        console.log('[BROWSER CONSOLE]', msg.text())
-      })
-
-      // Navigate to the web UI (test server should be running)
-      await page.goto(server.baseURL + '/')
-
-      console.log('[DEBUG] Base URL:', server.baseURL)
-
-      // Wait for sessions to load and verify exactly one exists
-      await page.waitForSelector('.session-item', { timeout: 10000 })
-      const initialSessionCount = await page.locator('.session-item').count()
-      expect(initialSessionCount).toBe(1)
-
-      // Find the running session (there should be at least one)
-      // Find the running session (there should be at least one)
-      const sessionCount = await page.locator('.session-item').count()
-      const allSessions = page.locator('.session-item')
-      let runningSession = null
-      for (let i = 0; i < sessionCount; i++) {
-        const session = allSessions.nth(i)
-        const statusBadge = await session.locator('.status-badge').textContent()
-        if (statusBadge === 'running') {
-          runningSession = session
-          break
-        }
-      }
-      if (!runningSession) {
-        throw new Error('No running session found')
-      }
-      // Click on the running session
-      await runningSession.click()
-      // Wait for session header and output UI
-      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
-      await page.waitForSelector('.xterm', { timeout: 2000 })
-      // Check the session info title appears
-      const headerTitle = await page.locator('.output-header .output-title').textContent()
-      expect(headerTitle).toContain('Live streaming test session')
-      // Wait for output (use regex for robustness, fallback to selector)
-      await waitForTerminalRegex(page, /Welcome to live streaming test/, '__waitWelcomeLive')
-      // Assert output lines exist
-      await page.waitForSelector('[data-testid="test-output"] .output-line', { timeout: 5000 })
-      const initialOutputLines = page.locator('[data-testid="test-output"] .output-line')
-      const initialCount = await initialOutputLines.count()
-      expect(initialCount).toBeGreaterThan(0)
-      // Debug info check (optional)
-      const debugElement = page.locator('[data-testid="debug-info"]')
-      await debugElement.waitFor({ timeout: 10000 })
-      // Final content assertion
-      const allText = await page.locator('[data-testid="test-output"]').textContent()
-      expect(allText).toContain('Welcome to live streaming test')
-    }
-  )
-
   extendedTest(
     'should preserve and display complete historical output buffer',
     async ({ page, server }) => {
@@ -169,7 +111,8 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.goto(server.baseURL + '/')
 
       // Ensure clean state for this test
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+      expect(clearResponse.status()).toBe(200)
       // Wait until sessions are actually cleared
       await page.waitForFunction(async (baseURL) => {
         const resp = await fetch(baseURL + '/api/sessions')

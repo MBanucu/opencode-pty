@@ -69,6 +69,10 @@ jobs:
         uses: actions/dependency-review-action@v4
 
   nix-flake-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        quality: [bun run quality, bun test, bun run test:e2e]
     name: Nix Flake CI
     runs-on: ubuntu-latest
     steps:
@@ -79,14 +83,8 @@ jobs:
       - name: Install dependencies (Nix devShell)
         run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun install
 
-      - name: Quality checks (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run quality
-
       - name: Build (Nix devShell)
         run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run build
 
-      - name: Run unit tests (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun test
-
-      - name: Run E2E tests (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run test:e2e
+      - name: Quality checks (Nix devShell)
+        run: nix --experimental-features 'nix-command flakes' develop .# --command -- ${{matrix.quality}}

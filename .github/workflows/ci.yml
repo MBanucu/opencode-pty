@@ -67,3 +67,19 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
+
+  nix-flake-test:
+    name: Nix Flake CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+      - name: Run checks and tests in devShell
+        run: |
+          nix --experimental-features 'nix-command flakes' develop .# --command bash -c "
+            bun install
+            bun run quality
+            bun run test:all
+          "

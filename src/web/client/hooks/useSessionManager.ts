@@ -33,7 +33,7 @@ export function useSessionManager({
 
           // Fetch raw buffer data only (processed output endpoint removed)
           const rawResponse = await fetch(
-            `${baseUrl}${RouteBuilder.session(session.id).rawBuffer()}`
+            `${baseUrl}${RouteBuilder.session.rawBuffer({ id: session.id })}`
           )
 
           // Process response with graceful error handling
@@ -60,7 +60,7 @@ export function useSessionManager({
 
       try {
         const baseUrl = `${location.protocol}//${location.host}`
-        await fetch(`${baseUrl}${RouteBuilder.session(activeSession.id).input()}`, {
+        await fetch(`${baseUrl}${RouteBuilder.session.input({ id: activeSession.id })}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ data }),
@@ -86,9 +86,12 @@ export function useSessionManager({
 
     try {
       const baseUrl = `${location.protocol}//${location.host}`
-      const response = await fetch(`${baseUrl}${RouteBuilder.session(activeSession.id).get()}`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(
+        `${baseUrl}${RouteBuilder.session.get({ id: activeSession.id })}`,
+        {
+          method: 'DELETE',
+        }
+      )
 
       if (response.ok) {
         setActiveSession(null)

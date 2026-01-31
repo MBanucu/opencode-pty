@@ -90,10 +90,10 @@ export default function globalSetup() {
     stdio: ['inherit', 'inherit', 'inherit'],
   })
 
-  if (result.success) {
-    console.log('Build completed successfully')
-  } else {
-    console.error('Build failed (see output above)')
-    throw new Error(`bun run build failed (code ${result.exitCode})`)
+  if (!result.success) {
+    console.error(`Build failed with exit code ${result.exitCode}`)
+    process.exit(result.exitCode ?? 1)
   }
+
+  console.log('Build completed successfully')
 }

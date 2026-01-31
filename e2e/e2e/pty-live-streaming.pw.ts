@@ -12,11 +12,15 @@ extendedTest.describe('PTY Live Streaming', () => {
       await page.goto(server.baseURL + '/')
 
       // Clear any existing sessions to ensure clean state
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+      expect(clearResponse.ok()).toBe(true)
+
+      // Wait for session list to update in UI after clearing
+      await page.waitForTimeout(500)
 
       // Create a fresh test session for streaming
 
-      await page.request.post(server.baseURL + '/api/sessions', {
+      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
         data: {
           command: 'bash',
           args: [
@@ -26,8 +30,12 @@ extendedTest.describe('PTY Live Streaming', () => {
           description: 'Live streaming test session',
         },
       })
-      // Wait for sessions to load
-      await page.waitForSelector('.session-item', { timeout: 5000 })
+      expect(createResponse.ok()).toBe(true)
+
+      // Wait for sessions to load and verify exactly one exists
+      await page.waitForSelector('.session-item', { timeout: 10000 })
+      const initialSessionCount = await page.locator('.session-item').count()
+      expect(initialSessionCount).toBe(1)
 
       // Find the running session (there should be at least one)
       // Find the running session (there should be at least one)

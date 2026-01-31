@@ -34,24 +34,3 @@ if (process.env.NODE_ENV === 'test') {
     process.exit(1)
   }
 }
-
-// Create test sessions for manual testing and e2e tests
-if (process.env.NODE_ENV === 'test') {
-  // Create an interactive bash session for e2e tests
-  manager.spawn({
-    command: 'bash',
-    args: ['-i'], // Interactive bash
-    description: 'Interactive bash session for e2e tests',
-    parentSessionId: 'test-session',
-  })
-} else if (process.env.CI !== 'true') {
-  manager.spawn({
-    command: 'bash',
-    args: [
-      '-c',
-      "echo 'Welcome to live streaming test'; echo 'Type commands and see real-time output'; for i in {1..100}; do echo \"$(date): Live update $i...\"; sleep 1; done",
-    ],
-    description: 'Live streaming test session',
-    parentSessionId: 'live-test',
-  })
-}

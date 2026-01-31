@@ -24,10 +24,16 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const workerIndex = workerInfo.workerIndex
       const portFilePath = `/tmp/test-server-port-${workerIndex}.txt`
 
+      // Clean up old port file from previous test runs
+      try {
+        const file = Bun.file(portFilePath)
+        await file.delete()
+      } catch {}
+
       const proc: ChildProcess = spawn('bun', ['run', 'e2e/test-web-server.ts'], {
         env: {
           ...process.env,
-          TEST_WORKER_INDEX: workerIndex.toString(),
+          TEST_WORKER_INDEX: workerInfo.workerIndex.toString(),
         },
         stdio: ['ignore', 'pipe', 'pipe'],
       })
@@ -35,7 +41,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       proc.stdout?.on('data', (_data) => {})
 
       proc.stderr?.on('data', (data) => {
-        console.error(`[W${workerInfo.workerIndex} ERR] ${data}`)
+        console.error(`[W${workerIndex} ERR] ${data}`)
       })
 
       proc.on('exit', (_code, _signal) => {})
@@ -65,17 +71,16 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
         // Read the actual URL from port file
         const serverURLText = await Bun.file(portFilePath).text()
-        if (!serverURLText) {
-          throw new Error(`Port file is empty: ${portFilePath}`)
-        }
         const serverURL = serverURLText.trim()
+
+        console.log(`[Worker ${workerIndex}] Read server URL from port file: ${serverURL}`)
 
         // Parse URL to extract port number
         const urlMatch = serverURL.match(/http:\/\/localhost:(\d+)/)
-        if (!urlMatch || !urlMatch[1]) {
+        if (!urlMatch) {
           throw new Error(`Invalid port file format: ${serverURL}`)
         }
-        const port = parseInt(urlMatch[1])
+        const port = parseInt(urlMatch[1]!)
         const baseURL = `http://localhost:${port}`
 
         await waitForServer(baseURL, 15000)

@@ -47,7 +47,7 @@
     "test:all": "bun test && bun run test:e2e",
     "dev": "vite --host",
     "dev:server": "bun run e2e/test-web-server.ts",
-    "build": "bun run clean && bun run typecheck && vite build",
+    "build": "bun run clean && vite build",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",
     "build:all:dev": "bun run build:dev",

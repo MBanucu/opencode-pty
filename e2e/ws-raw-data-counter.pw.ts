@@ -3,14 +3,13 @@ import { test as extendedTest, expect } from './fixtures'
 extendedTest.describe('WebSocket Raw Data Counter', () => {
   extendedTest(
     'increments WS raw_data counter when typing in xterm (input echo)',
-    async ({ page, server, api }) => {
+    async ({ page, api }) => {
       // Clear existing sessions and set up clean state
       await api.sessions.clear()
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
       })
 
-      await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a bash session that will echo input

@@ -4,11 +4,10 @@ import { test as extendedTest, expect } from './fixtures'
 extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typing)', () => {
   extendedTest(
     'should demonstrate local vs remote echo behavior with fast typing',
-    async ({ page, server, api }) => {
+    async ({ page, api }) => {
       // Clear any existing sessions
       await api.sessions.clear()
 
-      await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create interactive bash session

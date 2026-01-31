@@ -11,7 +11,7 @@ extendedTest.describe(
   () => {
     extendedTest(
       'should provide visual verification of DOM vs SerializeAddon vs Plain API extraction in bash -c',
-      async ({ page, server, api }) => {
+      async ({ page, api }) => {
         // Clear any existing sessions for isolation
         await api.sessions.clear()
 
@@ -25,8 +25,7 @@ extendedTest.describe(
           description: 'Visual verification test',
         })
 
-        // Navigate and select
-        await page.goto(server.baseURL)
+        // Wait for UI
         await page.waitForSelector('h1:has-text("PTY Sessions")')
         await page.waitForSelector('.session-item', { timeout: 5000 })
         await page.locator('.session-item:has-text("Visual verification test")').click()

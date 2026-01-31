@@ -22,9 +22,6 @@ extendedTest.describe('Server Clean Start', () => {
   })
 
   extendedTest('should start with empty session list via browser', async ({ page, api }) => {
-    // Navigate to the web UI
-    await page.goto(page.url())
-
     // Clear any existing sessions from previous tests
     await api.sessions.clear()
 

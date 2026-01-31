@@ -4,11 +4,10 @@ import { waitForTerminalRegex } from './xterm-test-helpers'
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should validate DOM scraping against xterm.js Terminal API',
-    async ({ page, server, api }) => {
+    async ({ page, api }) => {
       // Clear any existing sessions
       await api.sessions.clear()
 
-      await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a session and run some commands to generate content

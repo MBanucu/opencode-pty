@@ -11,7 +11,7 @@ const findLastNonEmptyLineIndex = (lines: string[]): number => {
 }
 
 extendedTest.describe('Xterm Newline Handling', () => {
-  extendedTest('should capture typed character in xterm display', async ({ page, server, api }) => {
+  extendedTest('should capture typed character in xterm display', async ({ page, api }) => {
     // Clear any existing sessions
     await api.sessions.clear()
 
@@ -22,8 +22,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
       description: 'Simple typing test session',
     })
 
-    // Navigate and select session
-    await page.goto(server.baseURL)
+    // Wait for UI
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item').first().click()
@@ -48,62 +47,58 @@ extendedTest.describe('Xterm Newline Handling', () => {
     expect(promptPattern.test((afterLines[afterLastNonEmpty] || '').trim())).toBe(true)
   })
 
-  extendedTest(
-    'should not add extra newlines when running echo command',
-    async ({ page, server, api }) => {
-      // Clear any existing sessions
-      await api.sessions.clear()
+  extendedTest('should not add extra newlines when running echo command', async ({ page, api }) => {
+    // Clear any existing sessions
+    await api.sessions.clear()
 
-      // Create interactive bash session
-      await api.sessions.create({
-        command: 'bash',
-        args: ['-i'],
-        description: 'PTY Buffer readRaw() Function',
-      })
+    // Create interactive bash session
+    await api.sessions.create({
+      command: 'bash',
+      args: ['-i'],
+      description: 'PTY Buffer readRaw() Function',
+    })
 
-      // Navigate and select session
-      await page.goto(server.baseURL)
-      await page.waitForSelector('h1:has-text("PTY Sessions")')
-      await page.waitForSelector('.session-item', { timeout: 5000 })
-      await page.locator('.session-item').first().click()
-      await page.waitForSelector('.xterm', { timeout: 5000 })
-      await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitial2')
+    // Wait for UI
+    await page.waitForSelector('h1:has-text("PTY Sessions")')
+    await page.waitForSelector('.session-item', { timeout: 5000 })
+    await page.locator('.session-item').first().click()
+    await page.waitForSelector('.xterm', { timeout: 5000 })
+    await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitial2')
 
-      // Capture initial
-      // const initialLines = await getTerminalPlainText(page)
-      // const initialLastNonEmpty = findLastNonEmptyLineIndex(initialLines)
-      // console.log('🔍 Initial lines count:', initialLines.length)
-      // console.log('🔍 Initial last non-empty line index:', initialLastNonEmpty)
-      // logLinesUpToIndex(initialLines, initialLastNonEmpty, 'Initial content')
+    // Capture initial
+    // const initialLines = await getTerminalPlainText(page)
+    // const initialLastNonEmpty = findLastNonEmptyLineIndex(initialLines)
+    // console.log('🔍 Initial lines count:', initialLines.length)
+    // console.log('🔍 Initial last non-empty line index:', initialLastNonEmpty)
+    // logLinesUpToIndex(initialLines, initialLastNonEmpty, 'Initial content')
 
-      // Type command
-      await page.locator('.terminal.xterm').click()
-      await page.keyboard.type("echo 'Hello World'")
-      await page.keyboard.press('Enter')
+    // Type command
+    await page.locator('.terminal.xterm').click()
+    await page.keyboard.type("echo 'Hello World'")
+    await page.keyboard.press('Enter')
 
-      // Wait for output
-      await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld')
+    // Wait for output
+    await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld')
 
-      // Get final displayed plain text content
-      const finalLines = await getTerminalPlainText(page)
-      // const finalLastNonEmpty = findLastNonEmptyLineIndex(finalLines)
-      // console.log('🔍 Final lines count:', finalLines.length)
-      // console.log('🔍 Final last non-empty line index:', finalLastNonEmpty)
-      // logLinesUpToIndex(finalLines, finalLastNonEmpty, 'Final content')
+    // Get final displayed plain text content
+    const finalLines = await getTerminalPlainText(page)
+    // const finalLastNonEmpty = findLastNonEmptyLineIndex(finalLines)
+    // console.log('🔍 Final lines count:', finalLines.length)
+    // console.log('🔍 Final last non-empty line index:', finalLastNonEmpty)
+    // logLinesUpToIndex(finalLines, finalLastNonEmpty, 'Final content')
 
-      // Ignore trailing empty lines: focus on real content
-      const nonEmptyLines = finalLines.filter((line) => line.trim().length > 0)
-      // Should be: prompt, echoed command, output, new prompt
-      // console.log('DEBUG nonEmptyLines', nonEmptyLines)
-      expect(nonEmptyLines.some((l) => l.includes('Hello World'))).toBe(true)
-      expect(nonEmptyLines[nonEmptyLines.length - 1]).toMatch(/\$/)
-      // Order: prompt, echo, output, (optional prompt)
-      const idxCmd = nonEmptyLines.findIndex((l) => l.includes("echo 'Hello World'"))
-      const idxOut = nonEmptyLines.findLastIndex((l) => l.includes('Hello World'))
-      expect(idxCmd).toBeGreaterThan(-1)
-      expect(idxOut).toBeGreaterThan(idxCmd)
-      // At least 3 lines: the first prompt, echoed line, 'Hello World', maybe prompt
-      expect(nonEmptyLines.length).toBeGreaterThanOrEqual(3)
-    }
-  )
+    // Ignore trailing empty lines: focus on real content
+    const nonEmptyLines = finalLines.filter((line) => line.trim().length > 0)
+    // Should be: prompt, echoed command, output, new prompt
+    // console.log('DEBUG nonEmptyLines', nonEmptyLines)
+    expect(nonEmptyLines.some((l) => l.includes('Hello World'))).toBe(true)
+    expect(nonEmptyLines[nonEmptyLines.length - 1]).toMatch(/\$/)
+    // Order: prompt, echo, output, (optional prompt)
+    const idxCmd = nonEmptyLines.findIndex((l) => l.includes("echo 'Hello World'"))
+    const idxOut = nonEmptyLines.findLastIndex((l) => l.includes('Hello World'))
+    expect(idxCmd).toBeGreaterThan(-1)
+    expect(idxOut).toBeGreaterThan(idxCmd)
+    // At least 3 lines: the first prompt, echoed line, 'Hello World', maybe prompt
+    expect(nonEmptyLines.length).toBeGreaterThanOrEqual(3)
+  })
 })

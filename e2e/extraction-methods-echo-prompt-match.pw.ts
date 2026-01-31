@@ -8,7 +8,7 @@ import { test as extendedTest, expect } from './fixtures'
 
 extendedTest(
   'should assert exactly 2 "$" prompts appear and verify 4 extraction methods match (ignoring \\r) with echo "Hello World"',
-  async ({ page, server, api }) => {
+  async ({ page, api }) => {
     // Clear sessions for state isolation
     await api.sessions.clear()
 
@@ -19,8 +19,7 @@ extendedTest(
       description: 'Echo "Hello World" test',
     })
 
-    // Navigate and select
-    await page.goto(server.baseURL)
+    // Wait for UI
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page

@@ -1,12 +1,15 @@
 import type { PTYSessionInfo } from './types.ts'
 
 export function formatSessionInfo(session: PTYSessionInfo): string[] {
-  const exitInfo = session.exitCode !== undefined ? ` (exit: ${session.exitCode})` : ''
+  const exitInfo = session.exitCode !== undefined ? ` | exit: ${session.exitCode}` : ''
+  const exitSignal = session.exitSignal ? ` | signal: ${session.exitSignal}` : ''
   return [
     `[${session.id}] ${session.title}`,
     `  Command: ${session.command} ${session.args.join(' ')}`,
-    `  Status: ${session.status}${exitInfo}`,
-    `  PID: ${session.pid} | Lines: ${session.lineCount} | Workdir: ${session.workdir}`,
+    `  Status: ${session.status}${exitInfo}${exitSignal}`,
+    `  PID: ${session.pid}`,
+    `  Lines: ${session.lineCount}`,
+    `  Workdir: ${session.workdir}`,
     `  Created: ${session.createdAt}`,
     '',
   ]

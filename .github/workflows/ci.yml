@@ -82,5 +82,8 @@ jobs:
       - name: Quality checks (Nix devShell)
         run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run quality
 
-      - name: Run tests (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run test:all
+      - name: Run unit tests (Nix devShell)
+        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun test
+
+      - name: Run E2E tests (Nix devShell)
+        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run test:e2e

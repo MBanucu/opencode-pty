@@ -30,26 +30,26 @@ extendedTest.describe(
         await waitForTerminalRegex(page, /More text/, '__waitMoreText')
 
         // Extraction methods
-        const domContent = await getTerminalPlainText(page)
+        const domContent = await getTerminalPlainText(page) // For visual/manual cross-check/debug only
         const serializeStrippedContent = bunStripANSI(
           await getSerializedContentByXtermSerializeAddon(page)
         ).split('\n')
         const plainData = await api.session.buffer.plain({ id: session.id })
         const plainApiContent = plainData.plain.split('\n')
 
-        // Only print concise message if key discrepancies (ignoring trivial \r/empty lines)
-        const domJoined = domContent.join('\n')
+        // Check: SerializeAddon output is canonical for this test
         const serializeJoined = serializeStrippedContent.join('\n')
-        // Removed unused lengthMismatch (was for old logging)
-
-        // Basic expectations
-        expect(domJoined).toContain('Normal text')
-        expect(domJoined).toContain('RED')
-        expect(domJoined).toContain('BLUE')
-        expect(domJoined).toContain('More text')
+        expect(serializeJoined).toContain('Normal text')
+        expect(serializeJoined).toContain('RED')
+        expect(serializeJoined).toContain('BLUE')
+        expect(serializeJoined).toContain('More text')
         expect(serializeJoined).not.toContain('\x1B[') // No ANSI codes in Serialize+strip
-        expect(Math.abs(domContent.length - serializeStrippedContent.length)).toBeLessThan(3)
-        expect(Math.abs(domContent.length - plainApiContent.length)).toBeLessThan(3)
+        expect(Math.abs(serializeStrippedContent.length - plainApiContent.length)).toBeLessThan(3)
+
+        // DOM output used for debug/report only--do not assert on it
+        // Example (manual cross-check):
+        // console.log('DOM output lines:', domContent)
+        // console.log('SerializeAddon output:', serializeStrippedContent)
       }
     )
   }

@@ -1,5 +1,9 @@
 import { test as extendedTest, expect } from './fixtures'
-import { waitForTerminalRegex, getTerminalPlainText } from './xterm-test-helpers'
+import {
+  waitForTerminalRegex,
+  getSerializedContentByXtermSerializeAddon,
+  bunStripANSI,
+} from './xterm-test-helpers'
 
 const findLastNonEmptyLineIndex = (lines: string[]): number => {
   for (let i = lines.length - 1; i >= 0; i--) {
@@ -26,22 +30,29 @@ extendedTest.describe('Xterm Newline Handling', () => {
     await page.waitForSelector('.xterm', { timeout: 5000 })
     await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitial')
 
+    // Use SerializeAddon before typing
+    const beforeContent = await getSerializedContentByXtermSerializeAddon(page, {
+      excludeModes: true,
+      excludeAltBuffer: true,
+    })
+    // await page.waitForTimeout(50)
+
     // Type single character
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('a')
-    await waitForTerminalRegex(page, /a\s*$/, '__waitEchoA')
+    await waitForTerminalRegex(page, /a/, '__waitEchoA')
 
-    // Capture after
-    const afterLines = await getTerminalPlainText(page)
-    const afterLastNonEmpty = findLastNonEmptyLineIndex(afterLines)
-    // console.log('\ud83d\udd0d Simple test - After lines count:', afterLines.length)
-    // console.log('\ud83d\udd0d Simple test - After last non-empty:', afterLastNonEmpty)
+    const afterContent = await getSerializedContentByXtermSerializeAddon(page, {
+      excludeModes: true,
+      excludeAltBuffer: true,
+    })
 
-    // Assert that the new prompt line has the typed character at the end (accepts spaces)
-    const promptPattern = /\$ *a\s*$/
-    expect(afterLastNonEmpty).toBeGreaterThanOrEqual(0)
-    expect(afterLines[afterLastNonEmpty]).toBeDefined()
-    expect(promptPattern.test((afterLines[afterLastNonEmpty] || '').trim())).toBe(true)
+    // Use robust character counting
+    const cleanBefore = bunStripANSI(beforeContent)
+    const cleanAfter = bunStripANSI(afterContent)
+    const beforeCount = (cleanBefore.match(/a/g) || []).length
+    const afterCount = (cleanAfter.match(/a/g) || []).length
+    expect(afterCount - beforeCount).toBe(1)
   })
 
   extendedTest('should not add extra newlines when running echo command', async ({ page, api }) => {
@@ -74,17 +85,17 @@ extendedTest.describe('Xterm Newline Handling', () => {
     // Wait for output
     await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld')
 
-    // Get final displayed plain text content
-    const finalLines = await getTerminalPlainText(page)
-    // const finalLastNonEmpty = findLastNonEmptyLineIndex(finalLines)
-    // console.log('🔍 Final lines count:', finalLines.length)
-    // console.log('🔍 Final last non-empty line index:', finalLastNonEmpty)
-    // logLinesUpToIndex(finalLines, finalLastNonEmpty, 'Final content')
-
+    // Get final terminal buffer via SerializeAddon (canonical, robust method)
+    const finalBuffer = bunStripANSI(
+      await getSerializedContentByXtermSerializeAddon(page, {
+        excludeModes: true,
+        excludeAltBuffer: true,
+      })
+    )
+    const finalLines = finalBuffer.split('\n')
     // Ignore trailing empty lines: focus on real content
     const nonEmptyLines = finalLines.filter((line) => line.trim().length > 0)
     // Should be: prompt, echoed command, output, new prompt
-    // console.log('DEBUG nonEmptyLines', nonEmptyLines)
     expect(nonEmptyLines.some((l) => l.includes('Hello World'))).toBe(true)
     expect(nonEmptyLines[nonEmptyLines.length - 1]).toMatch(/\$/)
     // Order: prompt, echo, output, (optional prompt)

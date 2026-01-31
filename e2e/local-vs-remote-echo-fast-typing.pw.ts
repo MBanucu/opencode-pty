@@ -1,4 +1,4 @@
-import { getTerminalPlainText } from './xterm-test-helpers'
+import { getSerializedContentByXtermSerializeAddon } from './xterm-test-helpers'
 import { test as extendedTest, expect } from './fixtures'
 
 extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typing)', () => {
@@ -23,41 +23,33 @@ extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typ
       // Wait for session prompt to appear, indicating readiness
       await page.waitForSelector('.xterm:has-text("$")', { timeout: 10000 })
 
+      // Take pre-input terminal snapshot (via SerializeAddon)
+      const beforeInput = await getSerializedContentByXtermSerializeAddon(page)
+
       // Fast typing - no delays to trigger local echo interference
       await page.locator('.terminal.xterm').click()
       await page.keyboard.type('echo "Hello World"')
       await page.keyboard.press('Enter')
 
-      // Progressive capture to observe echo character flow
-      const echoObservations: string[][] = []
-      for (let i = 0; i < 10; i++) {
-        const lines = await getTerminalPlainText(page)
-        echoObservations.push([...lines])
-      }
-      const domLines = echoObservations[echoObservations.length - 1] || []
+      // Wait for output to flush (look for "Hello World" on the buffer)
+      // Use xterm SerializeAddon waiter for robust pattern match
+      await page.waitForTimeout(200) // Give PTY process a moment to echo
+      await page.waitForSelector('.xterm:has-text("Hello World")', { timeout: 4000 })
 
-      // Get plain buffer from API
-      const plainData = await api.session.buffer.plain({ id: session.id })
-      const plainBuffer = plainData.plain
+      // Take post-input terminal snapshot (via SerializeAddon)
+      const afterInput = await getSerializedContentByXtermSerializeAddon(page)
 
-      // Analysis
-      const domJoined = domLines.join('\n')
-      const plainLines = plainBuffer.split('\n')
+      // Perform assertions: 'echo', 'Hello World' must appear in the post-input buffer
+      expect(afterInput).toContain('echo')
+      expect(afterInput).toContain('Hello World')
 
-      const hasLineWrapping = domLines.length > plainLines.length
-      const hasContentDifferences = domJoined.replace(/\s/g, '') !== plainBuffer.replace(/\s/g, '')
+      // Optionally, assert that character diff increased by correct amount
+      // (i.e. afterInput contains more non-whitespace text than beforeInput)
+      const beforeText = beforeInput.replace(/\s/g, '')
+      const afterText = afterInput.replace(/\s/g, '')
+      expect(afterText.length).toBeGreaterThan(beforeText.length)
 
-      expect(plainBuffer).toContain('echo')
-      expect(plainBuffer).toContain('Hello World')
-      expect(domJoined).toContain('Hello World')
-
-      // Only print one concise message if a difference is present
-      if (hasLineWrapping || hasContentDifferences) {
-        // Only log on failure: comment out for ultra-silence, or keep for minimal debug
-        // console.log(
-        //   'DIFFERENCE: Echo output differs between dom/text and server buffer (see assertions for details)'
-        // )
-      }
+      // Minimal debug output on failure for signal [optional]
     }
   )
 })

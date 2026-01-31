@@ -125,7 +125,20 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
   api: async ({ server }, use) => {
     const api = createApiClient(server.baseURL)
+    // Clear sessions before each test for clean state
+    try {
+      await api.sessions.clear()
+    } catch (error) {
+      console.warn('Could not clear sessions before test:', error)
+    }
     await use(api)
+  },
+
+  // Extend page fixture to automatically navigate to server URL and wait for readiness
+  page: async ({ page, server }, use) => {
+    await page.goto(server.baseURL)
+    await page.waitForLoadState('networkidle')
+    await use(page)
   },
 })
 

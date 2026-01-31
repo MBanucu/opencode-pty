@@ -1,18 +1,20 @@
 import { test as extendedTest, expect } from './fixtures'
 import type { Page } from '@playwright/test'
+import { createApiClient } from './helpers/apiClient'
 
 /**
  * Session and Terminal Helpers for E2E buffer extension tests
  */
 async function setupSession(
   page: Page,
-  api: ReturnType<typeof import('./helpers/apiClient').createApiClient>,
+  server: { baseURL: string },
+  api: ReturnType<typeof createApiClient>,
   description: string
 ): Promise<string> {
   await api.sessions.clear()
   const session = await api.sessions.create({ command: 'bash', args: ['-i'], description })
   const { id } = session
-  await page.goto(page.url())
+  await page.goto(server.baseURL)
   await page.waitForSelector('h1:has-text("PTY Sessions")')
   await page.waitForSelector('.session-item')
   await page.locator(`.session-item:has-text("${description}")`).click()
@@ -28,7 +30,7 @@ async function typeInTerminal(page: Page, text: string) {
   // Don't wait for text to appear since we're testing buffer extension, not visual echo
 }
 async function getRawBuffer(
-  api: ReturnType<typeof import('./helpers/apiClient').createApiClient>,
+  api: ReturnType<typeof createApiClient>,
   sessionId: string
 ): Promise<string> {
   const data = await api.session.buffer.raw({ id: sessionId })
@@ -39,9 +41,9 @@ async function getRawBuffer(
 extendedTest.describe('Buffer Extension on Input', () => {
   extendedTest(
     'should extend buffer when sending input to interactive bash session',
-    async ({ page, api }) => {
+    async ({ page, server, api }) => {
       const description = 'Buffer extension test session'
-      const sessionId = await setupSession(page, api, description)
+      const sessionId = await setupSession(page, server, api, description)
       const initialRaw = await getRawBuffer(api, sessionId)
       const initialLen = initialRaw.length
       await typeInTerminal(page, 'a')
@@ -53,9 +55,9 @@ extendedTest.describe('Buffer Extension on Input', () => {
 
   extendedTest(
     'should extend xterm display when sending input to interactive bash session',
-    async ({ page, api }) => {
+    async ({ page, server, api }) => {
       const description = 'Xterm display test session'
-      await setupSession(page, api, description)
+      await setupSession(page, server, api, description)
       const initialLines = await page
         .locator('[data-testid="test-output"] .output-line')
         .allTextContents()
@@ -82,31 +84,34 @@ extendedTest.describe('Buffer Extension on Input', () => {
     }
   )
 
-  extendedTest('should extend xterm display when running echo command', async ({ page, api }) => {
-    const description = 'Echo display test session'
-    await setupSession(page, api, description)
-    const initialLines = await page
-      .locator('[data-testid="test-output"] .output-line')
-      .allTextContents()
-    const initialContent = initialLines.join('\n')
-    // Initial content should have bash prompt
-    expect(initialContent).toContain('$')
+  extendedTest(
+    'should extend xterm display when running echo command',
+    async ({ page, server, api }) => {
+      const description = 'Echo display test session'
+      await setupSession(page, server, api, description)
+      const initialLines = await page
+        .locator('[data-testid="test-output"] .output-line')
+        .allTextContents()
+      const initialContent = initialLines.join('\n')
+      // Initial content should have bash prompt
+      expect(initialContent).toContain('$')
 
-    // Create a session that produces 'a' in output
-    await api.sessions.create({
-      command: 'bash',
-      args: ['-c', 'echo a'],
-      description: 'Echo a session',
-    })
-    await page.waitForSelector('.session-item:has-text("Echo a session")')
-    await page.locator('.session-item:has-text("Echo a session")').click()
-    await page.waitForTimeout(1000)
+      // Create a session that produces 'a' in output
+      await api.sessions.create({
+        command: 'bash',
+        args: ['-c', 'echo a'],
+        description: 'Echo a session',
+      })
+      await page.waitForSelector('.session-item:has-text("Echo a session")')
+      await page.locator('.session-item:has-text("Echo a session")').click()
+      await page.waitForTimeout(1000)
 
-    const afterLines = await page
-      .locator('[data-testid="test-output"] .output-line')
-      .allTextContents()
-    const afterContent = afterLines.join('\n')
-    expect(afterContent).toContain('a')
-    // Content should have changed (don't check length since initial bash prompt is long)
-  })
+      const afterLines = await page
+        .locator('[data-testid="test-output"] .output-line')
+        .allTextContents()
+      const afterContent = afterLines.join('\n')
+      expect(afterContent).toContain('a')
+      // Content should have changed (don't check length since initial bash prompt is long)
+    }
+  )
 })

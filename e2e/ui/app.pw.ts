@@ -1,25 +1,18 @@
 import { test as extendedTest, expect } from '../fixtures'
 
 extendedTest.describe('App Component', () => {
-  extendedTest('renders the PTY Sessions title', async ({ page, api }) => {
-    // Ensure clean state for parallel execution
-    await api.sessions.clear()
-
-    await page.goto(page.url())
+  extendedTest('renders the PTY Sessions title', async ({ page }) => {
+    // Page automatically navigated to server URL by fixture
     await expect(page.getByText('PTY Sessions')).toBeVisible()
   })
 
   extendedTest('shows connected status when WebSocket connects', async ({ page }) => {
-    await page.goto(page.url())
+    // Page automatically navigated to server URL by fixture
     await expect(page.getByText('● Connected')).toBeVisible()
   })
 
   extendedTest('receives WebSocket session_list messages', async ({ page, api }) => {
-    // Clear any existing sessions for clean state
-    await api.sessions.clear()
-
-    // Navigate to page and wait for WebSocket connection
-    await page.goto(page.url())
+    // Page automatically navigated by fixture, sessions cleared by fixture
 
     // Create a session to trigger session_list update
     await api.sessions.create({
@@ -36,22 +29,22 @@ extendedTest.describe('App Component', () => {
     expect(sessionText).toContain('Test session for WebSocket check')
   })
 
-  extendedTest('shows no active sessions message when empty', async ({ page, api }) => {
+  extendedTest('shows no active sessions message when empty', async ({ page, server, api }) => {
     // Clear any existing sessions
     await api.sessions.clear()
 
-    await page.goto(page.url())
+    await page.goto(server.baseURL)
     await expect(page.getByText('● Connected')).toBeVisible()
 
     // Now check that "No active sessions" appears in the sidebar
     await expect(page.getByText('No active sessions')).toBeVisible()
   })
 
-  extendedTest('shows empty state when no session is selected', async ({ page, api }) => {
+  extendedTest('shows empty state when no session is selected', async ({ page, server, api }) => {
     // Clear any existing sessions
     await api.sessions.clear()
 
-    await page.goto(page.url())
+    await page.goto(server.baseURL)
 
     // Set skip autoselect to prevent automatic selection
     await page.evaluate(() => {
@@ -77,17 +70,17 @@ extendedTest.describe('App Component', () => {
   extendedTest.describe('WebSocket Message Handling', () => {
     extendedTest(
       'increments WS message counter when receiving data for active session',
-      async ({ page, api }) => {
+      async ({ page, server, api }) => {
         extendedTest.setTimeout(15000) // Increase timeout for slow session startup
 
         // Navigate and wait for initial setup
-        await page.goto(page.url())
+        await page.goto(server.baseURL)
 
         // Clear any existing sessions for clean test state
         await api.sessions.clear()
 
         // Create a test session that produces continuous output
-        const session = await api.sessions.create({
+        await api.sessions.create({
           command: 'bash',
           args: [
             '-c',
@@ -95,20 +88,23 @@ extendedTest.describe('App Component', () => {
           ],
           description: 'Live streaming test session',
         })
-        console.log('Created session:', session)
 
         // Robustly wait for session to actually start (event-driven)
-        await page.waitForFunction(
-          async ({ description }) => {
+        // Use Node.js polling instead of browser context to access api
+        const waitStartTime = Date.now()
+        const waitTimeoutMs = 10000
+        while (Date.now() - waitStartTime < waitTimeoutMs) {
+          try {
             const sessions = await api.sessions.list()
-            return (
-              Array.isArray(sessions) &&
-              sessions.some((s) => s.description === description && s.status === 'running')
+            const targetSession = sessions.find(
+              (s: any) => s.description === 'Live streaming test session' && s.status === 'running'
             )
-          },
-          { description: 'Live streaming test session' },
-          { timeout: 10000 }
-        )
+            if (targetSession) break
+          } catch (error) {
+            console.warn('Error checking session status:', error)
+          }
+          await new Promise((resolve) => setTimeout(resolve, 200))
+        }
 
         // Optionally, also wait for session-item in UI
         await page.waitForSelector('.session-item', { timeout: 5000 })
@@ -182,13 +178,13 @@ extendedTest.describe('App Component', () => {
 
     extendedTest(
       'does not increment WS counter for messages from inactive sessions',
-      async ({ page, api }) => {
+      async ({ page, server, api }) => {
         // Log all console messages for debugging
         page.on('console', () => {})
 
         // This test would require multiple sessions and verifying that messages
         // for non-active sessions don't increment the counter
-        await page.goto(page.url())
+        await page.goto(server.baseURL)
 
         // Clear any existing sessions for clean test state
         await api.sessions.clear()
@@ -255,58 +251,61 @@ extendedTest.describe('App Component', () => {
       }
     )
 
-    extendedTest('maintains WS counter state during page refresh', async ({ page, api }) => {
-      // Log all console messages for debugging
-      page.on('console', () => {})
+    extendedTest(
+      'maintains WS counter state during page refresh',
+      async ({ page, server, api }) => {
+        // Log all console messages for debugging
+        page.on('console', () => {})
 
-      await page.goto(page.url())
+        await page.goto(server.baseURL)
 
-      // Clear any existing sessions for clean test state
-      await api.sessions.clear()
+        // Clear any existing sessions for clean test state
+        await api.sessions.clear()
 
-      // Create a streaming session
-      await api.sessions.create({
-        command: 'bash',
-        args: ['-c', 'while true; do echo "streaming"; sleep 0.1; done'],
-        description: 'Streaming session',
-      })
+        // Create a streaming session
+        await api.sessions.create({
+          command: 'bash',
+          args: ['-c', 'while true; do echo "streaming"; sleep 0.1; done'],
+          description: 'Streaming session',
+        })
 
-      // Wait until a session item appears in the sidebar (robust: >= 1 session)
-      await page.waitForFunction(
-        () => {
-          return document.querySelectorAll('.session-item').length >= 1
-        },
-        { timeout: 6000 }
-      )
-      await page.reload()
+        // Wait until a session item appears in the sidebar (robust: >= 1 session)
+        await page.waitForFunction(
+          () => {
+            return document.querySelectorAll('.session-item').length >= 1
+          },
+          { timeout: 6000 }
+        )
+        await page.reload()
 
-      // Wait for sessions
-      await page.waitForSelector('.session-item', { timeout: 5000 })
+        // Wait for sessions
+        await page.waitForSelector('.session-item', { timeout: 5000 })
 
-      await page.locator('.session-item').first().click()
-      await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
+        await page.locator('.session-item').first().click()
+        await page.waitForSelector('.output-header .output-title', { timeout: 2000 })
 
-      // Wait for messages (WS message counter event-driven)
-      await page.waitForFunction(
-        ({ selector }) => {
-          const el = document.querySelector(selector)
-          if (!el) return false
-          const match = el.textContent && el.textContent.match(/WS raw_data:\s*(\d+)/)
-          const count = match && match[1] ? parseInt(match[1]) : 0
-          return count > 0
-        },
-        { selector: '[data-testid="debug-info"]' },
-        { timeout: 7000 }
-      )
+        // Wait for messages (WS message counter event-driven)
+        await page.waitForFunction(
+          ({ selector }) => {
+            const el = document.querySelector(selector)
+            if (!el) return false
+            const match = el.textContent && el.textContent.match(/WS raw_data:\s*(\d+)/)
+            const count = match && match[1] ? parseInt(match[1]) : 0
+            return count > 0
+          },
+          { selector: '[data-testid="debug-info"]' },
+          { timeout: 7000 }
+        )
 
-      const debugElement = page.locator('[data-testid="debug-info"]')
-      await debugElement.waitFor({ state: 'attached', timeout: 2000 })
-      const debugText = (await debugElement.textContent()) || ''
-      const wsMatch = debugText.match(/WS raw_data:\s*(\d+)/)
-      const count = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
+        const debugElement = page.locator('[data-testid="debug-info"]')
+        await debugElement.waitFor({ state: 'attached', timeout: 2000 })
+        const debugText = (await debugElement.textContent()) || ''
+        const wsMatch = debugText.match(/WS raw_data:\s*(\d+)/)
+        const count = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
 
-      // Should have received some messages
-      expect(count).toBeGreaterThan(0)
-    })
+        // Should have received some messages
+        expect(count).toBeGreaterThan(0)
+      }
+    )
   })
 })

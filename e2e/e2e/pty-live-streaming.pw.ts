@@ -34,7 +34,7 @@ extendedTest.describe('PTY Live Streaming', () => {
           description: 'Live streaming test session',
         },
       })
-      console.log('[DEBUG] Create response:', createResponse.status())
+      console.log('[DEBUG] Create response:', await createResponse.text())
       expect(createResponse.ok()).toBe(true)
       expect(createResponse.ok()).toBe(true)
 
@@ -48,13 +48,15 @@ extendedTest.describe('PTY Live Streaming', () => {
           // @ts-ignore - WebSocket connection handled by page
           const ws = (window as any).__playwrightWebSocket
           if (ws && ws.send) {
+            // Send both subscribe and session_list to ensure UI updates
             ws.send(JSON.stringify({ type: 'subscribe', sessionId }))
+            ws.send(JSON.stringify({ type: 'session_list' }))
           }
         },
         { sessionId }
       )
 
-      // Wait for WebSocket 'subscribed' message before checking UI
+      // Wait for WebSocket 'subscribed' and session_list update
       const subscribedPromise = page.evaluate(() => {
         return new Promise<void>((resolve) => {
           const ws = (window as any).__playwrightWebSocket
@@ -62,9 +64,17 @@ extendedTest.describe('PTY Live Streaming', () => {
             resolve()
             return
           }
+          let subscribed = false
+          let sessionListReceived = false
           const handler = (event: MessageEvent) => {
             const data = JSON.parse(event.data)
-            if (data.type === 'subscribed' && data.sessionId === sessionId) {
+            if (data.type === 'subscribed') {
+              subscribed = true
+            }
+            if (data.type === 'session_list') {
+              sessionListReceived = true
+            }
+            if (subscribed && sessionListReceived) {
               ws.removeEventListener('message', handler)
               resolve()
             }

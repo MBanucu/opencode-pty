@@ -432,31 +432,41 @@ For flaky tests involving terminal input/output, use **WebSocket events** instea
 import { ManagedTestClient } from '../utils'
 import type { WSMessageServerRawData } from '../../src/web/shared/types'
 
-// 1. Connect WebSocket and subscribe to session
-await wsClient.connectAndSubscribe(sessionId)
+// 1. Connect WebSocket and subscribe to session (direct approach)
+wsClient.send({
+  type: 'subscribe',
+  sessionId,
+})
 
-// 2. Type input in terminal
+// 2. Set up listener BEFORE typing to avoid race conditions
+const aReceivedInTimePromise = wsClient.verifyCharacterInEvents(sessionId, 'a', 5000)
+
+// 3. Type input in terminal
 await typeInTerminal(page, 'a')
 
-// 3. Wait for actual buffer update events
-const rawDataEvent = await wsClient.waitForRawData(5000)
-expect(rawDataEvent.rawData).toContain('bash:')
+// 4. Wait for character in events (anti-race condition)
+const aReceivedInTime = await aReceivedInTimePromise
 
-// 4. Verify final buffer state
+// 5. Verify that typing generates WebSocket events
+expect(aReceivedInTime).toBe(true)
+
+// 6. Verify final buffer state (flexible length + character presence)
 const afterRaw = await getRawBuffer(api, sessionId)
-expect(afterRaw.length).toBeGreaterThan(initialLen)
+expect(afterRaw.length).toBeGreaterThan(initialRaw.length)
+expect(afterRaw).toContain('a')
 ```
 
 ### Why This Works
 
-- **No Race Condition**: Waits for actual `raw_data` events instead of polling
+- **No Race Condition**: Sets up WebSocket listener BEFORE typing to prevent race condition
+- **Event-Driven Verification**: Waits for actual `raw_data` events instead of polling
 - **Proper Timing**: Events arrive when bash processes input, not immediately
 - **Reliable**: Event-driven verification handles bash processing variations
 - **Clean Resources**: Automatic disposal via DisposableStack prevents leaks
 
 ### Usage
 
-- **WebSocket Helper**: `E2ETestWebSocketClient` provides event-driven methods
+- **WebSocket Helper**: `ManagedTestClient` provides event-driven methods
 - **Test Fixtures**: `wsClient` fixture with `using` pattern for cleanup
 - **Shared Infrastructure**: `ManagedTestClient` works for both unit and E2E tests
 
@@ -472,16 +482,14 @@ wsClient: async ({ server }, use) => {
 // In test cases
 const aReceivedInTime = await wsClient.verifyCharacterInEvents(sessionId, 'a', 5000)
 expect(aReceivedInTime).toBe(true)
+
+// Verify final buffer state (flexible length + character presence)
+const afterRaw = await getRawBuffer(api, sessionId)
+expect(afterRaw.length).toBeGreaterThan(initialRaw.length)
+expect(afterRaw).toContain('a')
 ```
 
-This approach eliminates flaky behavior by **waiting for actual buffer updates** rather than assuming immediate response to input.
-
-### Getting Help
-
-- Check existing issues on GitHub
-- Review README.md and this AGENTS.md
-- Create detailed bug reports with reproduction steps
-- Include environment info (Bun version, OS, OpenCode version)
+This pattern eliminates flaky behavior by **setting up WebSocket listeners before typing** and **waiting for actual buffer updates** rather than assuming immediate response to input.
 
 ---
 

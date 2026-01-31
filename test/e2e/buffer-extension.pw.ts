@@ -23,6 +23,7 @@ async function setupSession(
 }
 async function typeInTerminal(page: Page, text: string) {
   await page.locator('.terminal.xterm').click()
+  new Promise((r) => setTimeout(r, 100)) // Small delay to ensure focus
   await page.keyboard.type(text)
   // Don't wait for text to appear since we're testing buffer extension, not visual echo
 }
@@ -44,21 +45,25 @@ extendedTest.describe('Buffer Extension on Input', () => {
 
       // Get initial buffer state
       const initialRaw = await getRawBuffer(api, sessionId)
-      const initialLen = initialRaw.length
 
       // Connect WebSocket to monitor buffer events
-      await wsClient.connectAndSubscribe(sessionId)
+      wsClient.send({
+        type: 'subscribe',
+        sessionId,
+      })
 
       // Type input and wait for buffer events (event-driven approach)
+      // Set up the listener before typing to avoid race conditions
+      const aReceivedInTimePromise = wsClient.verifyCharacterInEvents(sessionId, 'a', 5000)
       await typeInTerminal(page, 'a')
-      const rawDataEvent = await wsClient.waitForRawData(5000)
+      const aReceivedInTime = await aReceivedInTimePromise
 
-      // Verify the character appears in WebSocket events
-      expect(rawDataEvent.rawData).toContain('a')
+      // Verify that typing 'a' generates WebSocket events (any bash activity confirms buffer extension)
+      expect(aReceivedInTime).toBe(true)
 
       // Verify final buffer state (more flexible than exact length check)
       const afterRaw = await getRawBuffer(api, sessionId)
-      expect(afterRaw.length).toBeGreaterThan(initialLen)
+      expect(afterRaw.length).toBeGreaterThan(initialRaw.length)
       expect(afterRaw).toContain('a')
     }
   )

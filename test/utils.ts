@@ -107,6 +107,28 @@ export class ManagedTestClient implements Disposable {
     return client
   }
 
+  /**
+   * Verify that a specific character appears in raw_data events within timeout
+   */
+  async verifyCharacterInEvents(sessionId: string, chars: string, timeout = 5000): Promise<boolean> {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        resolve(false)
+      }, timeout)
+
+      let rawData = ''
+      this.rawDataCallbacks.push((message) => {
+        if (message.session.id !== sessionId) return
+        rawData += message.rawData
+        if (rawData.includes(chars)) {
+          clearTimeout(timeoutId)
+          resolve(true)
+        }
+      })
+    })
+  }
+
+
   public send(
     message:
       | WSMessageClientInput

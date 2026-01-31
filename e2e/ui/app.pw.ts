@@ -97,12 +97,7 @@ extendedTest.describe('App Component', () => {
         // This enforces robust event-driven wait before proceeding further.
 
         // Check session status
-        const sessions = await api.sessions.list()
-
-        if (sessions.length > 0) {
-          console.log('First session status:', sessions[0]?.status)
-          console.log('First session PID:', sessions[0]?.pid)
-        }
+        await api.sessions.list()
 
         // Don't reload - wait for the session to appear in the UI
         await page.waitForSelector('.session-item', { timeout: 5000 })
@@ -163,9 +158,6 @@ extendedTest.describe('App Component', () => {
     extendedTest(
       'does not increment WS counter for messages from inactive sessions',
       async ({ page, api }) => {
-        // Log all console messages for debugging
-        page.on('console', () => {})
-
         // Create first session
         await api.sessions.create({
           command: 'bash',
@@ -229,9 +221,6 @@ extendedTest.describe('App Component', () => {
     )
 
     extendedTest('maintains WS counter state during page refresh', async ({ page, api }) => {
-      // Log all console messages for debugging
-      page.on('console', () => {})
-
       // Create a streaming session
       await api.sessions.create({
         command: 'bash',

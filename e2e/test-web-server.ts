@@ -1,12 +1,8 @@
+import { OpencodeClient } from '@opencode-ai/sdk'
 import { initManager } from '../src/plugin/pty/manager.ts'
 import { PTYServer } from '../src/web/server/server.ts'
 
-const fakeClient = {
-  app: {
-    log: async (_opts: any) => {},
-  },
-} as any
-initManager(fakeClient)
+initManager(new OpencodeClient())
 
 const server = await PTYServer.createServer()
 

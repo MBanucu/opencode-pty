@@ -72,7 +72,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
         // Parse URL to extract port number
         const urlMatch = serverURL.match(/http:\/\/localhost:(\d+)/)
-        if (!urlMatch) {
+        if (!urlMatch || !urlMatch[1]) {
           throw new Error(`Invalid port file format: ${serverURL}`)
         }
         const port = parseInt(urlMatch[1])

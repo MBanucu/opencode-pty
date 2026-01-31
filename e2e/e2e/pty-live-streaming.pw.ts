@@ -11,12 +11,16 @@ extendedTest.describe('PTY Live Streaming', () => {
       // Navigate to the web UI (test server should be running)
       await page.goto(server.baseURL + '/')
 
+      console.log('[DEBUG] Base URL:', server.baseURL)
+
       // Clear any existing sessions to ensure clean state
-      const clearResponse = await page.request.post(server.baseURL + '/api/sessions/clear')
+      const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
+      console.log('[DEBUG] Clear response status:', clearResponse.status())
       expect(clearResponse.ok()).toBe(true)
 
-      // Wait for session list to update in UI after clearing
-      await page.waitForTimeout(500)
+      // Wait for UI to reflect cleared state before creating new session
+      await page.waitForTimeout(1000)
+      console.log('[DEBUG] Waited 1s for UI update')
 
       // Create a fresh test session for streaming
 
@@ -30,7 +34,45 @@ extendedTest.describe('PTY Live Streaming', () => {
           description: 'Live streaming test session',
         },
       })
+      console.log('[DEBUG] Create response:', createResponse.status())
       expect(createResponse.ok()).toBe(true)
+      expect(createResponse.ok()).toBe(true)
+
+      console.log('[DEBUG] Create response JSON:', await createResponse.json())
+
+      // Subscribe to the session via WebSocket so UI gets updates
+      const responseData = await createResponse.json()
+      const sessionId = responseData.id
+      await page.evaluate(
+        ({ sessionId }) => {
+          // @ts-ignore - WebSocket connection handled by page
+          const ws = (window as any).__playwrightWebSocket
+          if (ws && ws.send) {
+            ws.send(JSON.stringify({ type: 'subscribe', sessionId }))
+          }
+        },
+        { sessionId }
+      )
+
+      // Wait for WebSocket 'subscribed' message before checking UI
+      const subscribedPromise = page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          const ws = (window as any).__playwrightWebSocket
+          if (!ws) {
+            resolve()
+            return
+          }
+          const handler = (event: MessageEvent) => {
+            const data = JSON.parse(event.data)
+            if (data.type === 'subscribed' && data.sessionId === sessionId) {
+              ws.removeEventListener('message', handler)
+              resolve()
+            }
+          }
+          ws.addEventListener('message', handler)
+        })
+      })
+      await subscribedPromise
 
       // Wait for sessions to load and verify exactly one exists
       await page.waitForSelector('.session-item', { timeout: 10000 })

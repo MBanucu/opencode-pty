@@ -50,7 +50,7 @@
     "build": "bun run clean && vite build",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",
-    "prepack": "bun run build:all:prod",
+    "prepack": "bun run build:prod",
     "install:web:dev": "bun run build:dev",
     "install:all:dev": "bun run install:web:dev",
     "run:all:dev": "bun run install:all:dev && LOG_LEVEL=silent opencode",

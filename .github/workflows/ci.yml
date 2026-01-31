@@ -73,13 +73,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v14
-      - name: Run checks and tests in devShell
-        run: |
-          nix --experimental-features 'nix-command flakes' develop .# --command bash -c "
-            bun install
-            bun run quality
-            bun run test:all
-          "
+        uses: DeterminateSystems/nix-installer-action@v21
+      - name: Install dependencies (Nix devShell)
+        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun install
+
+      - name: Quality checks (Nix devShell)
+        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run quality
+
+      - name: Run tests (Nix devShell)
+        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run test:all

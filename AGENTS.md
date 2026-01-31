@@ -418,7 +418,63 @@ All assertions in end-to-end (E2E) tests involving PTY or xterm.js terminal outp
 
 - Enable verbose logging: `opencode --log-level DEBUG --print-logs`
 - Check debug logs in `~/.local/share/opencode/logs/`
-- Use browser dev tools for web UI debugging
+- Use browser dev tools for WebSocket debugging
+
+---
+
+## Event-Driven E2E Testing
+
+For flaky tests involving terminal input/output, use **WebSocket events** instead of HTTP polling:
+
+### Pattern
+
+```typescript
+import { ManagedTestClient } from '../utils'
+import type { WSMessageServerRawData } from '../../src/web/shared/types'
+
+// 1. Connect WebSocket and subscribe to session
+await wsClient.connectAndSubscribe(sessionId)
+
+// 2. Type input in terminal
+await typeInTerminal(page, 'a')
+
+// 3. Wait for actual buffer update events
+const rawDataEvent = await wsClient.waitForRawData(5000)
+expect(rawDataEvent.rawData).toContain('bash:')
+
+// 4. Verify final buffer state
+const afterRaw = await getRawBuffer(api, sessionId)
+expect(afterRaw.length).toBeGreaterThan(initialLen)
+```
+
+### Why This Works
+
+- **No Race Condition**: Waits for actual `raw_data` events instead of polling
+- **Proper Timing**: Events arrive when bash processes input, not immediately
+- **Reliable**: Event-driven verification handles bash processing variations
+- **Clean Resources**: Automatic disposal via DisposableStack prevents leaks
+
+### Usage
+
+- **WebSocket Helper**: `E2ETestWebSocketClient` provides event-driven methods
+- **Test Fixtures**: `wsClient` fixture with `using` pattern for cleanup
+- **Shared Infrastructure**: `ManagedTestClient` works for both unit and E2E tests
+
+### Implementation
+
+```typescript
+// In test fixtures
+wsClient: async ({ server }, use) => {
+  await using client = await ManagedTestClient.create(`${server.baseURL.replace(/^http/, 'ws')}/ws`)
+  await use(client)
+}
+
+// In test cases
+const aReceivedInTime = await wsClient.verifyCharacterInEvents(sessionId, 'a', 5000)
+expect(aReceivedInTime).toBe(true)
+```
+
+This approach eliminates flaky behavior by **waiting for actual buffer updates** rather than assuming immediate response to input.
 
 ### Getting Help
 

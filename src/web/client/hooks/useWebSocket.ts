@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import type { PTYSessionInfo } from 'opencode-pty/shared/types'
+import type {
+  WSMessageServer,
+  WSMessageServerRawData,
+  WSMessageServerSessionList,
+  WSMessageServerSessionUpdate,
+} from '../../shared/types'
 import { RETRY_DELAY, SKIP_AUTOSELECT_KEY } from 'opencode-pty/shared/constants'
 
 interface UseWebSocketOptions {
@@ -39,15 +45,17 @@ export function useWebSocket({
     }
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data)
+        const data = JSON.parse(event.data) as WSMessageServer
         if (data.type === 'session_list') {
-          const sessions = data.sessions || []
+          const sessionListMsg = data as WSMessageServerSessionList
+          const sessions = sessionListMsg.sessions || []
           // Auto-select first running session if none selected (skip in tests that need empty state)
           const shouldSkipAutoselect = localStorage.getItem(SKIP_AUTOSELECT_KEY) === 'true'
           let autoSelected: PTYSessionInfo | null = null
           if (sessions.length > 0 && !activeSession && !shouldSkipAutoselect) {
-            const runningSession = sessions.find((s: PTYSessionInfo) => s.status === 'running')
-            autoSelected = runningSession || sessions[0]
+            const runningSession =
+              sessions.find((s: PTYSessionInfo) => s.status === 'running') || null
+            autoSelected = runningSession || sessions[0] || null
             if (autoSelected) {
               activeSessionRef.current = autoSelected
               // Subscribe to the auto-selected session for live updates
@@ -71,11 +79,13 @@ export function useWebSocket({
           }
           onSessionList(sessions, autoSelected)
         } else if (data.type === 'session_update') {
-          onSessionUpdate?.(data.session)
+          const sessionUpdateMsg = data as WSMessageServerSessionUpdate
+          onSessionUpdate?.(sessionUpdateMsg.session)
         } else if (data.type === 'raw_data') {
-          const isForActiveSession = data.sessionId === activeSessionRef.current?.id
+          const rawDataMsg = data as WSMessageServerRawData
+          const isForActiveSession = rawDataMsg.session.id === activeSessionRef.current?.id
           if (isForActiveSession) {
-            onRawData?.(data.rawData)
+            onRawData?.(rawDataMsg.rawData)
           }
         }
         // eslint-disable-next-line no-empty

@@ -2,6 +2,7 @@ import { test as base, type WorkerInfo } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
 
 import { createApiClient } from './helpers/apiClient'
+import { E2ETestWebSocketClient } from '../../e2e/helpers/websocketHelper'
 
 async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
   const start = Date.now()
@@ -18,6 +19,7 @@ async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
 type TestFixtures = {
   api: ReturnType<typeof createApiClient>
   autoCleanup: void
+  wsClient: E2ETestWebSocketClient
 }
 type WorkerFixtures = {
   server: { baseURL: string; port: number }
@@ -35,7 +37,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         await file.delete()
       } catch {}
 
-      const proc: ChildProcess = spawn('bun', ['run', 'e2e/test-web-server.ts'], {
+      const proc: ChildProcess = spawn('bun', ['run', 'test/e2e/test-web-server.ts'], {
         env: {
           ...process.env,
           TEST_WORKER_INDEX: workerInfo.workerIndex.toString(),
@@ -141,6 +143,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   api: async ({ server }, use) => {
     const api = createApiClient(server.baseURL)
     await use(api)
+  },
+
+  // WebSocket client fixture for event-driven testing
+  wsClient: async ({ server }, use) => {
+    const wsUrl = `${server.baseURL.replace(/^http/, 'ws')}/ws`
+    const client = new E2ETestWebSocketClient(wsUrl)
+    await use(client)
+    client[Symbol.dispose]()
   },
 
   // Extend page fixture to automatically navigate to server URL and wait for readiness

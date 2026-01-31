@@ -6,8 +6,8 @@ import { resolve } from 'path'
  */
 
 export default defineConfig({
-  globalSetup: resolve(__dirname, 'e2e/global-setup.ts'),
-  testDir: './e2e',
+  globalSetup: resolve(__dirname, 'test/e2e/global-setup.ts'),
+  testDir: './test/e2e',
   testMatch: '**/*.pw.ts',
   /* Run tests in files in parallel */
   fullyParallel: true, // Enable parallel execution with isolated servers

@@ -41,8 +41,8 @@ export class ManagedTestClient implements Disposable {
   public readonly sessionListCallbacks: Array<(message: WSMessageServerSessionList) => void> = []
   public readonly errorCallbacks: Array<(message: WSMessageServerError) => void> = []
 
-  private constructor(managedTestServer: ManagedTestServer) {
-    this.ws = new WebSocket(managedTestServer.server.getWsUrl()!)
+  private constructor(wsUrl: string) {
+    this.ws = new WebSocket(wsUrl)
     this.ws.onerror = (error) => {
       throw error
     }
@@ -101,8 +101,8 @@ export class ManagedTestClient implements Disposable {
       await new Promise(setImmediate)
     }
   }
-  public static async create(managedTestServer: ManagedTestServer) {
-    const client = new ManagedTestClient(managedTestServer)
+  public static async create(wsUrl: string) {
+    const client = new ManagedTestClient(wsUrl)
     await client.waitOpen()
     return client
   }

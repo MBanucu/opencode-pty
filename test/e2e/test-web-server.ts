@@ -1,6 +1,6 @@
 import { OpencodeClient } from '@opencode-ai/sdk'
-import { initManager } from '../src/plugin/pty/manager.ts'
-import { PTYServer } from '../src/web/server/server.ts'
+import { initManager } from '../../src/plugin/pty/manager.ts'
+import { PTYServer } from '../../src/web/server/server.ts'
 
 initManager(new OpencodeClient())
 

@@ -6,6 +6,10 @@ extendedTest.describe('PTY Live Streaming', () => {
   extendedTest(
     'should load historical buffered output when connecting to running PTY session',
     async ({ page, server }) => {
+      page.on('console', (msg) => {
+        console.log('[BROWSER CONSOLE]', msg.text())
+      })
+
       // Navigate to the web UI (test server should be running)
       await page.goto(server.baseURL + '/')
 

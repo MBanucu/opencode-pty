@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        quality: [test, typecheck, lint, format]
+        quality: [test --timeout=30000, run typecheck, run lint, run format:check]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -39,24 +39,10 @@ jobs:
         run: bun install
 
       - name: Build
-        if: matrix.quality == 'test'
-        run: bun run build:all:prod
+        run: bun run build:prod
 
       - name: Run test
-        if: matrix.quality == 'test'
-        run: bun test --timeout=30000
-
-      - name: Type check
-        if: matrix.quality == 'typecheck'
-        run: bun run typecheck
-
-      - name: Lint
-        if: matrix.quality == 'lint'
-        run: bun run lint
-
-      - name: Check formatting
-        if: matrix.quality == 'format'
-        run: bun run format:check
+        run: bun ${{matrix.quality}}
 
   dependency-review:
     runs-on: ubuntu-24.04

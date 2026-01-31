@@ -17,49 +17,41 @@ function buildUrl(template: string, params: Record<string, string | number>): st
 }
 
 // Import route templates from shared constants
-import {
-  wsPath,
-  healthPath,
-  apiBasePath,
-  apiSessionPath,
-  apiSessionCleanupPath,
-  apiSessionInputPath,
-  apiSessionRawBufferPath,
-  apiSessionPlainBufferPath,
-} from './routes'
+import { routes } from './routes'
 
 export class RouteBuilder {
   // WebSocket routes
   static websocket(): string {
-    return wsPath
+    return routes.websocket.path
   }
 
   // Health check routes
   static health(): string {
-    return healthPath
+    return routes.health.path
   }
 
   // Session collection routes
   static sessions = {
-    list: (): string => apiBasePath,
-    create: (): string => apiBasePath,
-    clear: (): string => apiBasePath,
+    list: (): string => routes.sessions.path,
+    create: (): string => routes.sessions.path,
+    clear: (): string => routes.sessions.path,
   }
 
   // Individual session routes with type-safe parameter building
   static session = {
-    get: (params: { id: string | number }): string => buildUrl(apiSessionPath, params),
+    get: (params: { id: string | number }): string => buildUrl(routes.session.path, params),
 
-    kill: (params: { id: string | number }): string => buildUrl(apiSessionPath, params),
+    kill: (params: { id: string | number }): string => buildUrl(routes.session.path, params),
 
-    cleanup: (params: { id: string | number }): string => buildUrl(apiSessionCleanupPath, params),
+    cleanup: (params: { id: string | number }): string =>
+      buildUrl(routes.session.cleanup.path, params),
 
-    input: (params: { id: string | number }): string => buildUrl(apiSessionInputPath, params),
+    input: (params: { id: string | number }): string => buildUrl(routes.session.input.path, params),
 
     rawBuffer: (params: { id: string | number }): string =>
-      buildUrl(apiSessionRawBufferPath, params),
+      buildUrl(routes.session.buffer.raw.path, params),
 
     plainBuffer: (params: { id: string | number }): string =>
-      buildUrl(apiSessionPlainBufferPath, params),
+      buildUrl(routes.session.buffer.plain.path, params),
   }
 }

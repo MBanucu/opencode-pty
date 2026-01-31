@@ -1,11 +1,13 @@
 import { test as extendedTest, expect } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('WebSocket Raw Data Counter', () => {
   extendedTest(
     'increments WS raw_data counter when typing in xterm (input echo)',
     async ({ page, server }) => {
+      const apiClient = createApiClient(server.baseURL)
       // Clear existing sessions and set up clean state
-      await page.request.delete(server.baseURL + '/api/sessions')
+      await apiClient.sessions.clear()
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
       })
@@ -14,12 +16,10 @@ extendedTest.describe('WebSocket Raw Data Counter', () => {
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a bash session that will echo input
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-i'],
-          description: 'Echo test session',
-        },
+      await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-i'],
+        description: 'Echo test session',
       })
 
       await page.waitForSelector('.session-item', { timeout: 5000 })

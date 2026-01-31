@@ -1,11 +1,12 @@
 import { test as extendedTest, expect } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 
-async function clearAllSessions(page: any, server: any) {
-  await page.request.delete(server.baseURL + '/api/sessions')
+async function clearAllSessions(server: any) {
+  const apiClient = createApiClient(server.baseURL)
+  await apiClient.sessions.clear()
 }
 
 async function createSession(
-  page: any,
   server: any,
   {
     command,
@@ -14,12 +15,27 @@ async function createSession(
     env,
   }: { command: string; args: string[]; description: string; env?: Record<string, string> }
 ) {
-  const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-    data: { command, args, description, ...(env && { env }) },
+  const apiClient = createApiClient(server.baseURL)
+  const session = await apiClient.sessions.create({
+    command,
+    args,
+    description,
+    ...(env && { env }),
   })
-  expect(createResponse.status()).toBe(200)
-  const data = await createResponse.json()
-  return data.id
+  return session.id
+}
+
+async function fetchBufferApi(
+  server: any,
+  sessionId: string,
+  bufferType = 'raw'
+): Promise<{ raw: string; byteLength: number } | { plain: string; byteLength: number }> {
+  const apiClient = createApiClient(server.baseURL)
+  if (bufferType === 'raw') {
+    return await apiClient.session.buffer.raw({ id: sessionId })
+  } else {
+    return await apiClient.session.buffer.plain({ id: sessionId })
+  }
 }
 
 async function gotoAndSelectSession(page: any, server: any, description: string, timeout = 10000) {
@@ -28,14 +44,6 @@ async function gotoAndSelectSession(page: any, server: any, description: string,
   await page.locator(`.session-item:has-text(\"${description}\")`).click()
   await page.waitForSelector('.output-container', { timeout })
   await page.waitForSelector('.xterm', { timeout })
-}
-
-async function fetchBufferApi(page: any, server: any, sessionId: string, bufferType = 'raw') {
-  const res = await page.request.get(
-    `${server.baseURL}/api/sessions/${sessionId}/buffer/${bufferType}`
-  )
-  expect(res.status()).toBe(200)
-  return res.json()
 }
 
 import {
@@ -52,9 +60,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should allow basic terminal input and output (minimal isolation check)',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
+      await clearAllSessions(server)
       const desc = 'basic input test session'
-      await createSession(page, server, {
+      await createSession(server, {
         command: 'bash',
         args: [],
         description: desc,
@@ -85,15 +93,18 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should verify buffer preserves newline characters in PTY output',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
-      const sessionId = await createSession(page, server, {
+      await clearAllSessions(server)
+      const sessionId = await createSession(server, {
         command: 'bash',
         args: ['-c', 'printf "line1\nline2\nline3\n"'],
         description: 'newline preservation test',
       })
       await gotoAndSelectSession(page, server, 'newline preservation test', 5000)
       await waitForTerminalRegex(page, /line3/, '__waitForEndOfOutput')
-      const bufferData = await fetchBufferApi(page, server, sessionId, 'raw')
+      const bufferData = (await fetchBufferApi(server, sessionId, 'raw')) as {
+        raw: string
+        byteLength: number
+      }
       expect(bufferData.raw.length).toBeGreaterThan(0)
       expect(bufferData.raw).toContain('line1')
       expect(bufferData.raw).toContain('line2')
@@ -118,15 +129,18 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   )
 
   extendedTest('should expose raw buffer data via API endpoint', async ({ page, server }) => {
-    await clearAllSessions(page, server)
-    const sessionId = await createSession(page, server, {
+    await clearAllSessions(server)
+    const sessionId = await createSession(server, {
       command: 'bash',
       args: ['-c', 'printf "api\ntest\ndata\n"'],
       description: 'API raw buffer test',
     })
     await gotoAndSelectSession(page, server, 'API raw buffer test', 5000)
     await waitForTerminalRegex(page, /data/, '__waitForEndOfApiRaw')
-    const rawData = await fetchBufferApi(page, server, sessionId, 'raw')
+    const rawData = (await fetchBufferApi(server, sessionId, 'raw')) as {
+      raw: string
+      byteLength: number
+    }
     expect(rawData).toHaveProperty('raw')
     expect(rawData).toHaveProperty('byteLength')
     expect(typeof rawData.raw).toBe('string')
@@ -140,21 +154,27 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should expose plain text buffer data via API endpoint',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
-      const sessionId = await createSession(page, server, {
+      await clearAllSessions(server)
+      const sessionId = await createSession(server, {
         command: 'bash',
         args: ['-c', 'echo -e "\x1b[31mRed text\x1b[0m and \x1b[32mgreen text\x1b[0m"'],
         description: 'ANSI test session for plain buffer endpoint',
       })
       await waitForTerminalRegex(page, /green text/, '__waitForGreenText')
-      const plainData = await fetchBufferApi(page, server, sessionId, 'plain')
+      const plainData = (await fetchBufferApi(server, sessionId, 'plain')) as {
+        plain: string
+        byteLength: number
+      }
       expect(plainData).toHaveProperty('plain')
       expect(plainData).toHaveProperty('byteLength')
       expect(typeof plainData.plain).toBe('string')
       expect(typeof plainData.byteLength).toBe('number')
       expect(plainData.plain).toContain('Red text and green text')
       expect(plainData.plain).not.toContain('\x1b[')
-      const rawData = await fetchBufferApi(page, server, sessionId, 'raw')
+      const rawData = (await fetchBufferApi(server, sessionId, 'raw')) as {
+        raw: string
+        byteLength: number
+      }
       expect(rawData.raw).toContain('\x1b[')
       expect(plainData.plain).not.toBe(rawData.raw)
     }
@@ -163,8 +183,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should extract plain text content using SerializeAddon',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
-      await createSession(page, server, {
+      await clearAllSessions(server)
+      await createSession(server, {
         command: 'echo',
         args: ['Hello World'],
         description: 'Simple echo test for SerializeAddon extraction',
@@ -189,8 +209,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should match API plain buffer with SerializeAddon for interactive input',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
-      await createSession(page, server, {
+      await clearAllSessions(server)
+      await createSession(server, {
         command: 'bash',
         args: ['-i'],
         description: 'Double Echo Test Session B',
@@ -203,7 +223,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       await page.keyboard.type('1')
       await waitForTerminalRegex(page, /1/, '__waitInputEchoB')
       // Dump buffer after typing in Session B
-      const sessionId = await createSession(page, server, {
+      const sessionId = await createSession(server, {
         command: 'bash',
         args: ['-i'],
         description: 'Double Echo Test Session C',
@@ -216,7 +236,10 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       await page.keyboard.type('1')
       await waitForTerminalRegex(page, /1/, '__waitInputEchoC')
       // Dump buffer after typing in Session C
-      const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
+      const apiData = (await fetchBufferApi(server, sessionId, 'plain')) as {
+        plain: string
+        byteLength: number
+      }
       const apiPlainText = apiData.plain
       const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {
         excludeModes: true,
@@ -232,8 +255,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should compare API plain text with SerializeAddon for initial bash state',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
-      const sessionId = await createSession(page, server, {
+      await clearAllSessions(server)
+      const sessionId = await createSession(server, {
         command: 'bash',
         args: ['-i'],
         description: 'Initial bash state test for plain text comparison',
@@ -245,7 +268,10 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         5000
       )
       await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitialBash')
-      const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
+      const apiData = (await fetchBufferApi(server, sessionId, 'plain')) as {
+        plain: string
+        byteLength: number
+      }
       const apiPlainText = apiData.plain
       const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {
         excludeModes: true,
@@ -261,15 +287,18 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should compare API plain text with SerializeAddon for cat command',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
-      const sessionId = await createSession(page, server, {
+      await clearAllSessions(server)
+      const sessionId = await createSession(server, {
         command: 'cat',
         args: ['-i'],
         description: 'Cat command test for plain text comparison',
       })
       await gotoAndSelectSession(page, server, 'Cat command test for plain text comparison', 5000)
       // No prompt expected after cat -i, proceed immediately
-      const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
+      const apiData = (await fetchBufferApi(server, sessionId, 'plain')) as {
+        plain: string
+        byteLength: number
+      }
       const apiPlainText = apiData.plain
       const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {
         excludeModes: true,
@@ -283,8 +312,8 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should prevent double-echo by comparing terminal content before and after input',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
-      await createSession(page, server, {
+      await clearAllSessions(server)
+      await createSession(server, {
         command: 'bash',
         args: ['-i'],
         description: 'Double-echo prevention test',
@@ -315,13 +344,13 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
   extendedTest(
     'should clear terminal content when switching sessions',
     async ({ page, server }) => {
-      await clearAllSessions(page, server)
-      await createSession(page, server, {
+      await clearAllSessions(server)
+      await createSession(server, {
         command: 'echo',
         args: ['SESSION_ONE_CONTENT'],
         description: 'Session One',
       })
-      await createSession(page, server, {
+      await createSession(server, {
         command: 'echo',
         args: ['SESSION_TWO_CONTENT'],
         description: 'Session Two',

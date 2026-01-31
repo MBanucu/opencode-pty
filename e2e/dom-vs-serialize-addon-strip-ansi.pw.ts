@@ -1,23 +1,23 @@
 import { test as extendedTest } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 import { waitForTerminalRegex } from './xterm-test-helpers'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should compare DOM scraping vs SerializeAddon with strip-ansi',
     async ({ page, server }) => {
+      const apiClient = createApiClient(server.baseURL)
       // Clear any existing sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await apiClient.sessions.clear()
 
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create interactive bash session
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-i'],
-          description: 'Strip-ANSI comparison test',
-        },
+      await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-i'],
+        description: 'Strip-ANSI comparison test',
       })
 
       // Wait for session to appear and select it

@@ -1,29 +1,25 @@
 import { test as extendedTest, expect } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should verify server buffer consistency with terminal display',
     async ({ page, server }) => {
+      const apiClient = createApiClient(server.baseURL)
       // Clear any existing sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await apiClient.sessions.clear()
 
       await page.goto(server.baseURL)
 
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a session that runs a command and produces output
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'echo "Hello from consistency test" && sleep 1'],
-          description: 'Buffer consistency test',
-        },
+      const session = await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-c', 'echo "Hello from consistency test" && sleep 1'],
+        description: 'Buffer consistency test',
       })
-      expect(createResponse.status()).toBe(200)
-
-      // Get the session ID from the response
-      const createData = await createResponse.json()
-      const sessionId = createData.id
+      const sessionId = session.id
       expect(sessionId).toBeDefined()
 
       // Wait for session to appear and select it
@@ -57,11 +53,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
       })
 
       // Get server buffer content via API
-      const bufferResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/raw`
-      )
-      expect(bufferResponse.status()).toBe(200)
-      const bufferData = await bufferResponse.json()
+      const bufferData = await apiClient.session.buffer.raw({ id: sessionId })
 
       // Verify server buffer contains the expected content
       expect(bufferData.raw.length).toBeGreaterThan(0)

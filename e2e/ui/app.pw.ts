@@ -1,10 +1,11 @@
 import { test as extendedTest, expect } from '../fixtures'
+import { createApiClient } from '../helpers/apiClient'
 
 extendedTest.describe('App Component', () => {
   extendedTest('renders the PTY Sessions title', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     // Ensure clean state for parallel execution
-    const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
-    expect(clearResponse.status()).toBe(200)
+    await apiClient.sessions.clear()
 
     await page.goto(server.baseURL + '/')
     await expect(page.getByText('PTY Sessions')).toBeVisible()
@@ -16,19 +17,18 @@ extendedTest.describe('App Component', () => {
   })
 
   extendedTest('receives WebSocket session_list messages', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     // Clear any existing sessions for clean state
-    await page.request.delete(server.baseURL + '/api/sessions')
+    await apiClient.sessions.clear()
 
     // Navigate to page and wait for WebSocket connection
     await page.goto(server.baseURL + '/')
 
     // Create a session to trigger session_list update
-    await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'echo',
-        args: ['test'],
-        description: 'Test session for WebSocket check',
-      },
+    await apiClient.sessions.create({
+      command: 'echo',
+      args: ['test'],
+      description: 'Test session for WebSocket check',
     })
 
     // Wait for session to appear in UI (indicates WebSocket session_list was processed)
@@ -40,9 +40,9 @@ extendedTest.describe('App Component', () => {
   })
 
   extendedTest('shows no active sessions message when empty', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     // Clear any existing sessions
-    const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
-    expect(clearResponse.status()).toBe(200)
+    await apiClient.sessions.clear()
 
     await page.goto(server.baseURL + '/')
     await expect(page.getByText('● Connected')).toBeVisible()
@@ -52,9 +52,9 @@ extendedTest.describe('App Component', () => {
   })
 
   extendedTest('shows empty state when no session is selected', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     // Clear any existing sessions
-    const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
-    expect(clearResponse.status()).toBe(200)
+    await apiClient.sessions.clear()
 
     await page.goto(server.baseURL + '/')
 
@@ -64,14 +64,11 @@ extendedTest.describe('App Component', () => {
     })
 
     // Create a session
-    const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'echo',
-        args: ['test'],
-        description: 'Test session',
-      },
+    await apiClient.sessions.create({
+      command: 'echo',
+      args: ['test'],
+      description: 'Test session',
     })
-    expect(createResponse.status()).toBe(200)
 
     // Reload to get the session list
     await page.reload()
@@ -86,28 +83,25 @@ extendedTest.describe('App Component', () => {
     extendedTest(
       'increments WS message counter when receiving data for active session',
       async ({ page, server }) => {
+        const apiClient = createApiClient(server.baseURL)
         extendedTest.setTimeout(15000) // Increase timeout for slow session startup
 
         // Navigate and wait for initial setup
         await page.goto(server.baseURL + '/')
 
         // Clear any existing sessions for clean test state
-        await page.request.delete(server.baseURL + '/api/sessions')
+        await apiClient.sessions.clear()
 
         // Create a test session that produces continuous output
-        const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-          data: {
-            command: 'bash',
-            args: [
-              '-c',
-              'echo "Welcome to live streaming test"; while true; do echo "$(date +"%H:%M:%S"): Live update"; sleep 0.1; done',
-            ],
-            description: 'Live streaming test session',
-          },
+        const session = await apiClient.sessions.create({
+          command: 'bash',
+          args: [
+            '-c',
+            'echo "Welcome to live streaming test"; while true; do echo "$(date +"%H:%M:%S"): Live update"; sleep 0.1; done',
+          ],
+          description: 'Live streaming test session',
         })
-        console.log('Session creation response status:', createResponse.status())
-        const sessionData = await createResponse.json()
-        console.log('Created session:', sessionData)
+        console.log('Created session:', session)
 
         // Robustly wait for session to actually start (event-driven)
         const sessionsApi = server.baseURL + '/api/sessions'
@@ -131,13 +125,12 @@ extendedTest.describe('App Component', () => {
         // This enforces robust event-driven wait before proceeding further.
 
         // Check session status
-        const sessionsResponse = await page.request.get(server.baseURL + '/api/sessions')
-        const sessions = await sessionsResponse.json()
+        const sessions = await apiClient.sessions.list()
         console.log('All sessions after creation:', sessions)
 
         if (sessions.length > 0) {
-          console.log('First session status:', sessions[0].status)
-          console.log('First session PID:', sessions[0].pid)
+          console.log('First session status:', sessions[0]?.status)
+          console.log('First session PID:', sessions[0]?.pid)
         }
 
         // Don't reload - wait for the session to appear in the UI
@@ -167,13 +160,7 @@ extendedTest.describe('App Component', () => {
 
         // Check if session has output
         if (sessionId) {
-          const bufferResponse = await page.request.get(
-            `${server.baseURL}/api/sessions/${sessionId}/buffer/raw`
-          )
-          if (bufferResponse.status() === 200) {
-            await bufferResponse.json()
-          } else {
-          }
+          await apiClient.session.buffer.raw({ id: sessionId })
         }
 
         const initialWsMatch = initialDebugText.match(/WS raw_data:\s*(\d+)/)
@@ -205,6 +192,7 @@ extendedTest.describe('App Component', () => {
     extendedTest(
       'does not increment WS counter for messages from inactive sessions',
       async ({ page, server }) => {
+        const apiClient = createApiClient(server.baseURL)
         // Log all console messages for debugging
         page.on('console', () => {})
 
@@ -213,24 +201,20 @@ extendedTest.describe('App Component', () => {
         await page.goto(server.baseURL + '/')
 
         // Clear any existing sessions for clean test state
-        await page.request.delete(server.baseURL + '/api/sessions')
+        await apiClient.sessions.clear()
 
         // Create first session
-        await page.request.post(server.baseURL + '/api/sessions', {
-          data: {
-            command: 'bash',
-            args: ['-c', 'while true; do echo "session1 $(date +%s)"; sleep 0.1; done'],
-            description: 'Session 1',
-          },
+        await apiClient.sessions.create({
+          command: 'bash',
+          args: ['-c', 'while true; do echo "session1 $(date +%s)"; sleep 0.1; done'],
+          description: 'Session 1',
         })
 
         // Create second session
-        await page.request.post(server.baseURL + '/api/sessions', {
-          data: {
-            command: 'bash',
-            args: ['-c', 'while true; do echo "session2 $(date +%s)"; sleep 0.1; done'],
-            description: 'Session 2',
-          },
+        await apiClient.sessions.create({
+          command: 'bash',
+          args: ['-c', 'while true; do echo "session2 $(date +%s)"; sleep 0.1; done'],
+          description: 'Session 2',
         })
 
         // Wait until both session items appear in the sidebar before continuing
@@ -282,21 +266,20 @@ extendedTest.describe('App Component', () => {
     )
 
     extendedTest('maintains WS counter state during page refresh', async ({ page, server }) => {
+      const apiClient = createApiClient(server.baseURL)
       // Log all console messages for debugging
       page.on('console', () => {})
 
       await page.goto(server.baseURL + '/')
 
       // Clear any existing sessions for clean test state
-      await page.request.delete(server.baseURL + '/api/sessions')
+      await apiClient.sessions.clear()
 
       // Create a streaming session
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'while true; do echo "streaming"; sleep 0.1; done'],
-          description: 'Streaming session',
-        },
+      await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-c', 'while true; do echo "streaming"; sleep 0.1; done'],
+        description: 'Streaming session',
       })
 
       // Wait until a session item appears in the sidebar (robust: >= 1 session)

@@ -5,24 +5,21 @@ import {
   waitForTerminalRegex,
 } from './xterm-test-helpers'
 import { test as extendedTest, expect } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 
 extendedTest(
   'should assert exactly 2 "$" prompts appear and verify 4 extraction methods match (ignoring \\r) with echo "Hello World"',
   async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     // Clear sessions for state isolation
-    await page.request.post(server.baseURL + '/api/sessions/clear')
+    await apiClient.sessions.clear()
 
     // Setup session with echo command
-    const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'bash',
-        args: ['-i'],
-        description: 'Echo "Hello World" test',
-      },
+    const session = await apiClient.sessions.create({
+      command: 'bash',
+      args: ['-i'],
+      description: 'Echo "Hello World" test',
     })
-    expect(createResponse.status()).toBe(200)
-    const sessionData = await createResponse.json()
-    const sessionId = sessionData.id
 
     // Navigate and select
     await page.goto(server.baseURL)
@@ -37,9 +34,7 @@ extendedTest(
     // Send echo command
     await page.locator('.terminal.xterm').click()
     // Try backend direct input for control comparison
-    await page.request.post(server.baseURL + `/api/sessions/${sessionId}/input`, {
-      data: { data: 'echo "Hello World"\r' },
-    })
+    await apiClient.session.input({ id: session.id }, { data: 'echo "Hello World"\r' })
     await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld') // Event-driven: output arrived
 
     // === EXTRACTION METHODS ===
@@ -53,11 +48,7 @@ extendedTest(
     const domContent = await getTerminalPlainText(page)
 
     // API
-    const plainApiResponse = await page.request.get(
-      server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
-    )
-    expect(plainApiResponse.status()).toBe(200)
-    const plainData = await plainApiResponse.json()
+    const plainData = await apiClient.session.buffer.plain({ id: session.id })
     const plainApiContent = plainData.plain.split('\n')
 
     // === VISUAL VERIFICATION LOGGING ===

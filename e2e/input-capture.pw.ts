@@ -1,22 +1,22 @@
 import { test as extendedTest, expect } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('PTY Input Capture', () => {
   extendedTest(
     'should capture and send printable character input (letters)',
     async ({ page, server }) => {
-      await page.request.delete(server.baseURL + '/api/sessions')
+      const apiClient = createApiClient(server.baseURL)
+      await apiClient.sessions.clear()
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
         ;(window as any).inputRequests = []
       })
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-i'],
-          description: 'Input test session',
-        },
+      await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-i'],
+        description: 'Input test session',
       })
       await page.waitForSelector('.session-item', { timeout: 5000 })
       await page.locator('.session-item:has-text("Input test session")').click()
@@ -51,19 +51,18 @@ extendedTest.describe('PTY Input Capture', () => {
   )
 
   extendedTest('should capture spacebar input', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await page.request.delete(server.baseURL + '/api/sessions')
+    await apiClient.sessions.clear()
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-    await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'bash',
-        args: ['-i'],
-        description: 'Space test session',
-      },
+    await apiClient.sessions.create({
+      command: 'bash',
+      args: ['-i'],
+      description: 'Space test session',
     })
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item:has-text("Space test session")').click()
@@ -94,19 +93,18 @@ extendedTest.describe('PTY Input Capture', () => {
   })
 
   extendedTest('should capture "ls" command with Enter key', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await page.request.delete(server.baseURL + '/api/sessions')
+    await apiClient.sessions.clear()
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-    await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'bash',
-        args: ['-i'],
-        description: 'ls command test session',
-      },
+    await apiClient.sessions.create({
+      command: 'bash',
+      args: ['-i'],
+      description: 'ls command test session',
     })
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item:has-text("ls command test session")').click()
@@ -147,19 +145,18 @@ extendedTest.describe('PTY Input Capture', () => {
   })
 
   extendedTest('should send backspace sequences', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await page.request.delete(server.baseURL + '/api/sessions')
+    await apiClient.sessions.clear()
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
-    await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'bash',
-        args: ['-i'],
-        description: 'Backspace test session',
-      },
+    await apiClient.sessions.create({
+      command: 'bash',
+      args: ['-i'],
+      description: 'Backspace test session',
     })
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item:has-text("Backspace test session")').click()
@@ -193,21 +190,20 @@ extendedTest.describe('PTY Input Capture', () => {
   })
 
   extendedTest('should handle Ctrl+C interrupt', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
       ;(window as any).killRequests = []
     })
-    await page.request.delete(server.baseURL + '/api/sessions')
+    await apiClient.sessions.clear()
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     page.on('dialog', (dialog) => dialog.accept())
-    await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'bash',
-        args: ['-i'],
-        description: 'Ctrl+C test session',
-      },
+    await apiClient.sessions.create({
+      command: 'bash',
+      args: ['-i'],
+      description: 'Ctrl+C test session',
     })
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item:has-text("Ctrl+C test session")').click()
@@ -268,20 +264,19 @@ extendedTest.describe('PTY Input Capture', () => {
   })
 
   extendedTest('should not capture input when session is inactive', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     await page.addInitScript(() => {
       localStorage.setItem('skip-autoselect', 'true')
       ;(window as any).inputRequests = []
     })
-    await page.request.delete(server.baseURL + '/api/sessions')
+    await apiClient.sessions.clear()
     await page.goto(server.baseURL)
     await page.waitForSelector('h1:has-text("PTY Sessions")')
     page.on('dialog', (dialog) => dialog.accept())
-    await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'bash',
-        args: ['-c', 'echo "Ready for input"'],
-        description: 'Inactive session test',
-      },
+    await apiClient.sessions.create({
+      command: 'bash',
+      args: ['-c', 'echo "Ready for input"'],
+      description: 'Inactive session test',
     })
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item:has-text("Inactive session test")').click()
@@ -313,19 +308,18 @@ extendedTest.describe('PTY Input Capture', () => {
   extendedTest(
     'should display "Hello World" twice when running echo command',
     async ({ page, server }) => {
+      const apiClient = createApiClient(server.baseURL)
       await page.addInitScript(() => {
         localStorage.setItem('skip-autoselect', 'true')
         ;(window as any).inputRequests = []
       })
-      await page.request.delete(server.baseURL + '/api/sessions')
+      await apiClient.sessions.clear()
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', "echo 'Hello World'"],
-          description: 'Echo test session',
-        },
+      await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-c', "echo 'Hello World'"],
+        description: 'Echo test session',
       })
       await page.waitForSelector('.session-item:has-text("Echo test session")', { timeout: 5000 })
       await page.locator('.session-item:has-text("Echo test session")').click()

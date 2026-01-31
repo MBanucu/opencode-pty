@@ -17,16 +17,7 @@ import { handleUpgrade } from './handlers/upgrade.ts'
 import { handleWebSocketMessage } from './handlers/websocket.ts'
 import { CallbackManager } from './CallbackManager.ts'
 
-import {
-  wsPath,
-  healthPath,
-  apiBasePath,
-  apiSessionPath,
-  apiSessionCleanupPath,
-  apiSessionInputPath,
-  apiSessionRawBufferPath,
-  apiSessionPlainBufferPath,
-} from '../shared/routes.ts'
+import { routes } from '../shared/routes.ts'
 
 export class PTYServer implements Disposable {
   public readonly server: Server<any>
@@ -56,27 +47,27 @@ export class PTYServer implements Disposable {
 
       routes: {
         ...this.staticRoutes,
-        [wsPath]: (req: Request) => handleUpgrade(this.server, req),
-        [healthPath]: () => handleHealth(this.server),
-        [apiBasePath]: {
+        [routes.websocket.path]: (req: Request) => handleUpgrade(this.server, req),
+        [routes.health.path]: () => handleHealth(this.server),
+        [routes.sessions.path]: {
           GET: getSessions,
           POST: createSession,
           DELETE: clearSessions,
         },
-        [apiSessionPath]: {
+        [routes.session.path]: {
           GET: getSession,
           DELETE: killSession,
         },
-        [apiSessionCleanupPath]: {
+        [routes.session.cleanup.path]: {
           DELETE: cleanupSession,
         },
-        [apiSessionInputPath]: {
+        [routes.session.input.path]: {
           POST: sendInput,
         },
-        [apiSessionRawBufferPath]: {
+        [routes.session.buffer.raw.path]: {
           GET: getRawBuffer,
         },
-        [apiSessionPlainBufferPath]: {
+        [routes.session.buffer.plain.path]: {
           GET: getPlainBuffer,
         },
       },
@@ -97,6 +88,6 @@ export class PTYServer implements Disposable {
   }
 
   public getWsUrl(): string {
-    return `${this.server.url.origin.replace(/^http/, 'ws')}${wsPath}`
+    return `${this.server.url.origin.replace(/^http/, 'ws')}${routes.websocket.path}`
   }
 }

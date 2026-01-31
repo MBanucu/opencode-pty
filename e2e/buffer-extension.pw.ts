@@ -1,5 +1,6 @@
 import { test as extendedTest, expect } from './fixtures'
 import type { Page } from '@playwright/test'
+import { createApiClient } from './helpers/apiClient'
 
 /**
  * Session and Terminal Helpers for E2E buffer extension tests
@@ -9,12 +10,10 @@ async function setupSession(
   server: { baseURL: string; port: number },
   description: string
 ): Promise<string> {
-  await page.request.delete(server.baseURL + '/api/sessions')
-  const createResp = await page.request.post(server.baseURL + '/api/sessions', {
-    data: { command: 'bash', args: ['-i'], description },
-  })
-  expect(createResp.status()).toBe(200)
-  const { id } = await createResp.json()
+  const apiClient = createApiClient(server.baseURL)
+  await apiClient.sessions.clear()
+  const session = await apiClient.sessions.create({ command: 'bash', args: ['-i'], description })
+  const { id } = session
   await page.goto(server.baseURL)
   await page.waitForSelector('h1:has-text("PTY Sessions")')
   await page.waitForSelector('.session-item')
@@ -31,13 +30,11 @@ async function typeInTerminal(page: Page, text: string) {
   // Don't wait for text to appear since we're testing buffer extension, not visual echo
 }
 async function getRawBuffer(
-  page: Page,
   server: { baseURL: string; port: number },
   sessionId: string
 ): Promise<string> {
-  const resp = await page.request.get(`${server.baseURL}/api/sessions/${sessionId}/buffer/raw`)
-  expect(resp.status()).toBe(200)
-  const data = await resp.json()
+  const apiClient = createApiClient(server.baseURL)
+  const data = await apiClient.session.buffer.raw({ id: sessionId })
   return data.raw
 }
 // Usage: await getSerializedContentByXtermSerializeAddon(page, { excludeModes: true, excludeAltBuffer: true })
@@ -48,10 +45,10 @@ extendedTest.describe('Buffer Extension on Input', () => {
     async ({ page, server }) => {
       const description = 'Buffer extension test session'
       const sessionId = await setupSession(page, server, description)
-      const initialRaw = await getRawBuffer(page, server, sessionId)
+      const initialRaw = await getRawBuffer(server, sessionId)
       const initialLen = initialRaw.length
       await typeInTerminal(page, 'a')
-      const afterRaw = await getRawBuffer(page, server, sessionId)
+      const afterRaw = await getRawBuffer(server, sessionId)
       expect(afterRaw.length).toBe(initialLen + 1)
       expect(afterRaw).toContain('a')
     }
@@ -70,14 +67,12 @@ extendedTest.describe('Buffer Extension on Input', () => {
       expect(initialContent).toContain('$')
 
       // Create a new session with different output
-      const createResp = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-c', 'echo "New session test"'],
-          description: 'New test session',
-        },
+      const apiClient = createApiClient(server.baseURL)
+      await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-c', 'echo "New session test"'],
+        description: 'New test session',
       })
-      expect(createResp.status()).toBe(200)
       await page.waitForSelector('.session-item:has-text("New test session")')
       await page.locator('.session-item:has-text("New test session")').click()
       await page.waitForTimeout(1000)
@@ -104,10 +99,12 @@ extendedTest.describe('Buffer Extension on Input', () => {
       expect(initialContent).toContain('$')
 
       // Create a session that produces 'a' in output
-      const createResp = await page.request.post(server.baseURL + '/api/sessions', {
-        data: { command: 'bash', args: ['-c', 'echo a'], description: 'Echo a session' },
+      const apiClient = createApiClient(server.baseURL)
+      await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-c', 'echo a'],
+        description: 'Echo a session',
       })
-      expect(createResp.status()).toBe(200)
       await page.waitForSelector('.session-item:has-text("Echo a session")')
       await page.locator('.session-item:has-text("Echo a session")').click()
       await page.waitForTimeout(1000)

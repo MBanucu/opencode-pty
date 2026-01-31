@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { test as extendedTest } from '../fixtures'
+import { createApiClient } from '../helpers/apiClient'
 
 extendedTest.describe('Server Clean Start', () => {
   extendedTest('should start with empty session list via API', async ({ request, server }) => {
@@ -23,12 +24,12 @@ extendedTest.describe('Server Clean Start', () => {
   })
 
   extendedTest('should start with empty session list via browser', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     // Navigate to the web UI
     await page.goto(server.baseURL + '/')
 
     // Clear any existing sessions from previous tests
-    const clearResponse = await page.request.delete(server.baseURL + '/api/sessions')
-    expect(clearResponse.status()).toBe(200)
+    await apiClient.sessions.clear()
 
     // Wait for sessions to actually be cleared in the UI (retry up to 5 times)
     for (let i = 0; i < 5; i++) {

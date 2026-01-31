@@ -1,22 +1,22 @@
 import { test as extendedTest, expect } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('Xterm Content Extraction', () => {
   extendedTest(
     'should compare SerializeAddon output with server buffer content',
     async ({ page, server }) => {
+      const apiClient = createApiClient(server.baseURL)
       // Clear any existing sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await apiClient.sessions.clear()
 
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create a session that runs a command and produces output
-      await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'echo',
-          args: ['Hello from SerializeAddon test'],
-          description: 'SerializeAddon extraction test',
-        },
+      await apiClient.sessions.create({
+        command: 'echo',
+        args: ['Hello from SerializeAddon test'],
+        description: 'SerializeAddon extraction test',
       })
 
       // Wait for session to appear and select it

@@ -1,13 +1,7 @@
 import { manager } from '../../../plugin/pty/manager.ts'
 import type { BunRequest } from 'bun'
 import { JsonResponse, ErrorResponse } from './responses.ts'
-import {
-  apiSessionCleanupPath,
-  apiSessionInputPath,
-  apiSessionPath,
-  apiSessionPlainBufferPath,
-  apiSessionRawBufferPath,
-} from '../../shared/routes.ts'
+import { routes } from '../../shared/routes.ts'
 
 export function getSessions() {
   const sessions = manager.list()
@@ -44,7 +38,7 @@ export function clearSessions() {
   return new JsonResponse({ success: true })
 }
 
-export function getSession(req: BunRequest<typeof apiSessionPath>) {
+export function getSession(req: BunRequest<typeof routes.session.path>) {
   const session = manager.get(req.params.id)
   if (!session) {
     return new ErrorResponse('Session not found', 404)
@@ -52,7 +46,9 @@ export function getSession(req: BunRequest<typeof apiSessionPath>) {
   return new JsonResponse(session)
 }
 
-export async function sendInput(req: BunRequest<typeof apiSessionInputPath>): Promise<Response> {
+export async function sendInput(
+  req: BunRequest<typeof routes.session.input.path>
+): Promise<Response> {
   try {
     const body = (await req.json()) as { data: string }
     if (!body.data || typeof body.data !== 'string') {
@@ -68,7 +64,7 @@ export async function sendInput(req: BunRequest<typeof apiSessionInputPath>): Pr
   }
 }
 
-export function cleanupSession(req: BunRequest<typeof apiSessionCleanupPath>) {
+export function cleanupSession(req: BunRequest<typeof routes.session.cleanup.path>) {
   console.log('Cleaning up session', req.params.id)
   const success = manager.kill(req.params.id, true)
   if (!success) {
@@ -77,7 +73,7 @@ export function cleanupSession(req: BunRequest<typeof apiSessionCleanupPath>) {
   return new JsonResponse({ success: true })
 }
 
-export function killSession(req: BunRequest<typeof apiSessionPath>) {
+export function killSession(req: BunRequest<typeof routes.session.path>) {
   const success = manager.kill(req.params.id)
   if (!success) {
     return new ErrorResponse('Failed to kill session', 400)
@@ -85,7 +81,7 @@ export function killSession(req: BunRequest<typeof apiSessionPath>) {
   return new JsonResponse({ success: true })
 }
 
-export function getRawBuffer(req: BunRequest<typeof apiSessionRawBufferPath>) {
+export function getRawBuffer(req: BunRequest<typeof routes.session.buffer.raw.path>) {
   const bufferData = manager.getRawBuffer(req.params.id)
   if (!bufferData) {
     return new ErrorResponse('Session not found', 404)
@@ -94,7 +90,7 @@ export function getRawBuffer(req: BunRequest<typeof apiSessionRawBufferPath>) {
   return new JsonResponse(bufferData)
 }
 
-export function getPlainBuffer(req: BunRequest<typeof apiSessionPlainBufferPath>) {
+export function getPlainBuffer(req: BunRequest<typeof routes.session.buffer.plain.path>) {
   const bufferData = manager.getRawBuffer(req.params.id)
   if (!bufferData) {
     return new ErrorResponse('Session not found', 404)

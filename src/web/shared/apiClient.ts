@@ -69,64 +69,80 @@ export async function apiFetchJson<
   return response.json() as Promise<T>
 }
 
-// Convenience API for specific endpoints with proper typing
-export const api = {
-  sessions: {
-    list: () =>
-      apiFetchJson<typeof routes.sessions, 'GET', PTYSessionInfo[]>(routes.sessions, {
-        method: 'GET',
-      }),
+// Factory function to create API client with fixed baseUrl (for tests)
+export function createApiClient(baseUrl: string) {
+  return {
+    sessions: {
+      list: () =>
+        apiFetchJson<typeof routes.sessions, 'GET', PTYSessionInfo[]>(routes.sessions, {
+          method: 'GET',
+          baseUrl,
+        }),
 
-    create: (body: { command: string; args?: string[]; description?: string; workdir?: string }) =>
-      apiFetchJson<typeof routes.sessions, 'POST', PTYSessionInfo>(routes.sessions, {
-        method: 'POST',
-        body,
-      }),
+      create: (body: {
+        command: string
+        args?: string[]
+        description?: string
+        workdir?: string
+      }) =>
+        apiFetchJson<typeof routes.sessions, 'POST', PTYSessionInfo>(routes.sessions, {
+          method: 'POST',
+          body,
+          baseUrl,
+        }),
 
-    clear: () =>
-      apiFetchJson<typeof routes.sessions, 'DELETE', { success: boolean }>(routes.sessions, {
-        method: 'DELETE',
-      }),
-  },
+      clear: () =>
+        apiFetchJson<typeof routes.sessions, 'DELETE', { success: boolean }>(routes.sessions, {
+          method: 'DELETE',
+          baseUrl,
+        }),
+    },
 
-  session: {
-    get: (params: { id: string }) =>
-      apiFetchJson<typeof routes.session, 'GET', PTYSessionInfo>(routes.session, {
-        method: 'GET',
-        params,
-      }),
+    session: {
+      get: (params: { id: string }) =>
+        apiFetchJson<typeof routes.session, 'GET', PTYSessionInfo>(routes.session, {
+          method: 'GET',
+          params,
+          baseUrl,
+        }),
 
-    kill: (params: { id: string }) =>
-      apiFetchJson<typeof routes.session, 'DELETE', { success: boolean }>(routes.session, {
-        method: 'DELETE',
-        params,
-      }),
+      kill: (params: { id: string }) =>
+        apiFetchJson<typeof routes.session, 'DELETE', { success: boolean }>(routes.session, {
+          method: 'DELETE',
+          params,
+          baseUrl,
+        }),
 
-    input: (params: { id: string }, body: { data: string }) =>
-      apiFetchJson<typeof routes.session.input, 'POST', { success: boolean }>(
-        routes.session.input,
-        { method: 'POST', params, body }
-      ),
-
-    cleanup: (params: { id: string }) =>
-      apiFetchJson<typeof routes.session.cleanup, 'DELETE', { success: boolean }>(
-        routes.session.cleanup,
-        { method: 'DELETE', params }
-      ),
-
-    buffer: {
-      raw: (params: { id: string }) =>
-        apiFetchJson<typeof routes.session.buffer.raw, 'GET', { raw: string }>(
-          routes.session.buffer.raw,
-          { method: 'GET', params }
+      input: (params: { id: string }, body: { data: string }) =>
+        apiFetchJson<typeof routes.session.input, 'POST', { success: boolean }>(
+          routes.session.input,
+          { method: 'POST', params, body, baseUrl }
         ),
 
-      plain: (params: { id: string }) =>
-        apiFetchJson<
-          typeof routes.session.buffer.plain,
-          'GET',
-          { plain: string; byteLength: number }
-        >(routes.session.buffer.plain, { method: 'GET', params }),
+      cleanup: (params: { id: string }) =>
+        apiFetchJson<typeof routes.session.cleanup, 'DELETE', { success: boolean }>(
+          routes.session.cleanup,
+          { method: 'DELETE', params, baseUrl }
+        ),
+
+      buffer: {
+        raw: (params: { id: string }) =>
+          apiFetchJson<
+            typeof routes.session.buffer.raw,
+            'GET',
+            { raw: string; byteLength: number }
+          >(routes.session.buffer.raw, { method: 'GET', params, baseUrl }),
+
+        plain: (params: { id: string }) =>
+          apiFetchJson<
+            typeof routes.session.buffer.plain,
+            'GET',
+            { plain: string; byteLength: number }
+          >(routes.session.buffer.plain, { method: 'GET', params, baseUrl }),
+      },
     },
-  },
-} as const
+  } as const
+}
+
+// Convenience API for browser use (auto-detects baseUrl from location)
+export const api = createApiClient('')

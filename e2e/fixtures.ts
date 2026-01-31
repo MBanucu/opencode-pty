@@ -1,6 +1,8 @@
 import { test as base, type WorkerInfo } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
 
+import { createApiClient } from './helpers/apiClient'
+
 async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
@@ -13,7 +15,9 @@ async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
   throw new Error(`Server did not become ready at ${url} within ${timeoutMs}ms`)
 }
 
-type TestFixtures = {}
+type TestFixtures = {
+  api: ReturnType<typeof createApiClient>
+}
 type WorkerFixtures = {
   server: { baseURL: string; port: number }
 }
@@ -87,7 +91,8 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
         // Clear any leftover sessions from previous test runs
         try {
-          await fetch(`${baseURL}/api/sessions`, { method: 'DELETE' })
+          const apiClient = createApiClient(baseURL)
+          await apiClient.sessions.clear()
         } catch (error) {
           // Ignore clear errors during startup
           console.log(`[Worker ${workerIndex}] Could not clear sessions during startup: ${error}`)
@@ -119,6 +124,11 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     },
     { scope: 'worker', auto: true },
   ],
+
+  api: async ({ server }, use) => {
+    const api = createApiClient(server.baseURL)
+    await use(api)
+  },
 })
 
 export { expect } from '@playwright/test'

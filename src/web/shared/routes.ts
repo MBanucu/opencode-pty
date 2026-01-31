@@ -37,13 +37,3 @@ export const routes = {
     },
   },
 } as const
-
-// Backward compatibility exports
-export const wsPath = routes.websocket.path
-export const healthPath = routes.health.path
-export const apiBasePath = routes.sessions.path
-export const apiSessionPath = routes.session.path
-export const apiSessionCleanupPath = routes.session.cleanup.path
-export const apiSessionInputPath = routes.session.input.path
-export const apiSessionRawBufferPath = routes.session.buffer.raw.path
-export const apiSessionPlainBufferPath = routes.session.buffer.plain.path

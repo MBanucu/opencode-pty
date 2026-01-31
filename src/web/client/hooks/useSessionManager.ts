@@ -77,11 +77,6 @@ export function useSessionManager({
     try {
       await api.session.kill({ id: activeSession.id })
 
-      if (true) {
-        // API returns success, so always set to null
-        setActiveSession(null)
-        onRawOutputUpdate?.('')
-      }
       // eslint-disable-next-line no-empty
     } catch {}
   }, [activeSession, setActiveSession, onRawOutputUpdate])

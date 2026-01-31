@@ -1,4 +1,5 @@
 import { test as extendedTest, expect } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 import { waitForTerminalRegex, getTerminalPlainText } from './xterm-test-helpers'
 
 const findLastNonEmptyLineIndex = (lines: string[]): number => {
@@ -12,18 +13,16 @@ const findLastNonEmptyLineIndex = (lines: string[]): number => {
 
 extendedTest.describe('Xterm Newline Handling', () => {
   extendedTest('should capture typed character in xterm display', async ({ page, server }) => {
+    const apiClient = createApiClient(server.baseURL)
     // Clear any existing sessions
-    await page.request.post(server.baseURL + '/api/sessions/clear')
+    await apiClient.sessions.clear()
 
     // Create interactive bash session
-    const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-      data: {
-        command: 'bash',
-        args: ['-i'],
-        description: 'Simple typing test session',
-      },
+    await apiClient.sessions.create({
+      command: 'bash',
+      args: ['-i'],
+      description: 'Simple typing test session',
     })
-    expect(createResponse.status()).toBe(200)
 
     // Navigate and select session
     await page.goto(server.baseURL)
@@ -54,18 +53,16 @@ extendedTest.describe('Xterm Newline Handling', () => {
   extendedTest(
     'should not add extra newlines when running echo command',
     async ({ page, server }) => {
+      const apiClient = createApiClient(server.baseURL)
       // Clear any existing sessions
-      await page.request.post(server.baseURL + '/api/sessions/clear')
+      await apiClient.sessions.clear()
 
       // Create interactive bash session
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-i'],
-          description: 'PTY Buffer readRaw() Function',
-        },
+      await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-i'],
+        description: 'PTY Buffer readRaw() Function',
       })
-      expect(createResponse.status()).toBe(200)
 
       // Navigate and select session
       await page.goto(server.baseURL)

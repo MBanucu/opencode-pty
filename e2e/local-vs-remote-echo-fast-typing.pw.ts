@@ -1,27 +1,24 @@
 import { getTerminalPlainText } from './xterm-test-helpers'
 import { test as extendedTest, expect } from './fixtures'
+import { createApiClient } from './helpers/apiClient'
 
 extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typing)', () => {
   extendedTest(
     'should demonstrate local vs remote echo behavior with fast typing',
     async ({ page, server }) => {
+      const apiClient = createApiClient(server.baseURL)
       // Clear any existing sessions
-      await page.request.delete(server.baseURL + '/api/sessions')
+      await apiClient.sessions.clear()
 
       await page.goto(server.baseURL)
       await page.waitForSelector('h1:has-text("PTY Sessions")')
 
       // Create interactive bash session
-      const createResponse = await page.request.post(server.baseURL + '/api/sessions', {
-        data: {
-          command: 'bash',
-          args: ['-i'],
-          description: 'Local vs remote echo test',
-        },
+      const session = await apiClient.sessions.create({
+        command: 'bash',
+        args: ['-i'],
+        description: 'Local vs remote echo test',
       })
-      expect(createResponse.status()).toBe(200)
-      const sessionData = await createResponse.json()
-      const sessionId = sessionData.id
 
       // Wait for session to appear and select it
       await page.waitForSelector('.session-item', { timeout: 5000 })
@@ -46,12 +43,8 @@ extendedTest.describe('Xterm Content Extraction - Local vs Remote Echo (Fast Typ
       const domLines = echoObservations[echoObservations.length - 1] || []
 
       // Get plain buffer from API
-      const plainApiResponse = await page.request.get(
-        server.baseURL + `/api/sessions/${sessionId}/buffer/plain`
-      )
-      expect(plainApiResponse.status()).toBe(200)
-      const plainData = await plainApiResponse.json()
-      const plainBuffer = plainData.plain || plainData.data || ''
+      const plainData = await apiClient.session.buffer.plain({ id: session.id })
+      const plainBuffer = plainData.plain
 
       // Analysis
       const domJoined = domLines.join('\n')

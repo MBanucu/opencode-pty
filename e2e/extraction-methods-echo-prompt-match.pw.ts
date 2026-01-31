@@ -50,9 +50,7 @@ extendedTest(
     // Create normalized versions (remove \r for comparison)
     const normalizeLines = (lines: string[]) =>
       lines.map((line) => line.replace(/\r/g, '').trimEnd())
-    const domNormalized = normalizeLines(domContent)
     const serializeNormalized = normalizeLines(serializeStrippedContent)
-    const serializeBunNormalized = normalizeLines(serializeStrippedContent)
 
     const plainNormalized = normalizeLines(plainApiContent)
 

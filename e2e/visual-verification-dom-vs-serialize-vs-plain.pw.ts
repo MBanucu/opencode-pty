@@ -1,6 +1,5 @@
 import {
   bunStripANSI,
-  getTerminalPlainText,
   getSerializedContentByXtermSerializeAddon,
   waitForTerminalRegex,
 } from './xterm-test-helpers'
@@ -30,7 +29,6 @@ extendedTest.describe(
         await waitForTerminalRegex(page, /More text/, '__waitMoreText')
 
         // Extraction methods
-        const domContent = await getTerminalPlainText(page) // For visual/manual cross-check/debug only
         const serializeStrippedContent = bunStripANSI(
           await getSerializedContentByXtermSerializeAddon(page)
         ).split('\n')

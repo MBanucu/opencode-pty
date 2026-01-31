@@ -5,15 +5,6 @@ import {
   bunStripANSI,
 } from './xterm-test-helpers'
 
-const findLastNonEmptyLineIndex = (lines: string[]): number => {
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i] !== '') {
-      return i
-    }
-  }
-  return -1
-}
-
 extendedTest.describe('Xterm Newline Handling', () => {
   extendedTest('should capture typed character in xterm display', async ({ page, api }) => {
     // Create interactive bash session

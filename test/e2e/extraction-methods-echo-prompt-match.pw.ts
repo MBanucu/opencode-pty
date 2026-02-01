@@ -29,7 +29,7 @@ extendedTest(
     await page.locator('.terminal.xterm').click()
     // Try backend direct input for control comparison
     await api.session.input({ id: session.id }, { data: 'echo "Hello World"\r' })
-    await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld') // Event-driven: output arrived
+    await waitForTerminalRegex(page, /Hello World/) // Event-driven: output arrived
 
     // === EXTRACTION METHODS ===
 

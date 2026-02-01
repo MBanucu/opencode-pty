@@ -26,7 +26,7 @@ extendedTest.describe(
         await page.waitForSelector('.session-item', { timeout: 5000 })
         await page.locator('.session-item:has-text("Visual verification test")').click()
         await page.waitForSelector('.xterm', { timeout: 5000 })
-        await waitForTerminalRegex(page, /More text/, '__waitMoreText')
+        await waitForTerminalRegex(page, /More text/)
 
         // Extraction methods
         const serializeStrippedContent = bunStripANSI(

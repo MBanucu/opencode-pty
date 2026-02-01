@@ -21,7 +21,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
       await page.waitForSelector('.xterm', { timeout: 5000 })
 
       // Wait for the command to complete
-      await waitForTerminalRegex(page, /Line 3/, '__waitLine3')
+      await waitForTerminalRegex(page, /Line 3/)
 
       // Extract content using DOM scraping
       const domContent = await page.evaluate(() => {

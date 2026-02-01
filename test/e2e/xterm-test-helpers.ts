@@ -81,69 +81,90 @@ export const getSerializedContentByXtermSerializeAddon = async (
 
 /**
  * Robust, DRY event-driven terminal content waiter for Playwright E2E
- * Waits for regex pattern to appear in xterm.js SerializeAddon buffer (optionally specify flagName).
- * Usage: await waitForTerminalRegex(page, /pattern/, '__someCustomFlag')
+ * Waits for regex pattern to appear in xterm.js SerializeAddon buffer.
+ * Throws an error if SerializeAddon or Terminal is not available.
+ * Usage: await waitForTerminalRegex(page, /pattern/)
  */
 export const waitForTerminalRegex = async (
   page: Page,
   regex: RegExp,
-  flagName = '__terminalOutputReady',
   serializeOptions: { excludeModes?: boolean; excludeAltBuffer?: boolean } = {
     excludeModes: true,
     excludeAltBuffer: true,
   },
   timeout: number = 5000
-) => {
-  const pattern = regex.source
-  // First wait for serializeAddon to be available
+): Promise<void> => {
+  // First, ensure the serialize addon is available (with a reasonable timeout)
   await page.waitForFunction(() => window.xtermSerializeAddon !== undefined, { timeout: 10000 })
-  await page.evaluate(
-    ({ pattern, flagName, opts }) => {
-      // Setup output watcher on window
+
+  let timeoutId: NodeJS.Timeout | undefined
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Timeout waiting for terminal regex')), timeout)
+  })
+
+  const evaluatePromise = page.evaluate(
+    (args) => {
+      const { pattern, excludeModes, excludeAltBuffer } = args
       const term = window.xtermTerminal
       const serializeAddon = window.xtermSerializeAddon
-      function stripAnsi(str: string) {
+
+      if (!serializeAddon) {
+        throw new Error('SerializeAddon not available on window')
+      }
+
+      if (!term) {
+        throw new Error('Terminal not found on window')
+      }
+
+      // Browser-compatible stripAnsi implementation
+      function stripAnsi(str: string): string {
         return str.replace(
           // eslint-disable-next-line no-control-regex
           /[\u001B\u009B][[()#;?]*(?:(?:[a-zA-Z\d]*(?:;[a-zA-Z\d]*)*)?\u0007|(?:\d{1,4}(?:;\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~])/g,
           ''
         )
       }
-      function checkMatch() {
-        if (serializeAddon) {
-          const c = serializeAddon.serialize({
-            excludeModes: opts.excludeModes,
-            excludeAltBuffer: opts.excludeAltBuffer,
-          })
-          try {
-            const plain = stripAnsi(c.replaceAll('\r', ''))
-            return new RegExp(pattern).test(plain)
-          } catch {
-            return false
-          }
+
+      function checkMatch(serializeAddon: SerializeAddon): boolean {
+        const content = serializeAddon.serialize({
+          excludeModes,
+          excludeAltBuffer,
+        })
+        try {
+          const plain = stripAnsi(content.replaceAll('\r', ''))
+          return new RegExp(pattern).test(plain)
+        } catch {
+          return false
         }
-        return false
       }
-      if (term) {
-        ;(window as any)[flagName] = false
+
+      return new Promise<boolean>((resolve) => {
         const disposable = term.onWriteParsed(() => {
-          if (checkMatch()) {
-            ;(window as any)[flagName] = true
+          if (checkMatch(serializeAddon)) {
             disposable.dispose()
+            resolve(true)
           }
         })
-        // Check immediately (catch output that already arrived)
-        if (checkMatch()) {
-          ;(window as any)[flagName] = true
+
+        // Immediate check
+        if (checkMatch(serializeAddon)) {
           disposable.dispose()
+          resolve(true)
         }
-      } else {
-        ;(window as any)[flagName] = true // fallback, treat as ready
-      }
+      })
     },
-    { pattern, flagName, opts: serializeOptions }
+    {
+      pattern: regex.source,
+      excludeModes: serializeOptions.excludeModes,
+      excludeAltBuffer: serializeOptions.excludeAltBuffer,
+    }
   )
-  await page.waitForFunction((flagName) => (window as any)[flagName] === true, flagName, {
-    timeout,
-  })
+
+  try {
+    await Promise.race([evaluatePromise, timeoutPromise])
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+  }
 }

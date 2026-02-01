@@ -61,11 +61,11 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       // 1. Try locator.type
       await term.type('echo OK', { delay: 25 })
       await term.press('Enter')
-      await waitForTerminalRegex(page, /OK/, '__waitEchoOK')
+      await waitForTerminalRegex(page, /OK/)
       // 2. Also try fallback page.keyboard in case
       await page.keyboard.type('echo OK', { delay: 25 })
       await page.keyboard.press('Enter')
-      await waitForTerminalRegex(page, /OK/, '__waitEchoOK_2')
+      await waitForTerminalRegex(page, /OK/)
       // Print buffer after typing
       let after = await getSerializedContentByXtermSerializeAddon(page, {
         excludeModes: true,
@@ -85,7 +85,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         description: 'newline preservation test',
       })
       await gotoAndSelectSession(page, 'newline preservation test', 5000)
-      await waitForTerminalRegex(page, /line3/, '__waitForEndOfOutput')
+      await waitForTerminalRegex(page, /line3/)
       const bufferData = (await fetchBufferApi(api, sessionId, 'raw')) as {
         raw: string
         byteLength: number
@@ -117,7 +117,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       description: 'API raw buffer test',
     })
     await gotoAndSelectSession(page, 'API raw buffer test', 5000)
-    await waitForTerminalRegex(page, /data/, '__waitForEndOfApiRaw')
+    await waitForTerminalRegex(page, /data/)
     const rawData = (await fetchBufferApi(api, sessionId, 'raw')) as {
       raw: string
       byteLength: number
@@ -139,7 +139,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       description: 'ANSI test session for plain buffer endpoint',
     })
     await gotoAndSelectSession(page, 'ANSI test session for plain buffer endpoint', 5000)
-    await waitForTerminalRegex(page, /green text/, '__waitForGreenText')
+    await waitForTerminalRegex(page, /green text/)
     const plainData = (await fetchBufferApi(api, sessionId, 'plain')) as {
       plain: string
       byteLength: number
@@ -165,7 +165,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       description: 'Simple echo test for SerializeAddon extraction',
     })
     await gotoAndSelectSession(page, 'Simple echo test for SerializeAddon extraction', 5000)
-    await waitForTerminalRegex(page, /Hello World/, '__waitForHelloWorld')
+    await waitForTerminalRegex(page, /Hello World/)
     const serializeAddonOutput = await getSerializedContentByXtermSerializeAddon(page, {
       excludeModes: true,
       excludeAltBuffer: true,
@@ -185,11 +185,11 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       })
       await gotoAndSelectSession(page, 'Double Echo Test Session B', 10000)
       // Debug what prompt is present before event-driven wait
-      await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptB')
+      await waitForTerminalRegex(page, /\$\s*$/)
       await page.locator('.terminal.xterm').click()
       // Dump buffer before typing in Session B
       await page.keyboard.type('1')
-      await waitForTerminalRegex(page, /1/, '__waitInputEchoB')
+      await waitForTerminalRegex(page, /1/)
       // Dump buffer after typing in Session B
       const sessionId = await createSession(api, {
         command: 'bash',
@@ -198,11 +198,11 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       })
       await gotoAndSelectSession(page, 'Double Echo Test Session C', 10000)
       // Debug what prompt is present before event-driven wait
-      await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptC')
+      await waitForTerminalRegex(page, /\$\s*$/)
       await page.locator('.terminal.xterm').click()
       // Dump buffer before typing in Session C
       await page.keyboard.type('1')
-      await waitForTerminalRegex(page, /1/, '__waitInputEchoC')
+      await waitForTerminalRegex(page, /1/)
       // Dump buffer after typing in Session C
       const apiData = (await fetchBufferApi(api, sessionId, 'plain')) as {
         plain: string
@@ -229,7 +229,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         description: 'Initial bash state test for plain text comparison',
       })
       await gotoAndSelectSession(page, 'Initial bash state test for plain text comparison', 5000)
-      await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitialBash')
+      await waitForTerminalRegex(page, /\$\s*$/)
       const apiData = (await fetchBufferApi(api, sessionId, 'plain')) as {
         plain: string
         byteLength: number
@@ -279,14 +279,14 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         description: 'Double-echo prevention test',
       })
       await gotoAndSelectSession(page, 'Double-echo prevention test', 5000)
-      await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptDoubleEcho')
+      await waitForTerminalRegex(page, /\$\s*$/)
       const initialContent = await getSerializedContentByXtermSerializeAddon(page, {
         excludeModes: true,
         excludeAltBuffer: true,
       })
       await page.locator('.terminal.xterm').click()
       await page.keyboard.type('1')
-      await waitForTerminalRegex(page, /1/, '__waitDoubleEchoInput')
+      await waitForTerminalRegex(page, /1/)
       // const apiData = await fetchBufferApi(page, server, sessionId, 'plain')
       const afterContent = await getSerializedContentByXtermSerializeAddon(page, {
         excludeModes: true,
@@ -314,7 +314,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     })
     await page.waitForSelector('.session-item', { timeout: 10000 })
     await page.locator('.session-item').filter({ hasText: 'Session One' }).click()
-    await waitForTerminalRegex(page, /SESSION_ONE_CONTENT/, '__waitSessionOne')
+    await waitForTerminalRegex(page, /SESSION_ONE_CONTENT/)
     await page.waitForFunction(
       () => {
         const serializeAddon = (window as any).xtermSerializeAddon
@@ -333,7 +333,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     })
     expect(session1Content).toContain('SESSION_ONE_CONTENT')
     await page.locator('.session-item').filter({ hasText: 'Session Two' }).click()
-    await waitForTerminalRegex(page, /SESSION_TWO_CONTENT/, '__waitSessionTwo')
+    await waitForTerminalRegex(page, /SESSION_TWO_CONTENT/)
     const session2Content = await getSerializedContentByXtermSerializeAddon(page, {
       excludeModes: true,
       excludeAltBuffer: true,

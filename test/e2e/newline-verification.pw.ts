@@ -19,7 +19,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item').first().click()
     await page.waitForSelector('.xterm', { timeout: 5000 })
-    await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitial')
+    await waitForTerminalRegex(page, /\$\s*$/)
 
     // Use SerializeAddon before typing
     const beforeContent = await getSerializedContentByXtermSerializeAddon(page, {
@@ -31,7 +31,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
     // Type single character
     await page.locator('.terminal.xterm').click()
     await page.keyboard.type('a')
-    await waitForTerminalRegex(page, /a/, '__waitEchoA')
+    await waitForTerminalRegex(page, /a/)
 
     const afterContent = await getSerializedContentByXtermSerializeAddon(page, {
       excludeModes: true,
@@ -59,7 +59,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
     await page.waitForSelector('.session-item', { timeout: 5000 })
     await page.locator('.session-item').first().click()
     await page.waitForSelector('.xterm', { timeout: 5000 })
-    await waitForTerminalRegex(page, /\$\s*$/, '__waitPromptInitial2')
+    await waitForTerminalRegex(page, /\$\s*$/)
 
     // Capture initial
     // const initialLines = await getTerminalPlainText(page)
@@ -74,7 +74,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
     await page.keyboard.press('Enter')
 
     // Wait for output
-    await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld')
+    await waitForTerminalRegex(page, /Hello World/)
 
     // Get final terminal buffer via SerializeAddon (canonical, robust method)
     const finalBuffer = bunStripANSI(

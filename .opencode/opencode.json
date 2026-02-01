@@ -5,7 +5,13 @@
     ".opencode/docs/test/bun/index.md",
     ".opencode/docs/test/bun/dom/index.md",
     ".opencode/docs/test/playwright/index.md",
-    ".opencode/docs/typescript-lessons-learned.md",
+    ".opencode/docs/typescript/index.md",
+    ".opencode/docs/typescript/best-practices.md",
+    ".opencode/docs/typescript/case-studies.md",
+    ".opencode/docs/typescript/case-studies/pty-read-tool-refactoring.md",
+    ".opencode/docs/typescript/case-studies/global-window-properties.md",
+    ".opencode/docs/typescript/case-studies/waitForTerminalRegex-refactoring.md",
+    ".opencode/docs/typescript/recommendations.md",
     "README.md"
   ]
 }

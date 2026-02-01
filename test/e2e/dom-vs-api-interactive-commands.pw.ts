@@ -21,7 +21,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
       await page.waitForSelector('.xterm', { timeout: 5000 })
 
       // Wait for session to initialize
-      await waitForTerminalRegex(page, /\$\s*$/, '__waitPrompt')
+      await waitForTerminalRegex(page, /\$\s*$/)
 
       // Send interactive command
       await page.locator('.terminal.xterm').click()
@@ -29,7 +29,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
       await page.keyboard.press('Enter')
 
       // Wait for command execution
-      await waitForTerminalRegex(page, /Hello World/, '__waitHelloWorld')
+      await waitForTerminalRegex(page, /Hello World/)
 
       // Extract content using DOM scraping
       const domContent = await page.evaluate(() => {

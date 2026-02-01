@@ -79,7 +79,7 @@ export function useSessionManager({
 
       // eslint-disable-next-line no-empty
     } catch {}
-  }, [activeSession, setActiveSession, onRawOutputUpdate])
+  }, [activeSession])
 
   return {
     handleSessionClick,

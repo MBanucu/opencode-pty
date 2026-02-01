@@ -29,7 +29,8 @@ type WorkerFixtures = {
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   server: [
-    async (_, fixtureUse, workerInfo: WorkerInfo) => {
+    // eslint-disable-next-line no-empty-pattern -- Playwright fixture API requires object destructuring pattern
+    async ({}, fixtureUse, workerInfo: WorkerInfo) => {
       const workerIndex = workerInfo.workerIndex
       const portFilePath = `/tmp/test-server-port-${workerIndex}.txt`
 

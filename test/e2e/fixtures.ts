@@ -29,7 +29,7 @@ type WorkerFixtures = {
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   server: [
-    async ({}, fixtureUse, workerInfo: WorkerInfo) => {
+    async (_, fixtureUse, workerInfo: WorkerInfo) => {
       const workerIndex = workerInfo.workerIndex
       const portFilePath = `/tmp/test-server-port-${workerIndex}.txt`
 

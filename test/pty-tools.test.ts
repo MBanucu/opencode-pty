@@ -33,6 +33,8 @@ describe('PTY Tools', () => {
         abort: new AbortController().signal,
         metadata: mock(() => {}),
         ask: mock(async () => {}),
+        directory: '/tmp',
+        worktree: '/tmp',
       }
       const args = {
         command: 'echo',
@@ -67,6 +69,8 @@ describe('PTY Tools', () => {
         abort: new AbortController().signal,
         metadata: mock(() => {}),
         ask: mock(async () => {}),
+        directory: '/tmp',
+        worktree: '/tmp',
       }
       const args = {
         command: 'node',
@@ -137,6 +141,8 @@ describe('PTY Tools', () => {
         abort: new AbortController().signal,
         metadata: mock(() => {}),
         ask: mock(async () => {}),
+        directory: '/tmp',
+        worktree: '/tmp',
       }
 
       const result = await ptyRead.execute(args, ctx)
@@ -159,6 +165,8 @@ describe('PTY Tools', () => {
         abort: new AbortController().signal,
         metadata: mock(() => {}),
         ask: mock(async () => {}),
+        directory: '/tmp',
+        worktree: '/tmp',
       }
 
       const result = await ptyRead.execute(args, ctx)
@@ -180,6 +188,8 @@ describe('PTY Tools', () => {
         abort: new AbortController().signal,
         metadata: mock(() => {}),
         ask: mock(async () => {}),
+        directory: '/tmp',
+        worktree: '/tmp',
       }
 
       expect(ptyRead.execute(args, ctx)).rejects.toThrow("PTY session 'invalid-id' not found")
@@ -194,6 +204,8 @@ describe('PTY Tools', () => {
         abort: new AbortController().signal,
         metadata: mock(() => {}),
         ask: mock(async () => {}),
+        directory: '/tmp',
+        worktree: '/tmp',
       }
 
       expect(ptyRead.execute(args, ctx)).rejects.toThrow(
@@ -228,6 +240,8 @@ describe('PTY Tools', () => {
           abort: new AbortController().signal,
           metadata: mock(() => {}),
           ask: mock(async () => {}),
+          directory: '/tmp',
+          worktree: '/tmp',
         }
       )
 
@@ -255,6 +269,8 @@ describe('PTY Tools', () => {
           abort: new AbortController().signal,
           metadata: mock(() => {}),
           ask: mock(async () => {}),
+          directory: '/tmp',
+          worktree: '/tmp',
         }
       )
 

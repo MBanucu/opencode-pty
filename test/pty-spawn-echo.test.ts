@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, mock } from 'bun:test'
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
 import { ptySpawn } from '../src/plugin/pty/tools/spawn.ts'
 import { manager, registerRawOutputCallback } from '../src/plugin/pty/manager.ts'
 import { ManagedTestServer } from './utils.ts'
@@ -33,15 +33,6 @@ describe('ptySpawn Integration', () => {
       setTimeout(() => resolve(receivedOutput || 'Timeout'), 2000)
     })
 
-    const ctx = {
-      sessionID: 'test-parent-session',
-      messageID: 'msg-1',
-      agent: 'test-agent',
-      abort: new AbortController().signal,
-      metadata: mock(() => {}),
-      ask: mock(async () => {}),
-    }
-
     const result = await ptySpawn.execute(
       {
         command: 'echo',
@@ -49,7 +40,16 @@ describe('ptySpawn Integration', () => {
         title,
         description: 'Integration test for echo',
       },
-      ctx
+      {
+        sessionID: 'test-parent-session',
+        messageID: 'msg-1',
+        agent: 'test-agent',
+        abort: new AbortController().signal,
+        metadata: () => {},
+        ask: async () => {},
+        directory: '/tmp',
+        worktree: '/tmp',
+      }
     )
 
     expect(result).toContain('<pty_spawned>')

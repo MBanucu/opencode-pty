@@ -75,6 +75,8 @@ This plugin provides slash commands that can be used in OpenCode chat:
 
 This plugin includes a modern React-based web interface for monitoring and interacting with PTY sessions.
 
+[![opencode-pty Web UI Demo](https://img.youtube.com/vi/wPqmTPnzvVY/0.jpg)](https://youtu.be/wPqmTPnzvVY)
+
 ### Starting the Web UI
 
 Run the test server to start the web interface:

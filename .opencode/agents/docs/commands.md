@@ -7,8 +7,6 @@
 - `bun run build` — Clean, typecheck, and build all assets
 - `bun run build:dev` — Build assets in development mode
 - `bun run build:prod` — Build assets in production mode
-- `bun run build:plugin` — Build plugin for OpenCode consumption
-- `bun run install:plugin:dev` — Build + install plugin to local .opencode
 - `bun run install:web:dev` — Build web client in dev mode
 - `bun run install:all:dev` — Build/install plugin & web client
 - `bun run run:all:dev` — Full build/install workflow then run OpenCode (silent)
@@ -26,15 +24,16 @@
 
 - `bun run typecheck` — Typescript strict check (no emit)
 - `bun run typecheck:watch` — Typecheck in watch mode
-- `bun run test` — Unit tests (Bun test runner, all but e2e/web)
-- `bun run test:watch` — Unit tests in watch mode
-- `bun run test:e2e` — Playwright end-to-end tests; ensure dev server built, use `PW_DISABLE_TS_ESM=1` for Bun
+- `bun test` — Run unit tests
+- `bun test --test-name-pattern <pattern>` — Run filtered unit tests
+- `bun run test:e2e` — Playwright end-to-end tests; ensure dev server built, uses `PW_DISABLE_TS_ESM=1` (disables trouble causing Playwright/Bun features) and `NODE_ENV=test` (used by tests)
 - `bun run test:all` — All unit + E2E tests
-- Run single/filtered unit test: `bun test --match "<pattern>"`
+- Run filtered E2E tests: `bun run test:e2e -- --grep "<pattern>"` (also supports `--repeat-each <N>` for flakiness detection and `--project <name>` for specific browser projects)
 
 ## Other
 
 - `bun run clean` — Remove build artifacts, test results, etc.
 - `bun run ci` — Run quality checks and all tests (used by CI pipeline)
+- `bun run prepack` — Automatically runs before `npm pack`; builds plugin for OpenCode consumption
 
 **Note:** Many scripts have special requirements or additional ENV flags; see inline package.json script comments for platform- or environment-specific details (e.g. Playwright+Bun TS support requires `PW_DISABLE_TS_ESM=1`).

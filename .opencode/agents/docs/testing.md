@@ -3,19 +3,19 @@
 ## Unit Tests
 
 - Use Bun's test runner (TypeScript; see `test/` folder for examples).
-- Run with `bun run test`.
-- To run a single unit test, use: `bun test --match "<pattern>"`.
+- Run with `bun test`.
+- To run filtered unit tests, use: `bun test --test-name-pattern "<pattern>"`.
 - Test coverage includes agent-facing APIs, logic utilities, and PTY manager functions.
 
 ## End-to-End (E2E) Tests
 
 - Use Playwright (see `e2e/` folder) to validate web UI, PTY session streaming, live events.
-- Run with `bun run test:e2e`. Note for Bun: Playwright requires `PW_DISABLE_TS_ESM=1` as an env var for TypeScript ESM compatibility in Bun; script handles this automatically.
+- Run with `bun run test:e2e`. Note for Bun: script uses `PW_DISABLE_TS_ESM=1` (disables unneeded Playwright/Bun features) and `NODE_ENV=test` (used by tests) automatically.
 - To run/play only selected E2E tests, use Playwright's `--grep "<pattern>"`:
   ```sh
   bun run test:e2e -- --grep "SomeFeatureOrTitle"
   ```
-- (Note: `--match` does NOT work for E2E tests; always use `--grep` for Playwright filtering.)
+- Also supports `--repeat-each <N>` for flakiness detection and `--project <name>` for specific browser projects.
 
 ## All Tests
 

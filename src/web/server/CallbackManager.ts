@@ -8,7 +8,7 @@ import type { PTYSessionInfo } from '../../plugin/pty/types'
 import type { WSMessageServerSessionUpdate, WSMessageServerRawData } from '../shared/types'
 
 export class CallbackManager implements Disposable {
-  constructor(private server: Bun.Server<string>) {
+  constructor(private server: Bun.Server<undefined>) {
     this.server = server
     registerSessionUpdateCallback(this.sessionUpdateCallback)
     registerRawOutputCallback(this.rawOutputCallback)

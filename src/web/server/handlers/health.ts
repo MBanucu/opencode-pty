@@ -2,7 +2,17 @@ import moment from 'moment'
 import { manager } from '../../../plugin/pty/manager.ts'
 import { JsonResponse } from './responses.ts'
 
-export function handleHealth(server: Bun.Server<any>) {
+interface HealthResponse {
+  status: 'healthy'
+  timestamp: string
+  uptime: number
+  sessions: { total: number; active: number }
+  websocket: { connections: number }
+  memory?: { rss: number; heapUsed: number; heapTotal: number }
+  responseTime?: number
+}
+
+export function handleHealth(server: Bun.Server<undefined>) {
   const sessions = manager.list()
   const activeSessions = sessions.filter((s) => s.status === 'running').length
   const totalSessions = sessions.length
@@ -10,7 +20,7 @@ export function handleHealth(server: Bun.Server<any>) {
   // Calculate response time (rough approximation)
   const startTime = Date.now()
 
-  const healthResponse = {
+  const healthResponse: HealthResponse = {
     status: 'healthy',
     timestamp: moment().toISOString(true),
     uptime: process.uptime(),
@@ -32,7 +42,7 @@ export function handleHealth(server: Bun.Server<any>) {
 
   // Add response time
   const responseTime = Date.now() - startTime
-  ;(healthResponse as any).responseTime = responseTime
+  healthResponse.responseTime = responseTime
 
   return new JsonResponse(healthResponse)
 }

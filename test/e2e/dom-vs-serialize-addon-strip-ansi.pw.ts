@@ -48,7 +48,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
       // Extract content using SerializeAddon + strip-ansi (output intentionally unused)
       await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
+        const serializeAddon = window.xtermSerializeAddon
         if (!serializeAddon) return []
 
         const raw = serializeAddon.serialize({

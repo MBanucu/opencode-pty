@@ -16,7 +16,11 @@ export function App() {
   const [wsMessageCount, setWsMessageCount] = useState(0)
   const [sessionUpdateCount, setSessionUpdateCount] = useState(0)
 
-  const { connected: wsConnected, subscribeWithRetry } = useWebSocket({
+  const {
+    connected: wsConnected,
+    subscribeWithRetry,
+    sendInput,
+  } = useWebSocket({
     activeSession,
     onRawData: useCallback((rawData: string) => {
       setRawOutput((prev) => {
@@ -85,6 +89,8 @@ export function App() {
     activeSession,
     setActiveSession,
     subscribeWithRetry,
+    sendInput,
+    wsConnected,
     onRawOutputUpdate: useCallback((rawOutput: string) => {
       setRawOutput(rawOutput)
     }, []),

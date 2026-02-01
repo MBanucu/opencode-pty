@@ -121,5 +121,11 @@ export function useWebSocket({
     }
   }
 
-  return { connected, subscribe, subscribeWithRetry }
+  const sendInput = (sessionId: string, data: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'input', sessionId, data }))
+    }
+  }
+
+  return { connected, subscribe, subscribeWithRetry, sendInput }
 }

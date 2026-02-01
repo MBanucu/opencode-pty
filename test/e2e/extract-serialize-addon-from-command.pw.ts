@@ -26,7 +26,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
       // Extract content directly from xterm.js Terminal buffer using manual reading
       const extractedContent = await page.evaluate(() => {
-        const term = (window as any).xtermTerminal
+        const term = window.xtermTerminal
 
         if (!term?.buffer?.active) {
           return []

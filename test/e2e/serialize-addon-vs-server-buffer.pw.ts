@@ -26,7 +26,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
 
       // Extract content using SerializeAddon
       const serializeAddonOutput = await page.evaluate(() => {
-        const serializeAddon = (window as any).xtermSerializeAddon
+        const serializeAddon = window.xtermSerializeAddon
 
         if (!serializeAddon) {
           // SerializeAddon not found; let Playwright fail

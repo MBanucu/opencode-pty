@@ -1,4 +1,5 @@
 import { test as extendedTest, expect } from '../fixtures'
+import type { PTYSessionInfo } from '../../../src/plugin/pty/types'
 
 extendedTest.describe('App Component', () => {
   extendedTest('renders the PTY Sessions title', async ({ page }) => {
@@ -82,7 +83,8 @@ extendedTest.describe('App Component', () => {
           try {
             const sessions = await api.sessions.list()
             const targetSession = sessions.find(
-              (s: any) => s.description === 'Live streaming test session' && s.status === 'running'
+              (s: PTYSessionInfo) =>
+                s.description === 'Live streaming test session' && s.status === 'running'
             )
             if (targetSession) break
           } catch (error) {

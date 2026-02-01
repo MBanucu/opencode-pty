@@ -1,4 +1,5 @@
 import { test as extendedTest, expect } from './fixtures'
+import type { Page } from '@playwright/test'
 
 import {
   getSerializedContentByXtermSerializeAddon,
@@ -36,7 +37,7 @@ async function fetchBufferApi(
   }
 }
 
-async function gotoAndSelectSession(page: any, description: string, timeout = 10000) {
+async function gotoAndSelectSession(page: Page, description: string, timeout = 10000) {
   await page.waitForSelector('.session-item', { timeout })
   await page.locator(`.session-item:has-text("${description}")`).click()
   await page.waitForSelector('.output-container', { timeout })
@@ -317,7 +318,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
     await waitForTerminalRegex(page, /SESSION_ONE_CONTENT/)
     await page.waitForFunction(
       () => {
-        const serializeAddon = (window as any).xtermSerializeAddon
+        const serializeAddon = window.xtermSerializeAddon
         if (!serializeAddon) return false
         const content = serializeAddon.serialize({
           excludeModes: true,

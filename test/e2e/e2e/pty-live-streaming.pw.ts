@@ -1,5 +1,6 @@
 import { test as extendedTest } from '../fixtures'
 import { expect } from '@playwright/test'
+import type { PTYSessionInfo } from '../../../src/plugin/pty/types'
 
 extendedTest.describe('PTY Live Streaming', () => {
   extendedTest('should preserve and display complete historical output buffer', async ({ api }) => {
@@ -88,7 +89,8 @@ extendedTest.describe('PTY Live Streaming', () => {
           try {
             const sessions = await api.sessions.list()
             const targetSession = sessions.find(
-              (s: any) => s.description === 'Live streaming test session' && s.status === 'running'
+              (s: PTYSessionInfo) =>
+                s.description === 'Live streaming test session' && s.status === 'running'
             )
             if (targetSession) break
           } catch (error) {

@@ -7,6 +7,8 @@ interface UseSessionManagerOptions {
   activeSession: PTYSessionInfo | null
   setActiveSession: (session: PTYSessionInfo | null) => void
   subscribeWithRetry: (sessionId: string) => void
+  sendInput?: (sessionId: string, data: string) => void
+  wsConnected?: boolean
   onRawOutputUpdate?: (rawOutput: string) => void
 }
 
@@ -14,6 +16,8 @@ export function useSessionManager({
   activeSession,
   setActiveSession,
   subscribeWithRetry,
+  sendInput,
+  wsConnected,
   onRawOutputUpdate,
 }: UseSessionManagerOptions) {
   const handleSessionClick = useCallback(
@@ -53,12 +57,23 @@ export function useSessionManager({
         return
       }
 
+      // Try WebSocket first if connected and available
+      if (wsConnected && sendInput) {
+        try {
+          sendInput(activeSession.id, data)
+          return
+        } catch (error) {
+          console.warn('WebSocket input failed, falling back to HTTP:', error)
+        }
+      }
+
+      // HTTP fallback
       try {
         await api.session.input({ id: activeSession.id }, { data })
         // eslint-disable-next-line no-empty
       } catch {}
     },
-    [activeSession]
+    [activeSession, wsConnected, sendInput]
   )
 
   const handleKillSession = useCallback(async () => {

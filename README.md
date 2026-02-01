@@ -82,14 +82,15 @@ This plugin includes a modern React-based web interface for monitoring and inter
 Run the test server to start the web interface:
 
 ```bash
-bun run e2e/test-web-server.ts
+bun run dev:server
 ```
 
 This will:
 
-- Start the web server on `http://localhost:8766`
+- Start the PTY server on a random port (check console output for the exact URL)
 - Create a test PTY session to demonstrate functionality
-- Open the React web interface in your browser
+
+The server URL will be displayed in the console output. Manually navigate to this URL in your browser to access the React web interface.
 
 ### Features
 
@@ -119,7 +120,7 @@ The web server provides a REST API for session management:
 #### Session Creation
 
 ```bash
-curl -X POST http://localhost:8766/api/sessions \
+curl -X POST http://localhost:[PORT]/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "command": "bash",
@@ -128,12 +129,14 @@ curl -X POST http://localhost:8766/api/sessions \
   }'
 ```
 
+Replace `[PORT]` with the actual port number shown in the server console output.
+
 #### WebSocket Streaming
 
 Connect to `/ws` for real-time updates:
 
 ```javascript
-const ws = new WebSocket('ws://localhost:8766/ws')
+const ws = new WebSocket('ws://localhost:[PORT]/ws')
 
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data)
@@ -145,19 +148,24 @@ ws.onmessage = (event) => {
 }
 ```
 
+Replace `[PORT]` with the actual port number shown in the server console output.
+
 ### Development
 
 For development with hot reloading:
 
 ```bash
-# Terminal 1: Start the React dev server
-bun run dev
+# 1. Build the web client
+bun run build:dev
 
-# Terminal 2: Start the PTY server (in another terminal)
-bun run e2e/test-web-server.ts
+# 2. Start the PTY server (Terminal 1)
+bun run dev:server
+
+# 3. Start the React dev server (Terminal 2)
+bun run dev
 ```
 
-The React app will be available at `http://localhost:5173` with hot reloading, and the PTY server at `http://localhost:8766`.
+The React app will be available at `http://localhost:3000` with hot reloading, and the PTY server at a random port (check console output).
 
 ## Usage Examples
 

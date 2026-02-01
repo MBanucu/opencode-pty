@@ -38,7 +38,7 @@ extendedTest.describe('Xterm Content Extraction', () => {
             excludeModes: true,
             excludeAltBuffer: true,
           })
-        } catch (error) {
+        } catch {
           return ''
         }
       })

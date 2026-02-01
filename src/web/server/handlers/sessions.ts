@@ -28,7 +28,7 @@ export async function createSession(req: Request) {
       parentSessionId: 'web-api',
     })
     return new JsonResponse(session)
-  } catch (err) {
+  } catch {
     return new ErrorResponse('Invalid JSON in request body', 400)
   }
 }
@@ -59,7 +59,7 @@ export async function sendInput(
       return new ErrorResponse('Failed to write to session', 400)
     }
     return new JsonResponse({ success: true })
-  } catch (err) {
+  } catch {
     return new ErrorResponse('Invalid JSON in request body', 400)
   }
 }

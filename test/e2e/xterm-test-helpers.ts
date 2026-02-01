@@ -112,7 +112,7 @@ export const waitForTerminalRegex = async (
           try {
             const plain = stripAnsi(c.replaceAll('\r', ''))
             return new RegExp(pattern).test(plain)
-          } catch (e) {
+          } catch {
             return false
           }
         }

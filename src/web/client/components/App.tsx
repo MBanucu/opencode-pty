@@ -73,7 +73,7 @@ export function App() {
           const sessionsData = await response.json()
           setSessions(sessionsData)
         }
-      } catch (error) {
+      } catch {
         // Silently ignore sync errors to avoid console spam
       }
     }, 10000) // 10 seconds

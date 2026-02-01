@@ -36,10 +36,10 @@ export function useSessionManager({
 
           // Call callback with raw data
           onRawOutputUpdate?.(rawData.raw || '')
-        } catch (fetchError) {
+        } catch {
           onRawOutputUpdate?.('')
         }
-      } catch (error) {
+      } catch {
         // Ensure UI remains stable
         onRawOutputUpdate?.('')
       }

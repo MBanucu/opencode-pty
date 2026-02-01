@@ -27,7 +27,7 @@ async function getPermissionConfig(): Promise<PermissionConfig> {
       return {}
     }
     return (response.data as { permission?: PermissionConfig }).permission ?? {}
-  } catch (e) {
+  } catch {
     return {}
   }
 }

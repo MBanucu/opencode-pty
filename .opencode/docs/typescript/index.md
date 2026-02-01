@@ -5,6 +5,7 @@ This directory contains comprehensive documentation on TypeScript best practices
 ## Contents
 
 - **[Best Practices](best-practices.md)**: Core TypeScript patterns, development workflow, and error prevention strategies
+- **[TypeScript Patterns](patterns.md)**: WebSocket typing, global augmentation, and testing patterns
 - **[Case Studies](case-studies.md)**: Real-world examples of TypeScript refactoring and type safety improvements
 - **[Recommendations](recommendations.md)**: Future development guidance and tooling enhancements
 

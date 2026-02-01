@@ -1,4 +1,4 @@
-# TypeScript Best Practices: Lessons from Code Quality Improvement Sessions
+# TypeScript Best Practices: Core Principles
 
 This document captures key lessons learned from multiple coding sessions focused on improving TypeScript code quality by eliminating `any` types, non-null assertions, and enhancing type safety in Bun-based projects with PTY management and E2E testing.
 
@@ -10,122 +10,39 @@ This document captures key lessons learned from multiple coding sessions focused
 - **Key insights**: TypeScript's control flow narrowing doesn't persist across function boundaries; module augmentation improves global object typing; E2E test timing is critical after type changes; Bun's WebSocket API evolution requires staying current with framework changes
 - **Results**: Eliminated 11 total warnings across sessions (from 41 to 30), improved test reliability, and enhanced code maintainability
 
-## Overview
+## Core Principles
 
-During multiple code quality improvement sessions, we addressed ESLint warnings about using `any` types and non-null assertions in TypeScript code. The sessions involved analyzing warnings, understanding root causes, implementing fixes that enhance type safety while maintaining functionality, and addressing E2E test integration challenges in React/Bun applications.
+### Avoid `any` Types
 
-## Key Lessons Learned
+**Problem**: Using `any` bypasses TypeScript's type checking, leading to potential runtime errors and reduced code maintainability.
 
-### 1. TypeScript Best Practices
+**Impact**: The session identified 41 warnings in the codebase related to `any` usage, indicating widespread type safety issues.
 
-#### Avoid `any` Types
+**Solution**: Define proper interfaces and types for all data structures.
 
-- **Problem**: Using `any` bypasses TypeScript's type checking, leading to potential runtime errors and reduced code maintainability.
-- **Impact**: The session identified 41 warnings in the codebase related to `any` usage, indicating widespread type safety issues.
-- **Solution**: Define proper interfaces and types for all data structures.
-- **Benefits**: Compile-time error detection, better IDE support, improved code documentation.
+**Benefits**: Compile-time error detection, better IDE support, improved code documentation.
 
-#### Eliminate Non-Null Assertions (`!`)
+### Eliminate Non-Null Assertions (`!`)
 
-- **Problem**: The `!` operator tells TypeScript to ignore null/undefined checks, masking real type safety issues.
-- **Root Cause**: TypeScript's control flow analysis doesn't persist across function boundaries, even when runtime checks guarantee values exist.
-- **Solution**: Restructure function signatures to accept required parameters instead of relying on assertions.
-- **Benefits**: Safer code at compile time, reduced runtime errors, cleaner function APIs.
-- **Example**: Instead of `processUser(args.user!)`, use `processUser(user: User)` and pass validated data.
+**Problem**: The `!` operator tells TypeScript to ignore null/undefined checks, masking real type safety issues.
 
-#### Additional TypeScript Patterns
+**Root Cause**: TypeScript's control flow analysis doesn't persist across function boundaries, even when runtime checks guarantee values exist.
+
+**Solution**: Restructure function signatures to accept required parameters instead of relying on assertions.
+
+**Benefits**: Safer code at compile time, reduced runtime errors, cleaner function APIs.
+
+**Example**: Instead of `processUser(args.user!)`, use `processUser(user: User)` and pass validated data.
+
+### Additional TypeScript Patterns
 
 - **Use Generics for Flexibility**: Prefer `<T>` over `any` for reusable components while maintaining type safety.
 - **Discriminated Unions**: Use union types with discriminant properties for exhaustive type checking.
 - **Type Guards**: Implement custom functions like `isUser(obj: unknown): obj is User` for runtime validation.
-- **Modern Bun WebSocket Typing**: Use explicit `data` configuration in websocket setup instead of generic parameters for better type safety and API compliance.
 
-#### Modern Bun WebSocket Type Safety
+## Code Architecture Insights
 
-**Problem**: Bun's WebSocket API evolved to prefer configuration-based typing over generics, but many codebases still use outdated patterns.
-
-**Solution**: Configure WebSocket data explicitly in the server setup:
-
-```typescript
-Bun.serve({
-  websocket: {
-    data: undefined as undefined, // For no data - strictest safety
-    // or data: {} as unknown,      // For future flexibility
-    // or data: undefined as never,  // For maximum strictness
-    message: handleWebSocketMessage,
-    // ... other handlers
-  },
-})
-```
-
-**Benefits**:
-
-- `ws.data` is properly typed at compile time
-- Prevents accidental property access on non-existent data
-- Clear contract for WebSocket data requirements
-- Future-proof when data needs are added
-
-#### TypeScript Module Augmentation for Global Objects
-
-**Problem**: Using `(window as any)` to expose properties for E2E testing bypassed type checking and created maintenance burdens.
-
-**Solution**: Implemented global interface augmentation:
-
-```typescript
-declare global {
-  interface Window {
-    xtermTerminal?: Terminal
-    xtermSerializeAddon?: SerializeAddon
-  }
-}
-```
-
-**Benefits**:
-
-- Compile-time type checking for global properties
-- Better IDE autocompletion and error detection
-- Cleaner, more maintainable code without runtime type assertions
-- Zero runtime performance impact
-
-#### Handling Private Properties in Type-Safe Code
-
-**Challenge**: Accessing private `_terminal` property on SerializeAddon required type compromises.
-
-**Approach**: Used targeted `as any` casting for private API access:
-
-```typescript
-const term = window.xtermSerializeAddon && (window.xtermSerializeAddon as any)._terminal
-```
-
-**Rationale**: Private properties are implementation details; `any` is acceptable for controlled, documented access in test utilities.
-
-#### Test Synchronization After Type Changes
-
-**Issue**: E2E tests experienced timeouts after component changes, despite passing unit tests.
-
-**Root Cause**: Test helpers relied on `window` properties being set synchronously, but component mounting is asynchronous in React apps.
-
-**Solution**: Added explicit waits for global properties:
-
-```typescript
-await page.waitForFunction(() => window.xtermSerializeAddon !== undefined, { timeout: 10000 })
-```
-
-**Lesson**: Type changes can affect test timing; always verify E2E test stability after modifications.
-
-#### Balancing Type Safety with Practicality
-
-**Insight**: Not all `any` usage should be eliminated—some serve legitimate purposes:
-
-- Test utilities accessing dynamic properties
-- Private API interactions
-- Legacy code with complex type relationships
-
-**Best Practice**: Eliminate `any` in application code while allowing targeted use in tests and utilities with clear documentation.
-
-### 2. Code Architecture Insights
-
-#### Function Signature Design
+### Function Signature Design
 
 - **Best Practice**: Pass individual required parameters instead of optional object properties.
 - **Benefits**:
@@ -134,15 +51,15 @@ await page.waitForFunction(() => window.xtermSerializeAddon !== undefined, { tim
   - Reduced need for runtime null checks
 - **Trade-offs**: Longer parameter lists may require config objects for very complex functions (balance with readability). For functions with 6+ params, consider a required config object with Pick/Required utilities.
 
-#### Control Flow Analysis Limitations
+### Control Flow Analysis Limitations
 
 - **Understanding**: TypeScript narrows types within conditional blocks but doesn't maintain this narrowing across function calls.
 - **Implication**: Even with `if (args.pattern)`, TypeScript still sees `pattern` as `string | undefined` inside called functions.
 - **Recent Improvements**: TypeScript 5.x+ offers better narrowing with `satisfies` operator and improved alias preservation. Previews for the upcoming TypeScript 7.0 (native Go port, with deprecations starting in TS 6.0) have been available since mid-2025 and continue into 2026, promising significant performance improvements like 10x faster builds.
 
-### 3. Development Workflow
+## Development Workflow
 
-#### Iterative Linting Process
+### Iterative Linting Process
 
 ```mermaid
 graph TD
@@ -161,48 +78,21 @@ This iterative process is particularly efficient with Bun's fast execution times
 4. **Systematic Fixes**: Address one warning at a time with verification
 5. **Verification**: Re-run lint, typecheck, and tests after each change
 
-#### Documentation and Reporting
-
-**Value**: Creating detailed analysis reports provides:
-
-- Clear problem statements and solutions
-- Code examples for implementation
-- Justification for architectural decisions
-- Reference for future similar issues
-
-**Format**: Markdown reports with code snippets, before/after comparisons, and rationale.
-
-#### Quality Assurance Steps
+### Quality Assurance Steps
 
 - **Type Checking**: Always run `bun run typecheck` after TypeScript changes
 - **Testing**: Execute both unit (`bun test`) and E2E tests (`bun run test:all`) to ensure functionality preservation
 - **Type Testing**: Use libraries like [tsd](https://github.com/tsdjs/tsd) for type assertions in tests
 - **Runtime Validation**: Combine static types with libraries like [Zod](https://zod.dev/) for API responses
 
-### 4. Tool Usage Patterns
+## Error Prevention Strategies
 
-#### Code Analysis Tools
-
-- **Grep**: Search for patterns across the codebase to understand usage context
-- **Read**: Examine specific files to understand implementation details
-- **Task Tool**: AI-powered agent for complex analysis and comprehensive reporting
-- **IDE Integration**: Use VS Code's TypeScript extensions for inline type hints and quick fixes
-
-#### Verification Tools
-
-- **ESLint**: Identify code quality issues with [@typescript-eslint](https://typescript-eslint.io/) rules
-- **TypeScript Compiler**: Catch type errors at compile time
-- **Test Runners**: Ensure functionality remains intact after changes
-- **CI/CD Tools**: GitHub Actions for automated type checking and linting
-
-### 5. Error Prevention Strategies
-
-#### Gradual Implementation
+### Gradual Implementation
 
 - **Approach**: Fix one warning at a time rather than attempting comprehensive changes
 - **Benefits**: Easier verification, reduced risk of introducing new issues
 
-#### Runtime vs Compile-Time Safety
+### Runtime vs Compile-Time Safety
 
 - **Understanding**: TypeScript provides compile-time guarantees, but runtime validation is still necessary for dynamic data
 - **Practice**: Use both static typing and runtime checks where appropriate
@@ -235,3 +125,10 @@ This iterative process is particularly efficient with Bun's fast execution times
 - Quality tools provide comprehensive feedback but require careful interpretation
 - Build processes must be considered in test environments
 - Incremental changes reduce risk but require more verification steps
+
+## Related Documentation
+
+For specific patterns and advanced techniques, see:
+
+- **[TypeScript Patterns](patterns.md)**: WebSocket typing, global augmentation, and testing patterns
+- **[Case Studies](case-studies.md)**: Real-world refactoring examples

@@ -20,7 +20,7 @@ import { CallbackManager } from './CallbackManager.ts'
 import { routes } from '../shared/routes.ts'
 
 export class PTYServer implements Disposable {
-  public readonly server: Server<any>
+  public readonly server: Server<undefined>
   private readonly staticRoutes: Record<string, Response>
   private readonly stack = new DisposableStack()
 
@@ -41,7 +41,7 @@ export class PTYServer implements Disposable {
     return new PTYServer(staticRoutes)
   }
 
-  private startWebServer(): Server<any> {
+  private startWebServer(): Server<undefined> {
     return Bun.serve({
       port: 0,
 
@@ -73,6 +73,7 @@ export class PTYServer implements Disposable {
       },
 
       websocket: {
+        data: undefined as undefined,
         perMessageDeflate: true,
         open: (ws) => ws.subscribe('sessions:update'),
         message: handleWebSocketMessage,

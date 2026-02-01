@@ -7,8 +7,8 @@ This document captures key lessons learned from multiple coding sessions focused
 - **Avoid `any` types** and non-null assertions (`!`) to maintain type safety
 - **Design function signatures** that work with TypeScript's type system rather than against it
 - **Follow iterative workflow**: lint → analyze → fix → test → repeat
-- **Key insights**: TypeScript's control flow narrowing doesn't persist across function boundaries; module augmentation improves global object typing; E2E test timing is critical after type changes
-- **Results**: Eliminated 9 total warnings across sessions (from 56 to 47), improved test reliability, and enhanced code maintainability
+- **Key insights**: TypeScript's control flow narrowing doesn't persist across function boundaries; module augmentation improves global object typing; E2E test timing is critical after type changes; Bun's WebSocket API evolution requires staying current with framework changes
+- **Results**: Eliminated 11 total warnings across sessions (from 41 to 30), improved test reliability, and enhanced code maintainability
 
 ## Overview
 
@@ -21,7 +21,7 @@ During multiple code quality improvement sessions, we addressed ESLint warnings 
 #### Avoid `any` Types
 
 - **Problem**: Using `any` bypasses TypeScript's type checking, leading to potential runtime errors and reduced code maintainability.
-- **Impact**: The session identified 56 warnings in the codebase related to `any` usage, indicating widespread type safety issues.
+- **Impact**: The session identified 41 warnings in the codebase related to `any` usage, indicating widespread type safety issues.
 - **Solution**: Define proper interfaces and types for all data structures.
 - **Benefits**: Compile-time error detection, better IDE support, improved code documentation.
 
@@ -38,6 +38,32 @@ During multiple code quality improvement sessions, we addressed ESLint warnings 
 - **Use Generics for Flexibility**: Prefer `<T>` over `any` for reusable components while maintaining type safety.
 - **Discriminated Unions**: Use union types with discriminant properties for exhaustive type checking.
 - **Type Guards**: Implement custom functions like `isUser(obj: unknown): obj is User` for runtime validation.
+- **Modern Bun WebSocket Typing**: Use explicit `data` configuration in websocket setup instead of generic parameters for better type safety and API compliance.
+
+#### Modern Bun WebSocket Type Safety
+
+**Problem**: Bun's WebSocket API evolved to prefer configuration-based typing over generics, but many codebases still use outdated patterns.
+
+**Solution**: Configure WebSocket data explicitly in the server setup:
+
+```typescript
+Bun.serve({
+  websocket: {
+    data: undefined as undefined, // For no data - strictest safety
+    // or data: {} as unknown,      // For future flexibility
+    // or data: undefined as never,  // For maximum strictness
+    message: handleWebSocketMessage,
+    // ... other handlers
+  },
+})
+```
+
+**Benefits**:
+
+- `ws.data` is properly typed at compile time
+- Prevents accidental property access on non-existent data
+- Clear contract for WebSocket data requirements
+- Future-proof when data needs are added
 
 #### TypeScript Module Augmentation for Global Objects
 

@@ -1,4 +1,4 @@
-export function handleUpgrade(server: Bun.Server<any>, req: Request) {
+export function handleUpgrade(server: Bun.Server<undefined>, req: Request) {
   if (!(req.headers.get('upgrade') === 'websocket')) {
     return new Response('WebSocket endpoint - use WebSocket upgrade', { status: 426 })
   }

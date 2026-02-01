@@ -17,14 +17,14 @@ import {
 } from '../../shared/types'
 
 class WebSocketHandler {
-  private sendSessionList(ws: ServerWebSocket<any>): void {
+  private sendSessionList(ws: ServerWebSocket<undefined>): void {
     const sessions = manager.list()
     const message: WSMessageServerSessionList = { type: 'session_list', sessions }
     ws.send(JSON.stringify(message))
   }
 
   private handleSubscribe(
-    ws: ServerWebSocket<any>,
+    ws: ServerWebSocket<undefined>,
     message: WSMessageClientSubscribeSession
   ): void {
     const session = manager.get(message.sessionId)
@@ -45,7 +45,7 @@ class WebSocketHandler {
   }
 
   private handleUnsubscribe(
-    ws: ServerWebSocket<any>,
+    ws: ServerWebSocket<undefined>,
     message: WSMessageClientUnsubscribeSession
   ): void {
     const topic = `session:${message.sessionId}`
@@ -58,13 +58,13 @@ class WebSocketHandler {
   }
 
   private handleSessionListRequest(
-    ws: ServerWebSocket<any>,
+    ws: ServerWebSocket<undefined>,
     _message: WSMessageClientSessionList
   ): void {
     this.sendSessionList(ws)
   }
 
-  private handleUnknownMessage(ws: ServerWebSocket<any>, message: WSMessageClient): void {
+  private handleUnknownMessage(ws: ServerWebSocket<undefined>, message: WSMessageClient): void {
     const error: WSMessageServerError = {
       type: 'error',
       error: new CustomError(`Unknown message type ${message.type}`),
@@ -73,7 +73,7 @@ class WebSocketHandler {
   }
 
   public handleWebSocketMessage(
-    ws: ServerWebSocket<any>,
+    ws: ServerWebSocket<undefined>,
     data: string | Buffer<ArrayBuffer>
   ): void {
     if (typeof data !== 'string') {
@@ -124,7 +124,7 @@ class WebSocketHandler {
     }
   }
 
-  private handleSpawn(ws: ServerWebSocket<any>, message: WSMessageClientSpawnSession) {
+  private handleSpawn(ws: ServerWebSocket<undefined>, message: WSMessageClientSpawnSession) {
     const sessionInfo = manager.spawn(message)
     if (message.subscribe) {
       this.handleSubscribe(ws, { type: 'subscribe', sessionId: sessionInfo.id })
@@ -135,7 +135,7 @@ class WebSocketHandler {
     manager.write(message.sessionId, message.data)
   }
 
-  private handleReadRaw(ws: ServerWebSocket<any>, message: WSMessageClientReadRaw) {
+  private handleReadRaw(ws: ServerWebSocket<undefined>, message: WSMessageClientReadRaw) {
     const rawData = manager.getRawBuffer(message.sessionId)
     if (!rawData) {
       const error: WSMessageServerError = {
@@ -155,7 +155,7 @@ class WebSocketHandler {
 }
 
 export function handleWebSocketMessage(
-  ws: ServerWebSocket<any>,
+  ws: ServerWebSocket<undefined>,
   data: string | Buffer<ArrayBuffer>
 ): void {
   const handler = new WebSocketHandler()

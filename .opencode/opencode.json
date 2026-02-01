@@ -11,6 +11,7 @@
     ".opencode/docs/typescript/case-studies/pty-read-tool-refactoring.md",
     ".opencode/docs/typescript/case-studies/global-window-properties.md",
     ".opencode/docs/typescript/case-studies/waitForTerminalRegex-refactoring.md",
+    ".opencode/docs/typescript/case-studies/websocket-typing-improvements.md",
     ".opencode/docs/typescript/recommendations.md",
     "README.md"
   ]

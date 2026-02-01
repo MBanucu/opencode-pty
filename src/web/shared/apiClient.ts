@@ -5,9 +5,11 @@ import type { PTYSessionInfo } from 'opencode-pty/shared/types'
 import { routes } from './routes'
 
 // Extract path parameters from route pattern at compile time
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- infer _ is intentional for type pattern matching
 type ExtractParams<T extends string> = T extends `${infer _}:${infer Param}/${infer Rest}`
   ? { [K in Param | keyof ExtractParams<Rest>]: string | number }
-  : T extends `${infer _}:${infer Param}`
+  : // eslint-disable-next-line @typescript-eslint/no-unused-vars -- infer _ is intentional for type pattern matching
+    T extends `${infer _}:${infer Param}`
     ? { [K in Param]: string | number }
     : Record<string, never>
 

@@ -2,6 +2,14 @@ import type { Page } from '@playwright/test'
 import type { SerializeAddon } from '@xterm/addon-serialize'
 import stripAnsi from 'strip-ansi'
 
+// Global module augmentation for E2E testing
+declare global {
+  interface Window {
+    xtermTerminal?: import('@xterm/xterm').Terminal
+    xtermSerializeAddon?: SerializeAddon
+  }
+}
+
 // Use Bun.stripANSI if available, otherwise fallback to npm strip-ansi
 let bunStripANSI: (str: string) => string
 try {
@@ -54,16 +62,13 @@ export const getTerminalPlainText = async (page: Page): Promise<string[]> => {
   })
 }
 
-/**
- * Extract terminal text via xterm.js SerializeAddon (configurable modes for DRY E2E usage)
- */
 export const getSerializedContentByXtermSerializeAddon = async (
   page: Page,
   { excludeModes = false, excludeAltBuffer = false } = {}
 ): Promise<string> => {
   return await page.evaluate(
     (opts) => {
-      const serializeAddon = (window as any).xtermSerializeAddon as SerializeAddon | undefined
+      const serializeAddon = window.xtermSerializeAddon
       if (!serializeAddon) return ''
       return serializeAddon.serialize({
         excludeModes: opts.excludeModes,
@@ -90,12 +95,13 @@ export const waitForTerminalRegex = async (
   timeout: number = 5000
 ) => {
   const pattern = regex.source
+  // First wait for serializeAddon to be available
+  await page.waitForFunction(() => window.xtermSerializeAddon !== undefined, { timeout: 10000 })
   await page.evaluate(
     ({ pattern, flagName, opts }) => {
       // Setup output watcher on window
-      const term =
-        (window as any).xtermSerializeAddon && (window as any).xtermSerializeAddon._terminal
-      const serializeAddon = (window as any).xtermSerializeAddon
+      const term = window.xtermTerminal
+      const serializeAddon = window.xtermSerializeAddon
       function stripAnsi(str: string) {
         return str.replace(
           // eslint-disable-next-line no-control-regex
@@ -104,7 +110,7 @@ export const waitForTerminalRegex = async (
         )
       }
       function checkMatch() {
-        if (serializeAddon && typeof serializeAddon.serialize === 'function') {
+        if (serializeAddon) {
           const c = serializeAddon.serialize({
             excludeModes: opts.excludeModes,
             excludeAltBuffer: opts.excludeAltBuffer,
@@ -118,7 +124,7 @@ export const waitForTerminalRegex = async (
         }
         return false
       }
-      if (term && typeof term.onWriteParsed === 'function') {
+      if (term) {
         ;(window as any)[flagName] = false
         const disposable = term.onWriteParsed(() => {
           if (checkMatch()) {

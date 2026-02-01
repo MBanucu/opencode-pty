@@ -4,6 +4,14 @@ import { FitAddon } from '@xterm/addon-fit'
 import { SerializeAddon } from '@xterm/addon-serialize'
 import '@xterm/xterm/css/xterm.css'
 
+// Global module augmentation to extend Window interface
+declare global {
+  interface Window {
+    xtermTerminal?: Terminal
+    xtermSerializeAddon?: SerializeAddon
+  }
+}
+
 interface RawTerminalProps {
   rawOutput: string
   onSendInput?: (data: string) => void
@@ -73,8 +81,8 @@ export class RawTerminal extends React.Component<RawTerminalProps> {
     this.xtermInstance = term
 
     // CRITICAL: Expose terminal and serialize addon for E2E testing
-    ;(window as any).xtermTerminal = term
-    ;(window as any).xtermSerializeAddon = this.serializeAddon
+    window.xtermTerminal = term
+    window.xtermSerializeAddon = this.serializeAddon
 
     // Set up input handling
     this.setupInputHandling(term)

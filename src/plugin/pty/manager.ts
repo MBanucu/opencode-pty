@@ -9,6 +9,7 @@ import { withSession } from './utils.ts'
 // Temporary workaround until https://github.com/sursaone/bun-pty/pull/37 is merged
 import { semver } from 'bun'
 import { version as bunPtyVersion } from 'bun-pty/package.json'
+import { Terminal } from 'bun-pty'
 
 if (semver.order(bunPtyVersion, '0.4.8') > 0) {
   throw new Error(
@@ -16,11 +17,15 @@ if (semver.order(bunPtyVersion, '0.4.8') > 0) {
   )
 }
 
-import { Terminal } from 'bun-pty'
-const originalStartReadLoop = (Terminal.prototype as any)._startReadLoop
-;(Terminal.prototype as any)._startReadLoop = async function (...args: any[]) {
-  await new Promise((resolve) => setTimeout(resolve, 0))
-  return originalStartReadLoop.apply(this, args)
+const proto = Terminal.prototype as unknown as { _startReadLoop?: (...args: unknown[]) => unknown }
+
+const original = proto._startReadLoop
+
+if (typeof original === 'function') {
+  proto._startReadLoop = async function (this: InstanceType<typeof Terminal>, ...args: unknown[]) {
+    await new Promise((r) => setTimeout(r, 0))
+    return original.apply(this, args)
+  }
 }
 
 type SessionUpdateCallback = (session: PTYSessionInfo) => void

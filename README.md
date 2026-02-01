@@ -152,20 +152,11 @@ Replace `[PORT]` with the actual port number shown in the server console output.
 
 ### Development
 
-For development with hot reloading:
+Future implementation will include:
 
-```bash
-# 1. Build the web client
-bun run build:dev
-
-# 2. Start the PTY server (Terminal 1)
-bun run dev:server
-
-# 3. Start the React dev server (Terminal 2)
-bun run dev
-```
-
-The React app will be available at `http://localhost:3000` with hot reloading, and the PTY server at a random port (check console output).
+- A startup script that runs the server and uses IPC communication to retrieve the URL of the server
+- The startup script will run `bun vite preview` with an environment variable set to the server URL
+- The client will use this environment variable for WebSocket and HTTP requests
 
 ## Usage Examples
 

@@ -5,6 +5,7 @@
     ".opencode/docs/test/bun/index.md",
     ".opencode/docs/test/bun/dom/index.md",
     ".opencode/docs/test/playwright/index.md",
+    ".opencode/docs/typescript-lessons-learned.md",
     "README.md"
   ]
 }

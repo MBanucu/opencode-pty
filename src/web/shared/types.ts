@@ -16,7 +16,7 @@ export class CustomError extends Error {
     // Include all own properties, including non-enumerable ones like 'message' and 'stack'
     // prettyPrintColor and prettyPrintNoColor are now included automatically as strings
     Object.getOwnPropertyNames(this).forEach((key) => {
-      obj[key] = (this as any)[key]
+      obj[key] = (this as Record<string, unknown>)[key]
     })
     return obj
   }

@@ -40,13 +40,19 @@ export class PerformanceMonitor {
       memory?: { used: number; total: number; limit: number }
     } = { measures: this.measures }
 
-    // Add memory info if available
+    // Add memory info if available (Chrome-specific extension)
     if ('memory' in performance) {
-      const mem = (performance as any).memory
-      metrics.memory = {
-        used: mem.usedJSHeapSize,
-        total: mem.totalJSHeapSize,
-        limit: mem.jsHeapSizeLimit,
+      const mem = (
+        performance as {
+          memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number }
+        }
+      ).memory
+      if (mem) {
+        metrics.memory = {
+          used: mem.usedJSHeapSize,
+          total: mem.totalJSHeapSize,
+          limit: mem.jsHeapSizeLimit,
+        }
       }
     }
 
@@ -68,22 +74,11 @@ export function trackWebVitals(): void {
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] })
 
       // Track First Input Delay (FID)
-      const fidObserver = new PerformanceObserver((list) => {
-        const entries = list.getEntries()
-        entries.forEach((_entry: any) => {})
-      })
+      const fidObserver = new PerformanceObserver(() => {})
       fidObserver.observe({ entryTypes: ['first-input'] })
 
       // Track Cumulative Layout Shift (CLS)
-      let clsValue = 0
-      const clsObserver = new PerformanceObserver((list) => {
-        const entries = list.getEntries()
-        entries.forEach((entry: any) => {
-          if (!entry.hadRecentInput) {
-            clsValue += entry.value
-          }
-        })
-      })
+      const clsObserver = new PerformanceObserver(() => {})
       clsObserver.observe({ entryTypes: ['layout-shift'] })
       // eslint-disable-next-line no-empty
     } catch {}

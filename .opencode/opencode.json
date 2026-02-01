@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    ".opencode/docs/quality-tools.md",
+    ".opencode/docs/test/bun/index.md",
+    ".opencode/docs/test/bun/dom/index.md",
+    ".opencode/docs/test/playwright/index.md",
+    "README.md"
+  ]
+}

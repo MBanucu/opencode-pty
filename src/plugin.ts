@@ -17,7 +17,7 @@ interface SessionDeletedEvent {
     }
   }
 }
-const ptyServerUrlCommand = 'pty-server-url'
+const ptyOpenClientCommand = 'pty-open-background-spy'
 
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initPermissions(client, directory)
@@ -26,7 +26,7 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
 
   return {
     'command.execute.before': async (input) => {
-      if (input.command !== ptyServerUrlCommand) {
+      if (input.command !== ptyOpenClientCommand) {
         return
       }
       open(ptyServer.server.url.origin)
@@ -44,7 +44,7 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
         input.command = {}
       }
       const serverUrl = ptyServer.server.url.toString()
-      input.command[ptyServerUrlCommand] = {
+      input.command[ptyOpenClientCommand] = {
         template: `${serverUrl}`,
         description: 'print link to PTY web server',
       }

@@ -1,6 +1,7 @@
-import { initManager, manager } from 'opencode-pty/src/plugin/pty/manager'
-import { PTYServer } from 'opencode-pty/server'
+import { initManager, manager } from 'opencode-pty/plugin/pty/manager'
+import { PTYServer } from 'opencode-pty/web/server/server'
 import { OpencodeClient } from '@opencode-ai/sdk'
+import { createApiClient } from 'opencode-pty/web/shared/apiClient'
 
 // Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {
@@ -22,13 +23,15 @@ if (process.env.NODE_ENV === 'test') {
   await Bun.write(`/tmp/test-server-port-${workerIndex}.txt`, server.server.port.toString())
 }
 
+const api = createApiClient(server.server.url.origin)
+
 // Health check for test mode
 if (process.env.NODE_ENV === 'test') {
-  let retries = 20 // 10 seconds
+  let retries = 200 // 20 seconds
   while (retries > 0) {
     try {
-      const response = await fetch(`${server.server.url}/api/sessions`)
-      if (response.ok) {
+      const health = await api.health()
+      if (health.status === 'healthy') {
         break
       }
     } catch (error) {
@@ -36,7 +39,7 @@ if (process.env.NODE_ENV === 'test') {
         throw error
       }
     }
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 100))
     retries--
   }
   if (retries === 0) {

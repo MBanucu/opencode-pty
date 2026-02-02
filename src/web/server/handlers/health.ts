@@ -1,16 +1,7 @@
 import moment from 'moment'
 import { manager } from '../../../plugin/pty/manager.ts'
 import { JsonResponse } from './responses.ts'
-
-interface HealthResponse {
-  status: 'healthy'
-  timestamp: string
-  uptime: number
-  sessions: { total: number; active: number }
-  websocket: { connections: number }
-  memory?: { rss: number; heapUsed: number; heapTotal: number }
-  responseTime?: number
-}
+import type { HealthResponse } from '../../shared/types.ts'
 
 export function handleHealth(server: Bun.Server<undefined>) {
   const sessions = manager.list()

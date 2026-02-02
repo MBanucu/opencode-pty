@@ -6,6 +6,7 @@ import { useSessionManager } from '../hooks/useSessionManager.ts'
 
 import { Sidebar } from './Sidebar.tsx'
 import { RawTerminal } from './TerminalRenderer.tsx'
+import { api } from '../../shared/apiClient.ts'
 
 export function App() {
   const [sessions, setSessions] = useState<PTYSessionInfo[]>([])
@@ -32,17 +33,15 @@ export function App() {
     onSessionList: useCallback(
       (newSessions: PTYSessionInfo[], autoSelected: PTYSessionInfo | null) => {
         setSessions(newSessions)
-        if (autoSelected) {
-          setActiveSession(autoSelected)
-          fetch(`${location.protocol}//${location.host}/api/sessions/${autoSelected.id}/buffer/raw`)
-            .then((response) => (response.ok ? response.json() : { raw: '' }))
-            .then((data) => {
-              setRawOutput(data.raw || '')
-            })
-            .catch(() => {
-              setRawOutput('')
-            })
+        if (!autoSelected) {
+          return
         }
+        setActiveSession(autoSelected)
+        api.session.buffer.raw({ id: autoSelected.id }).then((data) => {
+          setRawOutput(data.raw)
+        }).catch((error) => {
+          console.error('Failed to fetch initial raw buffer for auto-selected session', error)
+        })
       },
       []
     ),
@@ -72,13 +71,9 @@ export function App() {
   useEffect(() => {
     const syncInterval = setInterval(async () => {
       try {
-        const response = await fetch(`${location.protocol}//${location.host}/api/sessions`)
-        if (response.ok) {
-          const sessionsData = await response.json()
-          setSessions(sessionsData)
-        }
-      } catch {
-        // Silently ignore sync errors to avoid console spam
+        setSessions(await api.sessions.list())
+      } catch (error) {
+        console.error('Failed to sync sessions', error)
       }
     }, 10000) // 10 seconds
 

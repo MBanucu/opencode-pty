@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
-import type { PTYSessionInfo } from 'opencode-pty/shared/types'
+import type { PTYSessionInfo } from 'opencode-pty/web/shared/types'
 import type {
   WSMessageServer,
   WSMessageServerRawData,
   WSMessageServerSessionList,
   WSMessageServerSessionUpdate,
-} from '../../shared/types'
-import { RETRY_DELAY, SKIP_AUTOSELECT_KEY } from 'opencode-pty/shared/constants'
+} from 'opencode-pty/web/shared/types'
+import { RETRY_DELAY, SKIP_AUTOSELECT_KEY } from 'opencode-pty/web/shared/constants'
 
-import { RouteBuilder } from '../../shared/RouteBuilder'
+import { RouteBuilder } from 'opencode-pty/web/shared/RouteBuilder'
 
 interface UseWebSocketOptions {
   activeSession: PTYSessionInfo | null

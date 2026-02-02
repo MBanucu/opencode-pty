@@ -33,12 +33,11 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    "./shared/types": "./src/web/shared/types.ts",
-    "./shared/constants": "./src/web/shared/constants.ts",
-    "./shared/logger": "./src/web/shared/logger.ts",
-    "./src/plugin/pty/manager": "./src/plugin/pty/manager.ts",
-    "./src/plugin/logger": "./src/plugin/logger.ts",
-    "./server": "./src/web/server/server.ts"
+    "./*": "./src/*.ts",
+    "./*/*": "./src/*/*.ts",
+    "./*/*/*": "./src/*/*/*.ts",
+    "./*/*/*/*": "./src/*/*/*/*.ts",
+    "./*/*/*/*/*": "./src/*/*/*/*/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

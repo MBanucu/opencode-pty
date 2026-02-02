@@ -1,7 +1,7 @@
 // Type-safe API client for making HTTP requests with compile-time validation
 // Uses the structured routes to ensure correct methods and parameters
 
-import type { PTYSessionInfo } from 'opencode-pty/shared/types'
+import type { HealthResponse, PTYSessionInfo } from 'opencode-pty/shared/types'
 import { routes } from './routes'
 
 // Extract path parameters from route pattern at compile time
@@ -143,6 +143,12 @@ export function createApiClient(baseUrl: string) {
           >(routes.session.buffer.plain, { method: 'GET', params, baseUrl }),
       },
     },
+
+    health: () =>
+      apiFetchJson<typeof routes.health, 'GET', HealthResponse>(routes.health, {
+        method: 'GET',
+        baseUrl
+      })
   } as const
 }
 

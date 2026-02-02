@@ -1,6 +1,6 @@
 import type { PTYSessionInfo, PTYStatus, SpawnOptions } from '../../plugin/pty/types'
 
-export type { PTYSessionInfo, PTYStatus }
+export type { PTYSessionInfo, PTYStatus, HealthResponse }
 
 export class CustomError extends Error {
   constructor(message: string) {
@@ -102,4 +102,14 @@ export interface WSMessageServerSessionUpdate extends WSMessageServer {
 export interface WSMessageServerError extends WSMessageServer {
   type: 'error'
   error: CustomError
+}
+
+interface HealthResponse {
+  status: 'healthy'
+  timestamp: string
+  uptime: number
+  sessions: { total: number; active: number }
+  websocket: { connections: number }
+  memory?: { rss: number; heapUsed: number; heapTotal: number }
+  responseTime?: number
 }

@@ -66,9 +66,9 @@ opencode
 
 This plugin provides slash commands that can be used in OpenCode chat:
 
-| Command           | Description                                        |
-| ----------------- | -------------------------------------------------- |
-| `/pty-server-url` | Get the URL of the running PTY web server instance |
+| Command                    | Description                                        |
+| -------------------------- | -------------------------------------------------- |
+| `/pty-open-background-spy` | Get the URL of the running PTY web server instance |
 
 ## Web UI
 

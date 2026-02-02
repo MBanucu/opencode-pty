@@ -9,14 +9,6 @@ import { ptyKill } from './plugin/pty/tools/kill.ts'
 import { PTYServer } from './web/server/server.ts'
 import open from 'open'
 
-interface SessionDeletedEvent {
-  type: 'session.deleted'
-  properties: {
-    info: {
-      id: string
-    }
-  }
-}
 const ptyOpenClientCommand = 'pty-open-background-spy'
 
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
@@ -50,16 +42,8 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       }
     },
     event: async ({ event }) => {
-      if (!event) {
-        return
-      }
-
       if (event.type === 'session.deleted') {
-        const sessionEvent = event as SessionDeletedEvent
-        const sessionId = sessionEvent.properties?.info?.id
-        if (sessionId) {
-          manager.cleanupBySession(sessionId)
-        }
+        manager.cleanupBySession(event.properties.info.id)
       }
     },
   }

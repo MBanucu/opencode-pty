@@ -316,7 +316,7 @@ To load a local checkout in OpenCode:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["file:///absolute/path/to/opencode-pty"]
+  "plugin": ["file:///absolute/path/to/opencode-pty/index.ts"]
 }
 ```
 

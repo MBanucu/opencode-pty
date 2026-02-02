@@ -65,7 +65,6 @@ export async function sendInput(
 }
 
 export function cleanupSession(req: BunRequest<typeof routes.session.cleanup.path>) {
-  console.log('Cleaning up session', req.params.id)
   const success = manager.kill(req.params.id, true)
   if (!success) {
     return new ErrorResponse('Failed to kill session', 400)

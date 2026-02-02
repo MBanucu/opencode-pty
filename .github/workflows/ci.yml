@@ -64,18 +64,21 @@ jobs:
         quality: [quality, test, test:e2e]
     name: Nix Flake CI
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for FlakeHub cache authentication
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v21
+      - name: Install Determinate Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
       - name: Enable Magic Nix Cache
         uses: DeterminateSystems/magic-nix-cache-action@v13
       - name: Install dependencies (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun install
+        run: nix develop .# --command bun install
 
       - name: Build (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun build
+        run: nix develop .# --command bun build
 
       - name: Quality checks (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun ${{matrix.quality}}
+        run: nix develop .# --command bun ${{matrix.quality}}

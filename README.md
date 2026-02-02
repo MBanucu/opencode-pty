@@ -61,7 +61,6 @@ opencode
 | `pty_read`       | Read output buffer with pagination and optional regex filtering             |
 | `pty_list`       | List all PTY sessions with status, PID, line count                          |
 | `pty_kill`       | Terminate a PTY, optionally cleanup the buffer                              |
-| `pty_server_url` | Get the URL of the running PTY web server instance                          |
 
 ## Slash Commands
 
@@ -77,20 +76,25 @@ This plugin includes a modern React-based web interface for monitoring and inter
 
 [![opencode-pty Web UI Demo](https://img.youtube.com/vi/wPqmTPnzvVY/0.jpg)](https://youtu.be/wPqmTPnzvVY)
 
+If you instruct the coding agent to run something in background, you have to name it "session",
+i.e. "run xy as a background SESSION".
+If you name it "task" or "process" or anything else, the agent will sometimes run it as background subprocess using `&`.
+
 ### Starting the Web UI
 
-Run the test server to start the web interface:
+1. Run opencode with the plugin.
+2. Run slash command `/pty-server-url`.
 
-```bash
-bun run dev:server
-```
-
-This will:
-
-- Start the PTY server on a random port (check console output for the exact URL)
-- Create a test PTY session to demonstrate functionality
-
-The server URL will be displayed in the console output. Manually navigate to this URL in your browser to access the React web interface.
+Opencode will load the plugin.
+The plugin will start the server and provide the slash command.
+The port is not fixed.
+Every process instance of opencode will start a new server with unique random (but still free) port on localhost.
+The origin of the printed URL provided by the slash command will route to the static `index.html` (client).
+The `index.html` loads the javascript files, that build the client in the browser.
+The client will use a websocket and http (REST API) requests to communicate with the server, depending on latency, reliability and reactivity.
+The server subscribes to the events of the base (session creation, new output of pty session).
+The client subscribes to the events of the server (bun pub/sub via websocket).
+Everything is event driven, reliable (if you can call websocket communication reliable) and reactive (using react as client builder).
 
 ### Features
 
@@ -148,15 +152,18 @@ ws.onmessage = (event) => {
 }
 ```
 
-Replace `[PORT]` with the actual port number shown in the server console output.
+Replace `[PORT]` with the actual port number shown in the slash command output.
 
 ### Development
 
 Future implementation will include:
 
-- A startup script that runs the server and uses IPC communication to retrieve the URL of the server
-- The startup script will run `bun vite preview` with an environment variable set to the server URL
+#### App
+- A startup script that runs the server (in the same process).
+- The startup script will run `bun vite` with an environment variable set to the server URL
 - The client will use this environment variable for WebSocket and HTTP requests
+
+This will ease the development on the client.
 
 ## Usage Examples
 

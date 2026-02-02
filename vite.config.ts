@@ -8,7 +8,7 @@ export default defineConfig({
   root: 'src/web/client',
   resolve: {
     alias: {
-      'opencode-pty': path.resolve(__dirname, './src'),
+      'opencode-pty-test': path.resolve(__dirname, './src'),
     },
   },
   build: {

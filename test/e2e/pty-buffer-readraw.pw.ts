@@ -5,7 +5,7 @@ import {
   getSerializedContentByXtermSerializeAddon,
   waitForTerminalRegex,
 } from './xterm-test-helpers'
-import { createApiClient } from 'opencode-pty/web/shared/apiClient'
+import { createApiClient } from 'opencode-pty-test/web/shared/apiClient'
 
 async function createSession(
   api: ReturnType<typeof createApiClient>,

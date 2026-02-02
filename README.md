@@ -74,7 +74,7 @@ This plugin provides slash commands that can be used in OpenCode chat:
 
 This plugin includes a modern React-based web interface for monitoring and interacting with PTY sessions.
 
-[![opencode-pty Web UI Demo](https://img.youtube.com/vi/wPqmTPnzvVY/0.jpg)](https://youtu.be/wPqmTPnzvVY)
+[![opencode-pty-test Web UI Demo](https://img.youtube.com/vi/wPqmTPnzvVY/0.jpg)](https://youtu.be/wPqmTPnzvVY)
 
 If you instruct the coding agent to run something in background, you have to name it "session",
 i.e. "run xy as a background SESSION".

@@ -35,13 +35,13 @@ describe('npm pack structure', () => {
   it('includes dist web assets', async () => {
     // 1) Create tarball via npm pack (triggers prepack build)
     const pack = await run(['npm', 'pack'])
-    expect(pack.code).toBe(0)
+    expect(pack.code, pack.stderr).toBe(0)
     const tgz = findPackFileFromOutput(pack.stdout)
     expect(typeof tgz).toBe('string')
 
     // 2) List tarball contents via tar -tf
     const list = await run(['tar', '-tf', tgz as string])
-    expect(list.code).toBe(0)
+    expect(list.code, list.stderr).toBe(0)
     const files = list.stdout.split(/\r?\n/).filter(Boolean)
 
     // 3) Validate required files exist; NPM tarballs use 'package/' prefix

@@ -1,8 +1,8 @@
 import type { PTYSessionInfo, SpawnOptions, ReadResult, SearchResult } from './types.ts'
 import type { OpencodeClient } from '@opencode-ai/sdk'
-import { SessionLifecycleManager } from './SessionLifecycle.ts'
-import { OutputManager } from './OutputManager.ts'
-import { NotificationManager } from './NotificationManager.ts'
+import { SessionLifecycleManager } from './session-lifecycle.ts'
+import { OutputManager } from './output-manager.ts'
+import { NotificationManager } from './notification-manager.ts'
 import { withSession } from './utils.ts'
 
 // Monkey-patch bun-pty to fix race condition in _startReadLoop

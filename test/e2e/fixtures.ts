@@ -1,7 +1,7 @@
 import { test as base, type WorkerInfo } from '@playwright/test'
 import { spawn, type ChildProcess } from 'node:child_process'
 
-import { createApiClient } from '../../src/web/shared/apiClient.ts'
+import { createApiClient } from '../../src/web/shared/api-client.ts'
 import { ManagedTestClient } from '../utils'
 
 async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {

@@ -85,7 +85,7 @@ export default function globalSetup() {
 
   console.log('Building web client (Vite)...')
 
-  const result = spawnSync(['bun', 'run', 'build'], {
+  const result = spawnSync(['bun', 'build:prod'], {
     cwd: ROOT,
     stdio: ['inherit', 'inherit', 'inherit'],
   })

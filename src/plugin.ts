@@ -7,6 +7,7 @@ import { ptyRead } from './plugin/pty/tools/read.ts'
 import { ptyList } from './plugin/pty/tools/list.ts'
 import { ptyKill } from './plugin/pty/tools/kill.ts'
 import { PTYServer } from './web/server/server.ts'
+import open from 'open'
 
 interface SessionDeletedEvent {
   type: 'session.deleted'
@@ -25,24 +26,11 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
 
   return {
     'command.execute.before': async (input) => {
-      if (input.command === ptyServerUrlCommand) {
-        const serverUrl = ptyServer.server.url.toString()
-        client.session.prompt({
-          path: { id: input.sessionID },
-          body: {
-            parts: [
-              {
-                type: 'text',
-                text: serverUrl
-                  ? `PTY Web Server URL: ${serverUrl}`
-                  : 'PTY Web Server is not running.',
-              },
-            ],
-            noReply: true,
-          },
-        })
-        throw new Error('Command handled by PTY plugin')
+      if (input.command !== ptyServerUrlCommand) {
+        return
       }
+      open(ptyServer.server.url.origin)
+      throw new Error('Command handled by PTY plugin')
     },
     tool: {
       pty_spawn: ptySpawn,

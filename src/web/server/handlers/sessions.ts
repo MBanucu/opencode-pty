@@ -1,13 +1,14 @@
 import { manager } from '../../../plugin/pty/manager.ts'
 import type { BunRequest } from 'bun'
 import { JsonResponse, ErrorResponse } from './responses.ts'
+import { routes } from '../../shared/routes.ts'
 
-export async function getSessions(): Promise<Response> {
+export function getSessions() {
   const sessions = manager.list()
   return new JsonResponse(sessions)
 }
 
-export async function createSession(req: Request): Promise<Response> {
+export async function createSession(req: Request) {
   try {
     const body = (await req.json()) as {
       command: string
@@ -27,69 +28,60 @@ export async function createSession(req: Request): Promise<Response> {
       parentSessionId: 'web-api',
     })
     return new JsonResponse(session)
-  } catch (err) {
+  } catch {
     return new ErrorResponse('Invalid JSON in request body', 400)
   }
 }
 
-export async function clearSessions(): Promise<Response> {
+export function clearSessions() {
   manager.clearAllSessions()
   return new JsonResponse({ success: true })
 }
 
-export async function getSession(req: BunRequest<'/api/sessions/:id'>): Promise<Response> {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
-  }
-  const session = manager.get(sessionId)
+export function getSession(req: BunRequest<typeof routes.session.path>) {
+  const session = manager.get(req.params.id)
   if (!session) {
     return new ErrorResponse('Session not found', 404)
   }
   return new JsonResponse(session)
 }
 
-export async function sendInput(req: BunRequest<'/api/sessions/:id/input'>): Promise<Response> {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
-  }
+export async function sendInput(
+  req: BunRequest<typeof routes.session.input.path>
+): Promise<Response> {
   try {
     const body = (await req.json()) as { data: string }
     if (!body.data || typeof body.data !== 'string') {
       return new ErrorResponse('Data field is required and must be a string', 400)
     }
-    const success = manager.write(sessionId, body.data)
+    const success = manager.write(req.params.id, body.data)
     if (!success) {
       return new ErrorResponse('Failed to write to session', 400)
     }
     return new JsonResponse({ success: true })
-  } catch (err) {
+  } catch {
     return new ErrorResponse('Invalid JSON in request body', 400)
   }
 }
 
-export async function killSession(req: BunRequest<'/api/sessions/:id/kill'>): Promise<Response> {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
-  }
-  const success = manager.kill(sessionId)
+export function cleanupSession(req: BunRequest<typeof routes.session.cleanup.path>) {
+  const success = manager.kill(req.params.id, true)
   if (!success) {
     return new ErrorResponse('Failed to kill session', 400)
   }
   return new JsonResponse({ success: true })
 }
 
-export async function getRawBuffer(
-  req: BunRequest<'/api/sessions/:id/buffer/raw'>
-): Promise<Response> {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
+export function killSession(req: BunRequest<typeof routes.session.path>) {
+  const success = manager.kill(req.params.id)
+  if (!success) {
+    return new ErrorResponse('Failed to kill session', 400)
   }
+  return new JsonResponse({ success: true })
+}
 
-  const bufferData = manager.getRawBuffer(sessionId)
+export function getRawBuffer(req: BunRequest<typeof routes.session.buffer.raw.path>) {
+  const bufferData = manager.getRawBuffer(req.params.id)
   if (!bufferData) {
     return new ErrorResponse('Session not found', 404)
   }
@@ -97,15 +89,8 @@ export async function getRawBuffer(
   return new JsonResponse(bufferData)
 }
 
-export async function getPlainBuffer(
-  req: BunRequest<'/api/sessions/:id/buffer/plain'>
-): Promise<Response> {
-  const sessionId = req.params.id
-  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
-    return new ErrorResponse('Invalid session ID', 400)
-  }
-
-  const bufferData = manager.getRawBuffer(sessionId)
+export function getPlainBuffer(req: BunRequest<typeof routes.session.buffer.plain.path>) {
+  const bufferData = manager.getRawBuffer(req.params.id)
   if (!bufferData) {
     return new ErrorResponse('Session not found', 404)
   }

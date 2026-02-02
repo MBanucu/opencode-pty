@@ -1,9 +1,9 @@
-import type { Session } from 'opencode-pty-test/shared/types'
+import type { PTYSessionInfo } from 'opencode-pty-test/web/shared/types'
 
 interface SidebarProps {
-  sessions: Session[]
-  activeSession: Session | null
-  onSessionClick: (session: Session) => void
+  sessions: PTYSessionInfo[]
+  activeSession: PTYSessionInfo | null
+  onSessionClick: (session: PTYSessionInfo) => void
   connected: boolean
 }
 

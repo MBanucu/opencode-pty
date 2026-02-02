@@ -1,23 +1,32 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Session } from 'opencode-pty-test/shared/types'
-import {
-  WEBSOCKET_PING_INTERVAL,
-  RETRY_DELAY,
-  SKIP_AUTOSELECT_KEY,
-} from 'opencode-pty-test/shared/constants'
+import type { PTYSessionInfo } from 'opencode-pty-test/web/shared/types'
+import type {
+  WSMessageServer,
+  WSMessageServerRawData,
+  WSMessageServerSessionList,
+  WSMessageServerSessionUpdate,
+} from 'opencode-pty-test/web/shared/types'
+import { RETRY_DELAY, SKIP_AUTOSELECT_KEY } from 'opencode-pty-test/web/shared/constants'
+
+import { RouteBuilder } from 'opencode-pty-test/web/shared/RouteBuilder'
 
 interface UseWebSocketOptions {
-  activeSession: Session | null
+  activeSession: PTYSessionInfo | null
   onRawData?: (rawData: string) => void
-  onSessionList: (sessions: Session[], autoSelected: Session | null) => void
+  onSessionList: (sessions: PTYSessionInfo[], autoSelected: PTYSessionInfo | null) => void
+  onSessionUpdate?: (updatedSession: PTYSessionInfo) => void
 }
 
-export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWebSocketOptions) {
+export function useWebSocket({
+  activeSession,
+  onRawData,
+  onSessionList,
+  onSessionUpdate,
+}: UseWebSocketOptions) {
   const [connected, setConnected] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
-  const activeSessionRef = useRef<Session | null>(null)
-  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const activeSessionRef = useRef<PTYSessionInfo | null>(null)
 
   // Keep ref in sync with activeSession
   useEffect(() => {
@@ -26,7 +35,9 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
 
   // Connect to WebSocket on mount
   useEffect(() => {
-    const ws = new WebSocket(`ws://${location.host}/ws`)
+    const ws = new WebSocket(
+      `${RouteBuilder.websocket()}`.replace(/^\/ws/, `ws://${location.host}/ws`)
+    )
     ws.onopen = () => {
       setConnected(true)
       // Request initial session list
@@ -35,24 +46,20 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
       if (activeSessionRef.current) {
         ws.send(JSON.stringify({ type: 'subscribe', sessionId: activeSessionRef.current.id }))
       }
-      // Send ping every 30 seconds to keep connection alive
-      pingIntervalRef.current = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'ping' }))
-        }
-      }, WEBSOCKET_PING_INTERVAL)
     }
     ws.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data)
+        const data = JSON.parse(event.data) as WSMessageServer
         if (data.type === 'session_list') {
-          const sessions = data.sessions || []
+          const sessionListMsg = data as WSMessageServerSessionList
+          const sessions = sessionListMsg.sessions || []
           // Auto-select first running session if none selected (skip in tests that need empty state)
           const shouldSkipAutoselect = localStorage.getItem(SKIP_AUTOSELECT_KEY) === 'true'
-          let autoSelected: Session | null = null
+          let autoSelected: PTYSessionInfo | null = null
           if (sessions.length > 0 && !activeSession && !shouldSkipAutoselect) {
-            const runningSession = sessions.find((s: Session) => s.status === 'running')
-            autoSelected = runningSession || sessions[0]
+            const runningSession =
+              sessions.find((s: PTYSessionInfo) => s.status === 'running') || null
+            autoSelected = runningSession || sessions[0] || null
             if (autoSelected) {
               activeSessionRef.current = autoSelected
               // Subscribe to the auto-selected session for live updates
@@ -75,10 +82,14 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
             }
           }
           onSessionList(sessions, autoSelected)
+        } else if (data.type === 'session_update') {
+          const sessionUpdateMsg = data as WSMessageServerSessionUpdate
+          onSessionUpdate?.(sessionUpdateMsg.session)
         } else if (data.type === 'raw_data') {
-          const isForActiveSession = data.sessionId === activeSessionRef.current?.id
+          const rawDataMsg = data as WSMessageServerRawData
+          const isForActiveSession = rawDataMsg.session.id === activeSessionRef.current?.id
           if (isForActiveSession) {
-            onRawData?.(data.rawData)
+            onRawData?.(rawDataMsg.rawData)
           }
         }
         // eslint-disable-next-line no-empty
@@ -86,18 +97,13 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
     }
     ws.onclose = () => {
       setConnected(false)
-      // Clear ping interval
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current)
-        pingIntervalRef.current = null
-      }
     }
     ws.onerror = () => {}
     wsRef.current = ws
     return () => {
       ws.close()
     }
-  }, [activeSession, onRawData, onSessionList])
+  }, [activeSession, onRawData, onSessionList, onSessionUpdate])
 
   const subscribe = (sessionId: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -115,5 +121,11 @@ export function useWebSocket({ activeSession, onRawData, onSessionList }: UseWeb
     }
   }
 
-  return { connected, subscribe, subscribeWithRetry }
+  const sendInput = (sessionId: string, data: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'input', sessionId, data }))
+    }
+  }
+
+  return { connected, subscribe, subscribeWithRetry, sendInput }
 }

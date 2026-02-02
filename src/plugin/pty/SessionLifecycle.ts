@@ -2,6 +2,7 @@ import { spawn, type IPty } from 'bun-pty'
 import { RingBuffer } from './buffer.ts'
 import type { PTYSession, PTYSessionInfo, SpawnOptions } from './types.ts'
 import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS } from '../constants.ts'
+import moment from 'moment'
 
 const SESSION_ID_BYTE_LENGTH = 4
 
@@ -33,7 +34,7 @@ export class SessionLifecycleManager {
       env: opts.env,
       status: 'running',
       pid: 0, // will be set after spawn
-      createdAt: new Date(),
+      createdAt: moment(),
       parentSessionId: opts.parentSessionId,
       notifyOnExit: opts.notifyOnExit ?? false,
       buffer,
@@ -56,30 +57,33 @@ export class SessionLifecycleManager {
 
   private setupEventHandlers(
     session: PTYSession,
-    onData: (id: string, data: string) => void,
-    onExit: (id: string, exitCode: number | null) => void
+    onData: (session: PTYSession, data: string) => void,
+    onExit: (session: PTYSession, exitCode: number | null) => void
   ): void {
     session.process!.onData((data: string) => {
       session.buffer.append(data)
-      onData(session.id, data)
+      onData(session, data)
     })
 
-    session.process!.onExit(({ exitCode }) => {
+    session.process!.onExit(({ exitCode, signal }) => {
       // Flush any remaining incomplete line in the buffer
       session.buffer.flush()
 
-      if (session.status === 'running') {
+      if (session.status === 'killing') {
+        session.status = 'killed'
+      } else {
         session.status = 'exited'
-        session.exitCode = exitCode
       }
-      onExit(session.id, exitCode)
+      session.exitCode = exitCode
+      session.exitSignal = signal
+      onExit(session, exitCode)
     })
   }
 
   spawn(
     opts: SpawnOptions,
-    onData: (id: string, data: string) => void,
-    onExit: (id: string, exitCode: number | null) => void
+    onData: (session: PTYSession, data: string) => void,
+    onExit: (session: PTYSession, exitCode: number | null) => void
   ): PTYSessionInfo {
     const session = this.createSessionObject(opts)
     this.spawnProcess(session)
@@ -95,12 +99,12 @@ export class SessionLifecycleManager {
     }
 
     if (session.status === 'running') {
+      session.status = 'killing'
       try {
         session.process!.kill()
       } catch {
         // Ignore kill errors
       }
-      session.status = 'killed'
     }
 
     if (cleanup) {
@@ -129,10 +133,6 @@ export class SessionLifecycleManager {
     }
   }
 
-  cleanupAll(): void {
-    this.clearAllSessionsInternal()
-  }
-
   getSession(id: string): PTYSession | null {
     return this.sessions.get(id) || null
   }
@@ -151,8 +151,9 @@ export class SessionLifecycleManager {
       workdir: session.workdir,
       status: session.status,
       exitCode: session.exitCode,
+      exitSignal: session.exitSignal,
       pid: session.pid,
-      createdAt: session.createdAt,
+      createdAt: session.createdAt.toISOString(true),
       lineCount: session.buffer.length,
     }
   }

@@ -1,11 +1,15 @@
-import { describe, it, expect, beforeEach, mock, spyOn } from 'bun:test'
+import { describe, it, expect, beforeEach, mock, spyOn, afterAll } from 'bun:test'
 import { ptySpawn } from '../src/plugin/pty/tools/spawn.ts'
 import { ptyRead } from '../src/plugin/pty/tools/read.ts'
 import { ptyList } from '../src/plugin/pty/tools/list.ts'
 import { RingBuffer } from '../src/plugin/pty/buffer.ts'
 import { manager } from '../src/plugin/pty/manager.ts'
+import moment from 'moment'
 
 describe('PTY Tools', () => {
+  afterAll(() => {
+    mock.restore()
+  })
   describe('ptySpawn', () => {
     beforeEach(() => {
       spyOn(manager, 'spawn').mockImplementation((opts) => ({
@@ -16,7 +20,7 @@ describe('PTY Tools', () => {
         workdir: opts.workdir || '/tmp',
         pid: 12345,
         status: 'running',
-        createdAt: new Date(),
+        createdAt: moment().toISOString(true),
         lineCount: 0,
       }))
     })
@@ -27,8 +31,10 @@ describe('PTY Tools', () => {
         messageID: 'msg-1',
         agent: 'test-agent',
         abort: new AbortController().signal,
-        metadata: mock(() => {}),
-        ask: mock(async () => {}),
+        metadata: () => {},
+        ask: async () => {},
+        directory: '/tmp',
+        worktree: '/tmp',
       }
       const args = {
         command: 'echo',
@@ -61,8 +67,10 @@ describe('PTY Tools', () => {
         messageID: 'msg-2',
         agent: 'test-agent',
         abort: new AbortController().signal,
-        metadata: mock(() => {}),
-        ask: mock(async () => {}),
+        metadata: () => {},
+        ask: async () => {},
+        directory: '/tmp',
+        worktree: '/tmp',
       }
       const args = {
         command: 'node',
@@ -99,9 +107,16 @@ describe('PTY Tools', () => {
     beforeEach(() => {
       spyOn(manager, 'get').mockReturnValue({
         id: 'test-session-id',
+        title: 'Test Session',
+        description: 'A session for testing',
+        command: 'echo',
+        args: ['hello'],
+        workdir: '/tmp',
         status: 'running',
-        // other fields not needed for this test
-      } as any)
+        pid: 12345,
+        createdAt: moment().toISOString(true),
+        lineCount: 2,
+      })
       spyOn(manager, 'read').mockReturnValue({
         lines: ['line 1', 'line 2'],
         offset: 0,
@@ -124,8 +139,10 @@ describe('PTY Tools', () => {
         messageID: 'msg',
         agent: 'agent',
         abort: new AbortController().signal,
-        metadata: mock(() => {}),
-        ask: mock(async () => {}),
+        metadata: () => {},
+        ask: async () => {},
+        directory: '/tmp',
+        worktree: '/tmp',
       }
 
       const result = await ptyRead.execute(args, ctx)
@@ -146,8 +163,10 @@ describe('PTY Tools', () => {
         messageID: 'msg',
         agent: 'agent',
         abort: new AbortController().signal,
-        metadata: mock(() => {}),
-        ask: mock(async () => {}),
+        metadata: () => {},
+        ask: async () => {},
+        directory: '/tmp',
+        worktree: '/tmp',
       }
 
       const result = await ptyRead.execute(args, ctx)
@@ -167,11 +186,13 @@ describe('PTY Tools', () => {
         messageID: 'msg',
         agent: 'agent',
         abort: new AbortController().signal,
-        metadata: mock(() => {}),
-        ask: mock(async () => {}),
+        metadata: () => {},
+        ask: async () => {},
+        directory: '/tmp',
+        worktree: '/tmp',
       }
 
-      await expect(ptyRead.execute(args, ctx)).rejects.toThrow("PTY session 'invalid-id' not found")
+      expect(ptyRead.execute(args, ctx)).rejects.toThrow("PTY session 'invalid-id' not found")
     })
 
     it('should throw for invalid regex', async () => {
@@ -181,11 +202,13 @@ describe('PTY Tools', () => {
         messageID: 'msg',
         agent: 'agent',
         abort: new AbortController().signal,
-        metadata: mock(() => {}),
-        ask: mock(async () => {}),
+        metadata: () => {},
+        ask: async () => {},
+        directory: '/tmp',
+        worktree: '/tmp',
       }
 
-      await expect(ptyRead.execute(args, ctx)).rejects.toThrow(
+      expect(ptyRead.execute(args, ctx)).rejects.toThrow(
         'Potentially dangerous regex pattern rejected'
       )
     })
@@ -203,7 +226,7 @@ describe('PTY Tools', () => {
           pid: 12345,
           lineCount: 10,
           workdir: '/tmp',
-          createdAt: new Date('2023-01-01T00:00:00Z'),
+          createdAt: moment('2023-01-01T00:00:00Z').toISOString(true),
         },
       ]
       spyOn(manager, 'list').mockReturnValue(mockSessions)
@@ -215,8 +238,10 @@ describe('PTY Tools', () => {
           messageID: 'msg',
           agent: 'agent',
           abort: new AbortController().signal,
-          metadata: mock(() => {}),
-          ask: mock(async () => {}),
+          metadata: () => {},
+          ask: async () => {},
+          directory: '/tmp',
+          worktree: '/tmp',
         }
       )
 
@@ -225,7 +250,9 @@ describe('PTY Tools', () => {
       expect(result).toContain('[pty_123] Test Session')
       expect(result).toContain('Command: echo hello')
       expect(result).toContain('Status: running')
-      expect(result).toContain('PID: 12345 | Lines: 10 | Workdir: /tmp')
+      expect(result).toContain('PID: 12345')
+      expect(result).toContain('Lines: 10')
+      expect(result).toContain('Workdir: /tmp')
       expect(result).toContain('Total: 1 session(s)')
       expect(result).toContain('</pty_list>')
     })
@@ -240,8 +267,10 @@ describe('PTY Tools', () => {
           messageID: 'msg',
           agent: 'agent',
           abort: new AbortController().signal,
-          metadata: mock(() => {}),
-          ask: mock(async () => {}),
+          metadata: () => {},
+          ask: async () => {},
+          directory: '/tmp',
+          worktree: '/tmp',
         }
       )
 

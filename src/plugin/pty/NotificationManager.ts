@@ -22,7 +22,7 @@ export class NotificationManager {
           parts: [{ type: 'text', text: message }],
         },
       })
-    } catch (err) {
+    } catch {
       // Ignore notification errors
     }
   }

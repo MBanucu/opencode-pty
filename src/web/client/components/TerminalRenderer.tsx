@@ -4,64 +4,56 @@ import { FitAddon } from '@xterm/addon-fit'
 import { SerializeAddon } from '@xterm/addon-serialize'
 import '@xterm/xterm/css/xterm.css'
 
-interface BaseTerminalRendererProps {
+// Global module augmentation to extend Window interface
+declare global {
+  interface Window {
+    xtermTerminal?: Terminal
+    xtermSerializeAddon?: SerializeAddon
+  }
+}
+
+interface RawTerminalProps {
+  rawOutput: string
   onSendInput?: (data: string) => void
   onInterrupt?: () => void
   disabled?: boolean
 }
 
-interface RawTerminalRendererProps extends BaseTerminalRendererProps {
-  rawOutput: string
-}
-
-// Base abstract class for terminal renderers
-abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRendererProps> {
-  protected terminalRef = React.createRef<HTMLDivElement>()
-  protected xtermInstance: Terminal | null = null
-  protected fitAddon: FitAddon | null = null
-  protected serializeAddon: SerializeAddon | null = null
-
-  // Abstract method that subclasses must implement
-  abstract getDisplayData(): string
+export class RawTerminal extends React.Component<RawTerminalProps> {
+  private terminalRef = React.createRef<HTMLDivElement>()
+  private xtermInstance: Terminal | null = null
+  private fitAddon: FitAddon | null = null
+  private serializeAddon: SerializeAddon | null = null
 
   override componentDidMount() {
     this.initializeTerminal()
-    if (this.xtermInstance && this.getDisplayData()) {
-      this.xtermInstance.write(this.getDisplayData())
+    if (this.xtermInstance && this.props.rawOutput) {
+      this.xtermInstance.write(this.props.rawOutput)
     }
   }
 
-  // Safely writes only new output, or clears and rewrites if session/buffer changed
-  private diffAndWriteTerminalOutput(term: Terminal, prev: string, next: string) {
-    if (next.startsWith(prev)) {
-      // Normal append case
-      const newData = next.slice(prev.length)
+  override componentDidUpdate(prevProps: RawTerminalProps) {
+    if (!this.xtermInstance) return
+
+    const currentData = this.props.rawOutput
+    const prevData = prevProps.rawOutput
+
+    // Optimized diff-based writing - only write new content
+    if (currentData.startsWith(prevData)) {
+      const newData = currentData.slice(prevData.length)
       if (newData) {
-        term.write(newData)
+        this.xtermInstance.write(newData)
       }
     } else {
-      // Session switch/truncate/etc
-      term.clear()
-      term.write(next)
+      // Session switch/truncate/etc - clear and rewrite
+      this.xtermInstance.clear()
+      this.xtermInstance.write(currentData)
     }
-  }
-
-  override componentDidUpdate(prevProps: BaseTerminalRendererProps) {
-    if (!this.xtermInstance) return
-    const currentData = this.getDisplayData()
-    const prevData = (prevProps as any).rawOutput || ''
-    this.diffAndWriteTerminalOutput(this.xtermInstance, prevData, currentData)
   }
 
   override componentWillUnmount() {
     if (this.xtermInstance) {
       this.xtermInstance.dispose()
-    }
-  }
-
-  clear() {
-    if (this.xtermInstance) {
-      this.xtermInstance.clear()
     }
   }
 
@@ -88,15 +80,9 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
 
     this.xtermInstance = term
 
-    // Expose terminal and serialize addon for testing purposes
-    ;(window as any).xtermTerminal = term
-    ;(window as any).xtermSerializeAddon = this.serializeAddon
-
-    // Write initial data
-    const initialData = this.getDisplayData()
-    if (initialData) {
-      term.write(initialData)
-    }
+    // CRITICAL: Expose terminal and serialize addon for E2E testing
+    window.xtermTerminal = term
+    window.xtermSerializeAddon = this.serializeAddon
 
     // Set up input handling
     this.setupInputHandling(term)
@@ -112,25 +98,12 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
         // Ctrl+C
         onInterrupt?.()
       } else {
-        // Regular character input - let PTY handle echo, no local echo
+        // Send input to PTY server (PTY will echo back for interactive sessions)
         onSendInput?.(data)
       }
     }
 
-    const handleKey = (event: { key: string; domEvent: KeyboardEvent }) => {
-      const { key, domEvent } = event
-      if (key === 'Enter') {
-        domEvent.preventDefault()
-        handleData('\r')
-      } else if (key === 'Backspace') {
-        domEvent.preventDefault()
-        term.write('\b \b')
-        onSendInput?.('\b')
-      }
-    }
-
     term.onData(handleData)
-    term.onKey(handleKey)
   }
 
   override render() {
@@ -138,22 +111,4 @@ abstract class BaseTerminalRenderer extends React.Component<BaseTerminalRenderer
       <div ref={this.terminalRef} className="xterm" style={{ width: '100%', height: '100%' }} />
     )
   }
-}
-
-// RawTerminalRenderer subclass - handles raw strings
-export class RawTerminalRenderer extends BaseTerminalRenderer {
-  constructor(props: RawTerminalRendererProps) {
-    super(props)
-  }
-
-  getDisplayData(): string {
-    // Raw data goes directly to terminal (preserves ANSI codes, formatting)
-    const { rawOutput } = this.props as RawTerminalRendererProps
-    return rawOutput
-  }
-}
-
-// Functional wrapper for easier usage
-export const RawTerminal: React.FC<RawTerminalRendererProps> = (props) => {
-  return <RawTerminalRenderer {...props} />
 }

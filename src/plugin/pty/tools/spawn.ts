@@ -7,10 +7,7 @@ export const ptySpawn = tool({
   description: DESCRIPTION,
   args: {
     command: tool.schema.string().describe('The command/executable to run'),
-    args: tool.schema
-      .array(tool.schema.string())
-      .optional()
-      .describe('Arguments to pass to the command'),
+    args: tool.schema.array(tool.schema.string()).describe('Arguments to pass to the command'),
     workdir: tool.schema.string().optional().describe('Working directory for the PTY session'),
     env: tool.schema
       .record(tool.schema.string(), tool.schema.string())

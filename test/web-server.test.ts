@@ -1,116 +1,90 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { startWebServer, stopWebServer, getServerUrl } from '../src/web/server/server.ts'
-import { initManager, manager } from '../src/plugin/pty/manager.ts'
+import { describe, it, expect, afterAll, beforeAll } from 'bun:test'
+import {
+  manager,
+  registerRawOutputCallback,
+  registerSessionUpdateCallback,
+} from '../src/plugin/pty/manager.ts'
+import { PTYServer } from '../src/web/server/server.ts'
+import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
+import { ManagedTestServer } from './utils.ts'
 
 describe('Web Server', () => {
-  const fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger - do nothing
-      },
-    },
-  } as any
-
-  beforeEach(() => {
-    initManager(fakeClient)
-  })
-
-  afterEach(() => {
-    stopWebServer()
-    manager.cleanupAll() // Ensure cleanup after each test
-  })
-
   describe('Server Lifecycle', () => {
     it('should start server successfully', async () => {
-      const url = await startWebServer({ port: 8766 })
-      expect(url).toBe('http://localhost:8766')
-      expect(getServerUrl()).toBe('http://localhost:8766')
+      await using server = await PTYServer.createServer()
+      const url = server.server.url
+      expect(url.hostname).toBe('localhost')
+      expect(url.protocol).toBe('http:')
+      expect(url.port).not.toBe(0)
+      expect(url.port).not.toBe(8080) // Default port should be avoided
     })
 
-    it('should handle custom configuration', async () => {
-      const url = await startWebServer({ port: 8767, hostname: '127.0.0.1' })
-      expect(url).toBe('http://127.0.0.1:8767')
-    })
-
-    it('should prevent multiple server instances', async () => {
-      await startWebServer({ port: 8768 })
-      const secondUrl = await startWebServer({ port: 8769 })
-      expect(secondUrl).toBe('http://localhost:8768') // Returns existing server URL
+    it('should support multiple server instances', async () => {
+      await using server1 = await PTYServer.createServer()
+      await using server2 = await PTYServer.createServer()
+      expect(server1.server.url.port).not.toBe(server2.server.url.port)
     })
 
     it('should stop server correctly', async () => {
-      await startWebServer({ port: 8770 })
-      expect(getServerUrl()).toBeTruthy()
-      stopWebServer()
-      expect(getServerUrl()).toBeNull()
+      const server = await PTYServer.createServer()
+      expect(server.server.url).toBeTruthy()
+      server[Symbol['dispose']]()
     })
   })
 
   describe('HTTP Endpoints', () => {
-    let serverUrl: string
+    let managedTestServer: ManagedTestServer
+    let disposableStack: DisposableStack
 
-    beforeEach(async () => {
-      manager.cleanupAll() // Clean up any leftover sessions
-      serverUrl = await startWebServer({ port: 8771 })
+    beforeAll(async () => {
+      disposableStack = new DisposableStack()
+      managedTestServer = await ManagedTestServer.create()
+      disposableStack.use(managedTestServer)
     })
 
-    it('should serve built assets when NODE_ENV=test', async () => {
-      // Set test mode to serve from dist
-      process.env.NODE_ENV = 'test'
-
-      try {
-        const response = await fetch(`${serverUrl}/`)
-        expect(response.status).toBe(200)
-        const html = await response.text()
-
-        // Should contain built HTML with assets
-        expect(html).toContain('<!doctype html>')
-        expect(html).toContain('PTY Sessions Monitor')
-        expect(html).toContain('/assets/')
-        expect(html).not.toContain('/main.tsx')
-
-        // Extract asset URLs from HTML
-        const jsMatch = html.match(/src="\/assets\/([^"]+\.js)"/)
-        const cssMatch = html.match(/href="\/assets\/([^"]+\.css)"/)
-
-        if (jsMatch) {
-          const jsAsset = jsMatch[1]
-          const jsResponse = await fetch(`${serverUrl}/assets/${jsAsset}`)
-          expect(jsResponse.status).toBe(200)
-          const ct = jsResponse.headers.get('content-type')
-          expect((ct || '').toLowerCase()).toMatch(/^(application|text)\/javascript(;.*)?$/)
-        }
-
-        if (cssMatch) {
-          const cssAsset = cssMatch[1]
-          const cssResponse = await fetch(`${serverUrl}/assets/${cssAsset}`)
-          expect(cssResponse.status).toBe(200)
-          expect((cssResponse.headers.get('content-type') || '').toLowerCase()).toMatch(
-            /^text\/css(;.*)?$/
-          )
-        }
-      } finally {
-        delete process.env.NODE_ENV
-      }
+    afterAll(() => {
+      disposableStack.dispose()
     })
 
-    it('should serve dev HTML when NODE_ENV is not set', async () => {
-      // Ensure NODE_ENV is not set
-      delete process.env.NODE_ENV
-
-      const response = await fetch(`${serverUrl}/`)
+    it('should serve built assets', async () => {
+      const response = await fetch(managedTestServer.server.server.url)
       expect(response.status).toBe(200)
       const html = await response.text()
 
-      // Should contain built HTML
+      // Should contain built HTML with assets
       expect(html).toContain('<!doctype html>')
       expect(html).toContain('PTY Sessions Monitor')
-      expect(html).toContain('<div id="root"></div>')
       expect(html).toContain('/assets/')
+      expect(html).not.toContain('/main.tsx')
+      expect(html).toContain('<div id="root"></div>')
+
+      // Extract asset URLs from HTML
+      const jsMatch = html.match(/src="\/assets\/([^"]+\.js)"/)
+      const cssMatch = html.match(/href="\/assets\/([^"]+\.css)"/)
+
+      expect(jsMatch).toBeTruthy()
+      expect(cssMatch).toBeTruthy()
+
+      if (!jsMatch || !cssMatch) {
+        throw new Error('Failed to extract asset URLs from HTML')
+      }
+
+      const jsAsset = jsMatch[1]
+      const jsResponse = await fetch(`${managedTestServer.server.server.url}/assets/${jsAsset}`)
+      expect(jsResponse.status).toBe(200)
+      const ct = jsResponse.headers.get('content-type')
+      expect((ct || '').toLowerCase()).toMatch(/^(application|text)\/javascript(;.*)?$/)
+
+      const cssAsset = cssMatch[1]
+      const cssResponse = await fetch(`${managedTestServer.server.server.url}/assets/${cssAsset}`)
+      expect(cssResponse.status).toBe(200)
+      expect((cssResponse.headers.get('content-type') || '').toLowerCase()).toMatch(
+        /^text\/css(;.*)?$/
+      )
     })
 
     it('should serve HTML on root path', async () => {
-      const response = await fetch(`${serverUrl}/`)
+      const response = await fetch(managedTestServer.server.server.url)
       expect(response.status).toBe(200)
       expect(response.headers.get('content-type')).toContain('text/html')
 
@@ -120,7 +94,7 @@ describe('Web Server', () => {
     })
 
     it('should return sessions list', async () => {
-      const response = await fetch(`${serverUrl}/api/sessions`)
+      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions`)
       expect(response.status).toBe(200)
       expect(response.headers.get('content-type')).toContain('application/json')
 
@@ -131,33 +105,58 @@ describe('Web Server', () => {
     it('should return individual session', async () => {
       // Create a test session first
       const session = manager.spawn({
-        command: 'cat',
+        command: 'bash',
         args: [],
         description: 'Test session',
         parentSessionId: 'test',
       })
+      const rawDataPromise = new Promise<string>((resolve) => {
+        let rawDataTotal = ''
+        registerRawOutputCallback((sessionInfo: PTYSessionInfo, rawData: string) => {
+          if (sessionInfo.id === session.id) {
+            rawDataTotal += rawData
+            if (rawDataTotal.includes('test output')) {
+              resolve(rawDataTotal)
+            }
+          }
+        })
+      })
 
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      manager.write(session.id, 'echo "test output"\nexit\n')
 
-      const response = await fetch(`${serverUrl}/api/sessions/${session.id}`)
+      await rawDataPromise
+
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}`
+      )
       expect(response.status).toBe(200)
 
       const sessionData = await response.json()
       expect(sessionData.id).toBe(session.id)
-      expect(sessionData.command).toBe('cat')
+      expect(sessionData.command).toBe('bash')
       expect(sessionData.args).toEqual([])
-    })
+    }, 200)
 
     it('should return 404 for non-existent session', async () => {
-      const nonexistentId = `nonexistent-${Math.random().toString(36).substr(2, 9)}`
-      const response = await fetch(`${serverUrl}/api/sessions/${nonexistentId}`)
+      const nonexistentId = crypto.randomUUID()
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${nonexistentId}`
+      )
       expect(response.status).toBe(404)
-    })
+    }, 200)
 
     it('should handle input to session', async () => {
+      const title = crypto.randomUUID()
+      const sessionUpdatePromise = new Promise<PTYSessionInfo>((resolve) => {
+        registerSessionUpdateCallback((sessionInfo: PTYSessionInfo) => {
+          if (sessionInfo.title === title && sessionInfo.status === 'running') {
+            resolve(sessionInfo)
+          }
+        })
+      })
       // Create a session to test input
       const session = manager.spawn({
+        title: title,
         command: 'cat',
         args: [],
         description: 'Test session',
@@ -165,46 +164,76 @@ describe('Web Server', () => {
       })
 
       // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await sessionUpdatePromise
 
-      const response = await fetch(`${serverUrl}/api/sessions/${session.id}/input`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: 'test input\n' }),
-      })
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}/input`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: 'test input\n' }),
+        }
+      )
 
       // Should return success
       expect(response.status).toBe(200)
       const result = await response.json()
       expect(result).toHaveProperty('success', true)
-
-      // Clean up
-      manager.kill(session.id, true)
-    })
+    }, 200)
 
     it('should handle kill session', async () => {
+      const title = crypto.randomUUID()
+      const sessionRunningPromise = new Promise<PTYSessionInfo>((resolve) => {
+        registerSessionUpdateCallback((sessionInfo: PTYSessionInfo) => {
+          if (sessionInfo.title === title && sessionInfo.status === 'running') {
+            resolve(sessionInfo)
+          }
+        })
+      })
+      const sessionExitedPromise = new Promise<PTYSessionInfo>((resolve) => {
+        registerSessionUpdateCallback((sessionInfo: PTYSessionInfo) => {
+          if (sessionInfo.title === title && sessionInfo.status === 'killed') {
+            resolve(sessionInfo)
+          }
+        })
+      })
       const session = manager.spawn({
-        command: 'echo',
-        args: ['test output'],
+        title: title,
+        command: 'cat',
+        args: [],
         description: 'Test session',
         parentSessionId: 'test',
       })
 
       // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await sessionRunningPromise
 
-      const response = await fetch(`${serverUrl}/api/sessions/${session.id}/kill`, {
-        method: 'POST',
-      })
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}`,
+        {
+          method: 'DELETE',
+        }
+      )
 
       expect(response.status).toBe(200)
       const result = await response.json()
       expect(result.success).toBe(true)
-    })
+
+      await sessionExitedPromise
+    }, 1000)
 
     it('should return session output', async () => {
+      const title = crypto.randomUUID()
+      const sessionExitedPromise = new Promise<PTYSessionInfo>((resolve) => {
+        registerSessionUpdateCallback((sessionInfo: PTYSessionInfo) => {
+          if (sessionInfo.title === title && sessionInfo.status === 'exited') {
+            resolve(sessionInfo)
+          }
+        })
+      })
       // Create a session that produces output
       const session = manager.spawn({
+        title,
         command: 'echo',
         args: ['line1\nline2\nline3'],
         description: 'Test session with output',
@@ -212,9 +241,11 @@ describe('Web Server', () => {
       })
 
       // Wait a bit for output to be captured
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await sessionExitedPromise
 
-      const response = await fetch(`${serverUrl}/api/sessions/${session.id}/buffer/raw`)
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}/buffer/raw`
+      )
       expect(response.status).toBe(200)
 
       const bufferData = await response.json()
@@ -222,15 +253,16 @@ describe('Web Server', () => {
       expect(bufferData).toHaveProperty('byteLength')
       expect(typeof bufferData.raw).toBe('string')
       expect(typeof bufferData.byteLength).toBe('number')
-      expect(bufferData.raw.length).toBeGreaterThan(0)
+      expect(bufferData.raw.length).toBe(21)
+      expect(bufferData.raw).toBe('line1\r\nline2\r\nline3\r\n')
     })
 
-    it('should return 404 for non-existent endpoints', async () => {
-      const response = await fetch(`${serverUrl}/api/nonexistent`)
-      expect(response.status).toBe(404)
+    it('should return index.html for non-existent endpoints', async () => {
+      const response = await fetch(`${managedTestServer.server.server.url}/api/nonexistent`)
+      expect(response.status).toBe(200)
       const text = await response.text()
-      expect(text).toContain('404: Not Found')
-      expect(text).toContain('<!DOCTYPE html>')
-    })
+      expect(text).toContain('<div id="root"></div>')
+      expect(text).toContain('<!doctype html>')
+    }, 200)
   })
 })

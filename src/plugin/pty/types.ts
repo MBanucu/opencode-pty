@@ -1,7 +1,8 @@
 import type { IPty } from 'bun-pty'
 import type { RingBuffer } from './buffer.ts'
+import type moment from 'moment'
 
-export type PTYStatus = 'running' | 'exited' | 'killed'
+export type PTYStatus = 'running' | 'exited' | 'killing' | 'killed'
 
 export interface PTYSession {
   id: string
@@ -13,8 +14,9 @@ export interface PTYSession {
   env?: Record<string, string>
   status: PTYStatus
   exitCode?: number
+  exitSignal?: number | string
   pid: number
-  createdAt: Date
+  createdAt: moment.Moment
   parentSessionId: string
   notifyOnExit: boolean
   buffer: RingBuffer
@@ -30,8 +32,9 @@ export interface PTYSessionInfo {
   workdir: string
   status: PTYStatus
   exitCode?: number
+  exitSignal?: number | string
   pid: number
-  createdAt: Date
+  createdAt: string
   lineCount: number
 }
 

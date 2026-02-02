@@ -1,11 +1,14 @@
 import { useCallback } from 'react'
-import type { Session } from 'opencode-pty-test/shared/types'
+import type { PTYSessionInfo } from 'opencode-pty-test/web/shared/types'
+
+import { api } from '../../shared/apiClient'
 
 interface UseSessionManagerOptions {
-  activeSession: Session | null
-  setActiveSession: (session: Session | null) => void
+  activeSession: PTYSessionInfo | null
+  setActiveSession: (session: PTYSessionInfo | null) => void
   subscribeWithRetry: (sessionId: string) => void
-  onOutputUpdate?: (output: string[]) => void
+  sendInput?: (sessionId: string, data: string) => void
+  wsConnected?: boolean
   onRawOutputUpdate?: (rawOutput: string) => void
 }
 
@@ -13,44 +16,39 @@ export function useSessionManager({
   activeSession,
   setActiveSession,
   subscribeWithRetry,
-  onOutputUpdate,
+  sendInput,
+  wsConnected,
   onRawOutputUpdate,
 }: UseSessionManagerOptions) {
   const handleSessionClick = useCallback(
-    async (session: Session) => {
+    async (session: PTYSessionInfo) => {
       try {
         // Validate session object first
         if (!session?.id) {
           return
         }
         setActiveSession(session)
-        onOutputUpdate?.([])
         onRawOutputUpdate?.('')
         // Subscribe to this session for live updates
         subscribeWithRetry(session.id)
 
         try {
-          const baseUrl = `${location.protocol}//${location.host}`
-
           // Fetch raw buffer data only (processed output endpoint removed)
-          const rawResponse = await fetch(`${baseUrl}/api/sessions/${session.id}/buffer/raw`)
-
-          // Process response with graceful error handling
-          const rawData = rawResponse.ok ? await rawResponse.json() : { raw: '' }
+          const rawData = await api.session.buffer
+            .raw({ id: session.id })
+            .catch(() => ({ raw: '' }))
 
           // Call callback with raw data
           onRawOutputUpdate?.(rawData.raw || '')
-        } catch (fetchError) {
-          onOutputUpdate?.([])
+        } catch {
           onRawOutputUpdate?.('')
         }
-      } catch (error) {
+      } catch {
         // Ensure UI remains stable
-        onOutputUpdate?.([])
         onRawOutputUpdate?.('')
       }
     },
-    [setActiveSession, subscribeWithRetry, onOutputUpdate, onRawOutputUpdate]
+    [setActiveSession, subscribeWithRetry, onRawOutputUpdate]
   )
 
   const handleSendInput = useCallback(
@@ -59,17 +57,23 @@ export function useSessionManager({
         return
       }
 
+      // Try WebSocket first if connected and available
+      if (wsConnected && sendInput) {
+        try {
+          sendInput(activeSession.id, data)
+          return
+        } catch (error) {
+          console.warn('WebSocket input failed, falling back to HTTP:', error)
+        }
+      }
+
+      // HTTP fallback
       try {
-        const baseUrl = `${location.protocol}//${location.host}`
-        await fetch(`${baseUrl}/api/sessions/${activeSession.id}/input`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data }),
-        })
+        await api.session.input({ id: activeSession.id }, { data })
         // eslint-disable-next-line no-empty
       } catch {}
     },
-    [activeSession]
+    [activeSession, wsConnected, sendInput]
   )
 
   const handleKillSession = useCallback(async () => {
@@ -86,19 +90,11 @@ export function useSessionManager({
     }
 
     try {
-      const baseUrl = `${location.protocol}//${location.host}`
-      const response = await fetch(`${baseUrl}/api/sessions/${activeSession.id}/kill`, {
-        method: 'POST',
-      })
+      await api.session.kill({ id: activeSession.id })
 
-      if (response.ok) {
-        setActiveSession(null)
-        onOutputUpdate?.([])
-        onRawOutputUpdate?.('')
-      }
       // eslint-disable-next-line no-empty
     } catch {}
-  }, [activeSession, setActiveSession, onOutputUpdate, onRawOutputUpdate])
+  }, [activeSession])
 
   return {
     handleSessionClick,

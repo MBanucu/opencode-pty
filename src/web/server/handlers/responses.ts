@@ -3,7 +3,7 @@
  */
 
 export class JsonResponse extends Response {
-  constructor(data: any, status = 200, headers: Record<string, string> = {}) {
+  constructor(data: unknown, status = 200, headers: Record<string, string> = {}) {
     super(JSON.stringify(data), {
       status,
       headers: {

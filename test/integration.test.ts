@@ -1,158 +1,189 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { startWebServer, stopWebServer } from '../src/web/server/server.ts'
-import { initManager, manager } from '../src/plugin/pty/manager.ts'
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
+import { manager } from '../src/plugin/pty/manager.ts'
+import { ManagedTestClient, ManagedTestServer } from './utils.ts'
+import { PTYServer } from '../src/web/server/server.ts'
+import type { WSMessageServerSessionUpdate } from '../src/web/shared/types.ts'
+import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
 
 describe('Web Server Integration', () => {
-  const fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger
-      },
-    },
-  } as any
-
-  beforeEach(() => {
-    initManager(fakeClient)
+  let managedTestServer: ManagedTestServer
+  let disposableStack: DisposableStack
+  beforeAll(async () => {
+    disposableStack = new DisposableStack()
+    managedTestServer = await ManagedTestServer.create()
+    disposableStack.use(managedTestServer)
   })
 
-  afterEach(() => {
-    stopWebServer()
+  afterAll(() => {
+    disposableStack.dispose()
   })
 
   describe('Full User Workflow', () => {
     it('should handle multiple concurrent sessions and clients', async () => {
-      manager.cleanupAll() // Clean up any leftover sessions
-      await startWebServer({ port: 8781 })
+      await using managedTestClient1 = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
+      await using managedTestClient2 = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
 
-      // Create multiple sessions
-      const session1 = manager.spawn({
+      const title1 = crypto.randomUUID()
+      const title2 = crypto.randomUUID()
+
+      const session1ExitedPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
+        managedTestClient1.sessionUpdateCallbacks.push((message) => {
+          if (message.session.title === title1 && message.session.status === 'exited') {
+            resolve(message)
+          }
+        })
+      })
+
+      const session2ExitedPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
+        managedTestClient2.sessionUpdateCallbacks.push((message) => {
+          if (message.session.title === title2 && message.session.status === 'exited') {
+            resolve(message)
+          }
+        })
+      })
+
+      managedTestClient1.send({
+        type: 'spawn',
+        title: title1,
         command: 'echo',
         args: ['Session 1'],
         description: 'Multi-session test 1',
-        parentSessionId: 'multi-test',
+        parentSessionId: managedTestServer.sessionId,
+        subscribe: true,
       })
 
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const session2 = manager.spawn({
+      managedTestClient2.send({
+        type: 'spawn',
+        title: title2,
         command: 'echo',
         args: ['Session 2'],
         description: 'Multi-session test 2',
-        parentSessionId: 'multi-test',
+        parentSessionId: managedTestServer.sessionId,
+        subscribe: true,
       })
 
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      // Create multiple WebSocket clients
-      const ws1 = new WebSocket('ws://localhost:8781/ws')
-      const ws2 = new WebSocket('ws://localhost:8781/ws')
-      const messages1: any[] = []
-      const messages2: any[] = []
-
-      ws1.onmessage = (event) => messages1.push(JSON.parse(event.data))
-      ws2.onmessage = (event) => messages2.push(JSON.parse(event.data))
-
-      await Promise.all([
-        new Promise((resolve) => {
-          ws1.onopen = resolve
-        }),
-        new Promise((resolve) => {
-          ws2.onopen = resolve
-        }),
+      const [session1Exited, session2Exited] = await Promise.all([
+        session1ExitedPromise,
+        session2ExitedPromise,
       ])
 
-      // Subscribe clients to different sessions
-      ws1.send(JSON.stringify({ type: 'subscribe', sessionId: session1.id }))
-      ws2.send(JSON.stringify({ type: 'subscribe', sessionId: session2.id }))
+      const response = await fetch(`${managedTestServer.server.server.url}/api/sessions`)
+      const sessions = (await response.json()) as PTYSessionInfo[]
+      expect(sessions.length).toBeGreaterThanOrEqual(2)
 
-      // Wait for sessions to complete
-      await new Promise((resolve) => setTimeout(resolve, 300))
-
-      // Check that API returns both sessions
-      const response = await fetch('http://localhost:8781/api/sessions')
-      const sessions = await response.json()
-      expect(sessions.length).toBe(2)
-
-      const sessionIds = sessions.map((s: any) => s.id)
-      expect(sessionIds).toContain(session1.id)
-      expect(sessionIds).toContain(session2.id)
-
-      // Cleanup
-      ws1.close()
-      ws2.close()
+      const sessionIds = sessions.map((s) => s.id)
+      expect(sessionIds).toContain(session1Exited.session.id)
+      expect(sessionIds).toContain(session2Exited.session.id)
     })
 
     it('should handle error conditions gracefully', async () => {
-      manager.cleanupAll() // Clean up any leftover sessions
-      await startWebServer({ port: 8782 })
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
 
-      // Test non-existent session
-      let response = await fetch('http://localhost:8782/api/sessions/nonexistent')
-      expect(response.status).toBe(404)
+      const testSessionId = crypto.randomUUID()
 
-      // Test invalid input to existing session
+      const sessionExitedPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
+        managedTestClient.sessionUpdateCallbacks.push((message) => {
+          if (message.session.title === testSessionId && message.session.status === 'exited') {
+            resolve(message)
+          }
+        })
+      })
+
       const session = manager.spawn({
+        title: testSessionId,
         command: 'echo',
         args: ['test'],
         description: 'Error test session',
-        parentSessionId: 'error-test',
+        parentSessionId: managedTestServer.sessionId,
       })
 
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await sessionExitedPromise
 
-      response = await fetch(`http://localhost:8782/api/sessions/${session.id}/input`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: 'test input\n' }),
-      })
+      const response = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}/input`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: 'test input\n' }),
+        }
+      )
 
-      // Should handle gracefully even for exited sessions
       const result = await response.json()
       expect(result).toHaveProperty('success')
 
-      // Test WebSocket error handling
-      const ws = new WebSocket('ws://localhost:8782/ws')
-      const wsMessages: any[] = []
-
-      ws.onmessage = (event) => wsMessages.push(JSON.parse(event.data))
-
-      await new Promise((resolve) => {
-        ws.onopen = () => {
-          // Send invalid message
-          ws.send('invalid json')
-          setTimeout(resolve, 100)
-        }
+      const errorPromise = new Promise((resolve) => {
+        managedTestClient.errorCallbacks.push((message) => {
+          resolve(message)
+        })
       })
 
-      const errorMessages = wsMessages.filter((msg) => msg.type === 'error')
-      expect(errorMessages.length).toBeGreaterThan(0)
+      managedTestClient.ws.send('invalid json')
 
-      ws.close()
+      await errorPromise
+    })
+
+    it('should handle input to sleeping session', async () => {
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
+
+      const testSessionId = crypto.randomUUID()
+
+      const sessionRunningPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
+        managedTestClient.sessionUpdateCallbacks.push((message) => {
+          if (message.session.title === testSessionId && message.session.status === 'running') {
+            resolve(message)
+          }
+        })
+      })
+
+      const session = manager.spawn({
+        title: testSessionId,
+        command: 'sleep',
+        args: ['10'],
+        description: 'Sleep test session',
+        parentSessionId: managedTestServer.sessionId,
+      })
+
+      await sessionRunningPromise
+
+      const inputResponse = await fetch(
+        `${managedTestServer.server.server.url}/api/sessions/${session.id}/input`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: 'input to sleeping process\n' }),
+        }
+      )
+
+      const inputResult = await inputResponse.json()
+      expect(inputResult).toHaveProperty('success')
+
+      manager.kill(session.id)
     })
   })
 
   describe('Performance and Reliability', () => {
     it('should handle rapid API requests', async () => {
-      await startWebServer({ port: 8783 })
+      const title = crypto.randomUUID()
 
-      // Create a session
       const session = manager.spawn({
+        title,
         command: 'echo',
         args: ['performance test'],
         description: 'Performance test',
-        parentSessionId: 'perf-test',
+        parentSessionId: managedTestServer.sessionId,
       })
 
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      // Make multiple concurrent requests
-      const promises = []
+      const promises: Promise<Response>[] = []
       for (let i = 0; i < 10; i++) {
-        promises.push(fetch(`http://localhost:8783/api/sessions/${session.id}`))
+        promises.push(fetch(`${managedTestServer.server.server.url}/api/sessions/${session.id}`))
       }
 
       const responses = await Promise.all(promises)
@@ -162,33 +193,28 @@ describe('Web Server Integration', () => {
     })
 
     it('should cleanup properly on server stop', async () => {
-      await startWebServer({ port: 8784 })
+      const ptyServer = await PTYServer.createServer()
 
-      // Create session and WebSocket
+      const sessionId = crypto.randomUUID()
       manager.spawn({
+        title: sessionId,
         command: 'echo',
         args: ['cleanup test'],
         description: 'Cleanup test',
-        parentSessionId: 'cleanup-test',
+        parentSessionId: sessionId,
       })
 
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const ws = new WebSocket('ws://localhost:8784/ws')
+      const ws = new WebSocket(ptyServer.getWsUrl()!)
       await new Promise((resolve) => {
         ws.onopen = resolve
       })
 
-      // Stop server
-      stopWebServer()
+      ws.close()
 
-      // Verify server is stopped (should fail to connect)
-      const response = await fetch('http://localhost:8784/api/sessions').catch(() => null)
+      ptyServer[Symbol.dispose]()
+
+      const response = await fetch(`${ptyServer.server.url}/api/sessions`).catch(() => null)
       expect(response).toBeNull()
-
-      // Note: WebSocket may remain OPEN on client side until connection actually fails
-      // This is expected behavior - the test focuses on server cleanup
     })
   })
 })

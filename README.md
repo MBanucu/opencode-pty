@@ -54,14 +54,13 @@ opencode
 
 ## Tools Provided
 
-| Tool             | Description                                                                 |
-| ---------------- | --------------------------------------------------------------------------- |
-| `pty_spawn`      | Create a new PTY session (command, args, workdir, env, title, notifyOnExit) |
-| `pty_write`      | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C)         |
-| `pty_read`       | Read output buffer with pagination and optional regex filtering             |
-| `pty_list`       | List all PTY sessions with status, PID, line count                          |
-| `pty_kill`       | Terminate a PTY, optionally cleanup the buffer                              |
-| `pty_server_url` | Get the URL of the running PTY web server instance                          |
+| Tool        | Description                                                                 |
+| ----------- | --------------------------------------------------------------------------- |
+| `pty_spawn` | Create a new PTY session (command, args, workdir, env, title, notifyOnExit) |
+| `pty_write` | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C)         |
+| `pty_read`  | Read output buffer with pagination and optional regex filtering             |
+| `pty_list`  | List all PTY sessions with status, PID, line count                          |
+| `pty_kill`  | Terminate a PTY, optionally cleanup the buffer                              |
 
 ## Slash Commands
 
@@ -75,19 +74,27 @@ This plugin provides slash commands that can be used in OpenCode chat:
 
 This plugin includes a modern React-based web interface for monitoring and interacting with PTY sessions.
 
+[![opencode-pty Web UI Demo](https://img.youtube.com/vi/wPqmTPnzvVY/0.jpg)](https://youtu.be/wPqmTPnzvVY)
+
+If you instruct the coding agent to run something in background, you have to name it "session",
+i.e. "run xy as a background SESSION".
+If you name it "task" or "process" or anything else, the agent will sometimes run it as background subprocess using `&`.
+
 ### Starting the Web UI
 
-Run the test server to start the web interface:
+1. Run opencode with the plugin.
+2. Run slash command `/pty-server-url`.
 
-```bash
-bun run e2e/test-web-server.ts
-```
-
-This will:
-
-- Start the web server on `http://localhost:8766`
-- Create a test PTY session to demonstrate functionality
-- Open the React web interface in your browser
+Opencode will load the plugin.
+The plugin will start the server and provide the slash command.
+The port is not fixed.
+Every process instance of opencode will start a new server with unique random (but still free) port on localhost.
+The origin of the printed URL provided by the slash command will route to the static `index.html` (client).
+The `index.html` loads the javascript files, that build the client in the browser.
+The client will use a websocket and http (REST API) requests to communicate with the server, depending on latency, reliability and reactivity.
+The server subscribes to the events of the base (session creation, new output of pty session).
+The client subscribes to the events of the server (bun pub/sub via websocket).
+Everything is event driven, reliable (if you can call websocket communication reliable) and reactive (using react as client builder).
 
 ### Features
 
@@ -101,22 +108,23 @@ This will:
 
 The web server provides a REST API for session management:
 
-| Method | Endpoint                         | Description                            |
-| ------ | -------------------------------- | -------------------------------------- |
-| `GET`  | `/api/sessions`                  | List all PTY sessions                  |
-| `POST` | `/api/sessions`                  | Create a new PTY session               |
-| `GET`  | `/api/sessions/:id`              | Get session details                    |
-| `POST` | `/api/sessions/:id/input`        | Send input to a session                |
-| `POST` | `/api/sessions/:id/kill`         | Kill and cleanup a session             |
-| `GET`  | `/api/sessions/:id/buffer/plain` | Get session output buffer (plain text) |
-| `GET`  | `/api/sessions/:id/buffer/raw`   | Get session output buffer (raw)        |
-| `POST` | `/api/sessions/clear`            | Clear all sessions                     |
-| `GET`  | `/health`                        | Server health check with metrics       |
+| Method   | Endpoint                         | Description                                                                 |
+| -------- | -------------------------------- | --------------------------------------------------------------------------- |
+| `GET`    | `/api/sessions`                  | List all PTY sessions                                                       |
+| `POST`   | `/api/sessions`                  | Create a new PTY session                                                    |
+| `GET`    | `/api/sessions/:id`              | Get session details                                                         |
+| `POST`   | `/api/sessions/:id/input`        | Send input to a session                                                     |
+| `DELETE` | `/api/sessions/:id`              | Kill a session (without cleanup)                                            |
+| `DELETE` | `/api/sessions/:id/cleanup`      | Kill and cleanup a session                                                  |
+| `GET`    | `/api/sessions/:id/buffer/plain` | Get session output buffer (returns `{ plain: string, byteLength: number }`) |
+| `GET`    | `/api/sessions/:id/buffer/raw`   | Get session output buffer (raw data)                                        |
+| `DELETE` | `/api/sessions`                  | Clear all sessions                                                          |
+| `GET`    | `/health`                        | Server health check with metrics                                            |
 
 #### Session Creation
 
 ```bash
-curl -X POST http://localhost:8766/api/sessions \
+curl -X POST http://localhost:[PORT]/api/sessions \
   -H "Content-Type: application/json" \
   -d '{
     "command": "bash",
@@ -125,12 +133,14 @@ curl -X POST http://localhost:8766/api/sessions \
   }'
 ```
 
+Replace `[PORT]` with the actual port number shown in the server console output.
+
 #### WebSocket Streaming
 
 Connect to `/ws` for real-time updates:
 
 ```javascript
-const ws = new WebSocket('ws://localhost:8766/ws')
+const ws = new WebSocket('ws://localhost:[PORT]/ws')
 
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data)
@@ -142,19 +152,19 @@ ws.onmessage = (event) => {
 }
 ```
 
+Replace `[PORT]` with the actual port number shown in the slash command output.
+
 ### Development
 
-For development with hot reloading:
+Future implementation will include:
 
-```bash
-# Terminal 1: Start the React dev server
-bun run dev
+#### App
 
-# Terminal 2: Start the PTY server (in another terminal)
-bun run e2e/test-web-server.ts
-```
+- A startup script that runs the server (in the same process).
+- The startup script will run `bun vite` with an environment variable set to the server URL
+- The client will use this environment variable for WebSocket and HTTP requests
 
-The React app will be available at `http://localhost:5173` with hot reloading, and the PTY server at `http://localhost:8766`.
+This will ease the development on the client.
 
 ## Usage Examples
 
@@ -307,7 +317,7 @@ To load a local checkout in OpenCode:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["file:///absolute/path/to/opencode-pty-test"]
+  "plugin": ["file:///absolute/path/to/opencode-pty-test/index.ts"]
 }
 ```
 

@@ -5,24 +5,73 @@ import { OutputManager } from './OutputManager.ts'
 import { NotificationManager } from './NotificationManager.ts'
 import { withSession } from './utils.ts'
 
-let onSessionUpdate: (() => void) | undefined
+// Monkey-patch bun-pty to fix race condition in _startReadLoop
+// Temporary workaround until https://github.com/sursaone/bun-pty/pull/37 is merged
+import { semver } from 'bun'
+import { version as bunPtyVersion } from 'bun-pty/package.json'
+import { Terminal } from 'bun-pty'
 
-export function setOnSessionUpdate(callback: () => void) {
-  onSessionUpdate = callback
+if (semver.order(bunPtyVersion, '0.4.8') > 0) {
+  throw new Error(
+    `bun-pty version ${bunPtyVersion} is too new for patching; remove the workaround.`
+  )
 }
 
-type RawOutputCallback = (sessionId: string, rawData: string) => void
+const proto = Terminal.prototype as unknown as { _startReadLoop?: (...args: unknown[]) => unknown }
 
-const rawOutputCallbacks: RawOutputCallback[] = []
+const original = proto._startReadLoop
 
-export function onRawOutput(callback: RawOutputCallback): void {
+if (typeof original === 'function') {
+  proto._startReadLoop = async function (this: InstanceType<typeof Terminal>, ...args: unknown[]) {
+    await new Promise((r) => setTimeout(r, 0))
+    return original.apply(this, args)
+  }
+}
+
+type SessionUpdateCallback = (session: PTYSessionInfo) => void
+
+export const sessionUpdateCallbacks: SessionUpdateCallback[] = []
+
+export function registerSessionUpdateCallback(callback: SessionUpdateCallback) {
+  sessionUpdateCallbacks.push(callback)
+}
+
+export function removeSessionUpdateCallback(callback: SessionUpdateCallback) {
+  const index = sessionUpdateCallbacks.indexOf(callback)
+  if (index !== -1) {
+    sessionUpdateCallbacks.splice(index, 1)
+  }
+}
+
+function notifySessionUpdate(session: PTYSessionInfo) {
+  for (const callback of sessionUpdateCallbacks) {
+    try {
+      callback(session)
+    } catch {
+      // Ignore callback errors
+    }
+  }
+}
+
+type RawOutputCallback = (session: PTYSessionInfo, rawData: string) => void
+
+export const rawOutputCallbacks: RawOutputCallback[] = []
+
+export function registerRawOutputCallback(callback: RawOutputCallback): void {
   rawOutputCallbacks.push(callback)
 }
 
-function notifyRawOutput(sessionId: string, rawData: string): void {
+export function removeRawOutputCallback(callback: RawOutputCallback): void {
+  const index = rawOutputCallbacks.indexOf(callback)
+  if (index !== -1) {
+    rawOutputCallbacks.splice(index, 1)
+  }
+}
+
+function notifyRawOutput(session: PTYSessionInfo, rawData: string): void {
   for (const callback of rawOutputCallbacks) {
     try {
-      callback(sessionId, rawData)
+      callback(session, rawData)
     } catch {
       // Ignore callback errors
     }
@@ -45,18 +94,17 @@ class PTYManager {
   spawn(opts: SpawnOptions): PTYSessionInfo {
     const session = this.lifecycleManager.spawn(
       opts,
-      (id, data) => {
-        notifyRawOutput(id, data)
+      (session, data) => {
+        notifyRawOutput(this.lifecycleManager.toInfo(session), data)
       },
-      async (id, exitCode) => {
-        if (onSessionUpdate) onSessionUpdate()
-        const session = this.lifecycleManager.getSession(id)
+      async (session, exitCode) => {
+        notifySessionUpdate(this.lifecycleManager.toInfo(session))
         if (session && session.notifyOnExit) {
           await this.notificationManager.sendExitNotification(session, exitCode || 0)
         }
       }
     )
-    if (onSessionUpdate) onSessionUpdate()
+    notifySessionUpdate(session)
     return session
   }
 
@@ -118,10 +166,6 @@ class PTYManager {
 
   cleanupBySession(parentSessionId: string): void {
     this.lifecycleManager.cleanupBySession(parentSessionId)
-  }
-
-  cleanupAll(): void {
-    this.lifecycleManager.cleanupAll()
   }
 }
 

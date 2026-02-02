@@ -1,58 +1,89 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { initManager, manager, onRawOutput } from '../src/plugin/pty/manager.ts'
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
+import { manager, registerRawOutputCallback } from '../src/plugin/pty/manager.ts'
+import { ManagedTestServer } from './utils.ts'
 
 describe('PTY Echo Behavior', () => {
-  const fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger
-      },
-    },
-  } as any
-
-  beforeEach(() => {
-    initManager(fakeClient)
+  let managedTestServer: ManagedTestServer
+  let disposableStack: DisposableStack
+  beforeAll(async () => {
+    managedTestServer = await ManagedTestServer.create()
+    disposableStack = new DisposableStack()
+    disposableStack.use(managedTestServer)
   })
 
-  afterEach(() => {
-    // Clean up any sessions
-    manager.clearAllSessions()
+  afterAll(() => {
+    disposableStack.dispose()
   })
 
-  it('should echo input characters in interactive bash session', async () => {
-    const receivedOutputs: string[] = []
-
-    // Subscribe to raw output events
-    onRawOutput((_sessionId, rawData) => {
-      receivedOutputs.push(rawData)
+  it('should echo input characters in non-interactive bash session', async () => {
+    const title = crypto.randomUUID()
+    const promise = new Promise<string>((resolve) => {
+      let receivedOutputs = ''
+      // Subscribe to raw output events
+      registerRawOutputCallback((session, rawData) => {
+        if (session.title !== title) return
+        receivedOutputs += rawData
+        if (receivedOutputs.includes('Hello World')) {
+          resolve(receivedOutputs)
+        }
+      })
+      setTimeout(() => resolve('Timeout'), 1000)
+    }).catch((e) => {
+      console.error(e)
     })
 
     // Spawn interactive bash session
     const session = manager.spawn({
-      command: 'bash',
-      args: ['-i'],
+      title,
+      command: 'echo',
+      args: ['Hello World'],
       description: 'Echo test session',
       parentSessionId: 'test',
     })
 
-    // Wait for PTY to initialize and show prompt
-    await new Promise((resolve) => setTimeout(resolve, 200))
-
-    // Send test input
-    const success = manager.write(session.id, 'a')
-    expect(success).toBe(true)
-
-    // Wait for echo to be processed
-    await new Promise((resolve) => setTimeout(resolve, 200))
+    const allOutput = await promise
 
     // Clean up
     manager.kill(session.id, true)
 
     // Verify echo occurred
-    const allOutput = receivedOutputs.join('')
-    expect(allOutput).toContain('a')
+    expect(allOutput).toContain('Hello World')
+  })
 
-    // Should have received some output (prompt + echo)
-    expect(receivedOutputs.length).toBeGreaterThan(0)
+  it('should echo input characters in interactive bash session', async () => {
+    const title = crypto.randomUUID()
+    const promise = new Promise<string>((resolve) => {
+      let receivedOutputs = ''
+      // Subscribe to raw output events
+      registerRawOutputCallback((session, rawData) => {
+        if (session.title !== title) return
+        receivedOutputs += rawData
+        if (receivedOutputs.includes('Hello World')) {
+          resolve(receivedOutputs)
+        }
+      })
+      setTimeout(() => resolve('Timeout'), 1000)
+    }).catch((e) => {
+      console.error(e)
+    })
+
+    // Spawn interactive bash session
+    const session = manager.spawn({
+      title,
+      command: 'bash',
+      args: [],
+      description: 'Echo test session',
+      parentSessionId: 'test',
+    })
+
+    manager.write(session.id, 'echo "Hello World"\nexit\n')
+
+    const allOutput = await promise
+
+    // Clean up
+    manager.kill(session.id, true)
+
+    // Verify echo occurred
+    expect(allOutput).toContain('Hello World')
   })
 })

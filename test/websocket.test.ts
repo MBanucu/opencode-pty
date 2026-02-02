@@ -1,333 +1,357 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { startWebServer, stopWebServer } from '../src/web/server/server.ts'
-import { initManager, manager } from '../src/plugin/pty/manager.ts'
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
+import { manager } from '../src/plugin/pty/manager.ts'
+import {
+  CustomError,
+  type WSMessageServerError,
+  type WSMessageServerSessionList,
+  type WSMessageServerSessionUpdate,
+  type WSMessageServerSubscribedSession,
+  type WSMessageServerUnsubscribedSession,
+} from '../src/web/shared/types.ts'
+import { ManagedTestClient, ManagedTestServer } from './utils.ts'
 
 describe('WebSocket Functionality', () => {
-  const fakeClient = {
-    app: {
-      log: async (_opts: any) => {
-        // Mock logger
-      },
-    },
-  } as any
-
-  beforeEach(() => {
-    initManager(fakeClient)
+  let managedTestServer: ManagedTestServer
+  let disposableStack: DisposableStack
+  beforeAll(async () => {
+    managedTestServer = await ManagedTestServer.create()
+    disposableStack = new DisposableStack()
+    disposableStack.use(managedTestServer)
   })
-
-  afterEach(() => {
-    stopWebServer()
+  afterAll(() => {
+    disposableStack.dispose()
   })
 
   describe('WebSocket Connection', () => {
     it('should accept WebSocket connections', async () => {
-      manager.cleanupAll() // Clean up any leftover sessions
-      await startWebServer({ port: 8772 })
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
+      await managedTestClient.waitOpen()
+      expect(managedTestClient.ws.readyState).toBe(WebSocket.OPEN)
+    }, 1000)
 
-      // Create a WebSocket connection
-      const ws = new WebSocket('ws://localhost:8772/ws')
-
-      await new Promise((resolve, reject) => {
-        ws.onopen = () => {
-          expect(ws.readyState).toBe(WebSocket.OPEN)
-          ws.close()
-          resolve(void 0)
-        }
-
-        ws.onerror = (error) => {
-          reject(error)
-        }
-
-        // Timeout after 2 seconds
-        setTimeout(() => reject(new Error('WebSocket connection timeout')), 2000)
-      })
-    })
-
-    it('should send session list on connection', async () => {
-      await startWebServer({ port: 8773 })
-
-      const ws = new WebSocket('ws://localhost:8773/ws')
-
-      const messages: any[] = []
-      ws.onmessage = (event) => {
-        messages.push(JSON.parse(event.data))
-      }
-
-      await new Promise((resolve) => {
-        ws.onopen = () => {
-          // Wait a bit for the session list message
-          setTimeout(() => {
-            ws.close()
-            resolve(void 0)
-          }, 100)
-        }
+    it('should not send session list on connection', async () => {
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
+      let called = false
+      managedTestClient.sessionListCallbacks.push((message: WSMessageServerSessionList) => {
+        expect(message).toBeUndefined()
+        called = true
       })
 
-      expect(messages.length).toBeGreaterThan(0)
-      const sessionListMessage = messages.find((msg) => msg.type === 'session_list')
-      expect(sessionListMessage).toBeDefined()
-      expect(Array.isArray(sessionListMessage.sessions)).toBe(true)
+      const title = crypto.randomUUID()
+      const promise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
+        managedTestClient.sessionUpdateCallbacks.push((message) => {
+          if (message.session.title === title) {
+            if (message.session.status === 'exited') {
+              resolve(message)
+            }
+          }
+        })
+      })
+
+      managedTestClient.send({
+        type: 'spawn',
+        title: title,
+        subscribe: true,
+        command: 'echo',
+        args: ['Hello World'],
+        description: 'Test session',
+        parentSessionId: managedTestServer.sessionId,
+      })
+      await promise
+      expect(called, 'session list has been sent unexpectedly').toBe(false)
     })
   })
 
   describe('WebSocket Message Handling', () => {
-    let ws: WebSocket
-
-    beforeEach(async () => {
-      manager.cleanupAll() // Clean up any leftover sessions
-      await startWebServer({ port: 8774 })
-      ws = new WebSocket('ws://localhost:8774/ws')
-
-      await new Promise((resolve, reject) => {
-        ws.onopen = () => resolve(void 0)
-        ws.onerror = reject
-        // Timeout after 2 seconds
-        setTimeout(() => reject(new Error('WebSocket connection timeout')), 2000)
-      })
-    })
-
-    afterEach(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close()
-      }
-    })
-
     it('should handle subscribe message', async () => {
-      const testSession = manager.spawn({
-        command: 'echo',
-        args: ['test'],
-        description: 'Test session',
-        parentSessionId: 'test',
-      })
-
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const messages: any[] = []
-      ws.onmessage = (event) => {
-        messages.push(JSON.parse(event.data))
-      }
-
-      ws.send(
-        JSON.stringify({
-          type: 'subscribe',
-          sessionId: testSession.id,
-        })
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
       )
+      const title = crypto.randomUUID()
+      const sessionRunningPromise = new Promise<WSMessageServerSessionUpdate>((resolve) => {
+        managedTestClient.sessionUpdateCallbacks.push((message) => {
+          if (message.session.title === title) {
+            if (message.session.status === 'running') {
+              resolve(message)
+            }
+          }
+        })
+      })
+      managedTestClient.send({
+        type: 'spawn',
+        title: title,
+        subscribe: false,
+        command: 'bash',
+        args: [],
+        description: 'Test session',
+        parentSessionId: managedTestServer.sessionId,
+      })
+      const runningSession = await sessionRunningPromise
 
-      // Wait for any response or timeout
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100)
+      const subscribedPromise = new Promise<boolean>((res) => {
+        managedTestClient.subscribedCallbacks.push((message) => {
+          if (message.sessionId === runningSession.session.id) {
+            res(true)
+          }
+        })
       })
 
-      // Should not have received an error message
-      const errorMessages = messages.filter((msg) => msg.type === 'error')
-      expect(errorMessages.length).toBe(0)
-    })
+      managedTestClient.send({
+        type: 'subscribe',
+        sessionId: runningSession.session.id,
+      })
+
+      const subscribed = await subscribedPromise
+      expect(subscribed).toBe(true)
+    }, 1000)
 
     it('should handle subscribe to non-existent session', async () => {
-      const messages: any[] = []
-      ws.onmessage = (event) => {
-        messages.push(JSON.parse(event.data))
-      }
-
-      ws.send(
-        JSON.stringify({
-          type: 'subscribe',
-          sessionId: 'nonexistent-session',
-        })
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
       )
-
-      // Wait for error response
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100)
+      const nonexistentSessionId = crypto.randomUUID()
+      const errorPromise = new Promise<WSMessageServerError>((res) => {
+        managedTestClient.errorCallbacks.push((message) => {
+          if (message.error.message.includes(nonexistentSessionId)) {
+            res(message)
+          }
+        })
       })
 
-      const errorMessages = messages.filter((msg) => msg.type === 'error')
-      expect(errorMessages.length).toBe(1)
-      expect(errorMessages[0].error).toContain('not found')
-    })
+      managedTestClient.send({
+        type: 'subscribe',
+        sessionId: nonexistentSessionId,
+      })
+
+      await errorPromise
+    }, 1000)
 
     it('should handle unsubscribe message', async () => {
-      ws.send(
-        JSON.stringify({
-          type: 'unsubscribe',
-          sessionId: 'some-session-id',
-        })
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
       )
+      const sessionId = crypto.randomUUID()
 
-      // Should not crash or send error
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100)
+      const unsubscribedPromise = new Promise<WSMessageServerUnsubscribedSession>((res) => {
+        managedTestClient.unsubscribedCallbacks.push((message) => {
+          if (message.sessionId === sessionId) {
+            res(message)
+          }
+        })
       })
 
-      expect(ws.readyState).toBe(WebSocket.OPEN)
-    })
+      managedTestClient.send({
+        type: 'unsubscribe',
+        sessionId: sessionId,
+      })
+
+      await unsubscribedPromise
+      expect(managedTestClient.ws.readyState).toBe(WebSocket.OPEN)
+    }, 1000)
 
     it('should handle session_list request', async () => {
-      const messages: any[] = []
-      ws.onmessage = (event) => {
-        messages.push(JSON.parse(event.data))
-      }
-
-      ws.send(
-        JSON.stringify({
-          type: 'session_list',
-        })
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
       )
-
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100)
+      const sessionListPromise = new Promise<WSMessageServerSessionList>((res) => {
+        managedTestClient.sessionListCallbacks.push((message) => {
+          res(message)
+        })
       })
 
-      const sessionListMessages = messages.filter((msg) => msg.type === 'session_list')
-      expect(sessionListMessages.length).toBeGreaterThan(0) // At least one session_list message
-    })
+      managedTestClient.send({
+        type: 'session_list',
+      })
+
+      await sessionListPromise
+    }, 1000)
 
     it('should handle invalid message format', async () => {
-      const messages: any[] = []
-      ws.onmessage = (event) => {
-        messages.push(JSON.parse(event.data))
-      }
-
-      ws.send('invalid json')
-
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100)
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
+      const errorPromise = new Promise<CustomError>((res) => {
+        managedTestClient.errorCallbacks.push((message) => {
+          res(message.error)
+        })
       })
 
-      const errorMessages = messages.filter((msg) => msg.type === 'error')
-      expect(errorMessages.length).toBe(1)
-      expect(errorMessages[0].error).toContain('Invalid message format')
-    })
+      managedTestClient.ws.send('invalid json')
+
+      const customError = await errorPromise
+      expect(customError.message).toContain('JSON Parse error')
+    }, 1000)
 
     it('should handle unknown message type', async () => {
-      const messages: any[] = []
-      ws.onmessage = (event) => {
-        messages.push(JSON.parse(event.data))
-      }
-
-      ws.send(
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
+      const errorPromise = new Promise<CustomError>((res) => {
+        managedTestClient.errorCallbacks.push((message) => {
+          res(message.error)
+        })
+      })
+      managedTestClient.ws.send(
         JSON.stringify({
           type: 'unknown_type',
           data: 'test',
         })
       )
 
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100)
-      })
-
-      const errorMessages = messages.filter((msg) => msg.type === 'error')
-      expect(errorMessages.length).toBe(1)
-      expect(errorMessages[0].error).toContain('Unknown message type')
-    })
+      const customError = await errorPromise
+      expect(customError.message).toContain('Unknown message type')
+    }, 1000)
 
     it('should demonstrate WebSocket subscription logic works correctly', async () => {
-      // This test demonstrates why integration tests failed:
-      // The WebSocket server logic and subscription system work correctly.
-      // Integration tests failed because they tried to read counter values
-      // from DOM elements that were removed during cleanup, not because
-      // the WebSocket messaging logic was broken.
-
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
       const testSession = manager.spawn({
-        command: 'echo',
-        args: ['test output'],
+        command: 'bash',
+        args: [],
         description: 'Test session for subscription logic',
-        parentSessionId: 'test-subscription',
+        parentSessionId: managedTestServer.sessionId,
       })
-
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
-
-      const messages: any[] = []
-      ws.onmessage = (event) => {
-        messages.push(JSON.parse(event.data))
-      }
 
       // Subscribe to the session
-      ws.send(
-        JSON.stringify({
-          type: 'subscribe',
-          sessionId: testSession.id,
+      const subscribePromise = new Promise<WSMessageServerSubscribedSession>((res) => {
+        managedTestClient.subscribedCallbacks.push((message) => {
+          if (message.sessionId === testSession.id) {
+            res(message)
+          }
         })
-      )
+      })
 
-      // Wait for subscription processing
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      managedTestClient.send({
+        type: 'subscribe',
+        sessionId: testSession.id,
+      })
+      await subscribePromise
 
-      // Check that subscription didn't produce errors
-      const errorMessages = messages.filter((msg) => msg.type === 'error')
-      expect(errorMessages.length).toBe(0)
+      let rawData = ''
+      managedTestClient.rawDataCallbacks.push((message) => {
+        if (message.session.id === testSession.id) {
+          rawData += message.rawData
+        }
+      })
+
+      const sessionUpdatePromise = new Promise<WSMessageServerSessionUpdate>((res) => {
+        managedTestClient.sessionUpdateCallbacks.push((message) => {
+          if (message.session.id === testSession.id) {
+            if (message.session.status === 'exited') {
+              res(message)
+            }
+          }
+        })
+      })
+
+      // Send input to the session
+      managedTestClient.send({
+        type: 'input',
+        sessionId: testSession.id,
+        data: "echo 'Hello from subscription test'\nexit\n",
+      })
+
+      // Wait for session to exit
+      await sessionUpdatePromise
+
+      // Check that we received the echoed output
+      expect(rawData).toContain('Hello from subscription test')
 
       // Unsubscribe
-      ws.send(
-        JSON.stringify({
-          type: 'unsubscribe',
-          sessionId: testSession.id,
+      const unsubscribePromise = new Promise<WSMessageServerUnsubscribedSession>((res) => {
+        managedTestClient.unsubscribedCallbacks.push((message) => {
+          if (message.sessionId === testSession.id) {
+            res(message)
+          }
         })
-      )
-
-      await new Promise((resolve) => setTimeout(resolve, 50))
-
-      // Should still not have errors
-      const errorMessagesAfterUnsub = messages.filter((msg) => msg.type === 'error')
-      expect(errorMessagesAfterUnsub.length).toBe(0)
-
-      // This test passes because WebSocket subscription/unsubscription works.
-      // The integration test failures were due to UI test assumptions about
-      // DOM elements that were removed, not WebSocket functionality issues.
-    })
+      })
+      managedTestClient.send({
+        type: 'unsubscribe',
+        sessionId: testSession.id,
+      })
+      await unsubscribePromise
+    }, 500)
 
     it('should handle multiple subscription states correctly', async () => {
+      await using managedTestClient = await ManagedTestClient.create(
+        managedTestServer.server.getWsUrl()
+      )
       // Test that demonstrates the subscription system tracks client state properly
       // This is important because the UI relies on proper subscription management
+      const errors: CustomError[] = []
+      managedTestClient.errorCallbacks.push((message) => {
+        errors.push(message.error)
+      })
 
       const session1 = manager.spawn({
-        command: 'echo',
-        args: ['session1'],
+        command: 'bash',
+        args: [],
         description: 'Session 1',
-        parentSessionId: 'test-multi-1',
+        parentSessionId: crypto.randomUUID(),
       })
-
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
 
       const session2 = manager.spawn({
-        command: 'echo',
-        args: ['session2'],
+        command: 'bash',
+        args: [],
         description: 'Session 2',
-        parentSessionId: 'test-multi-2',
+        parentSessionId: crypto.randomUUID(),
       })
 
-      // Wait for PTY to start
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      const subscribePromise1 = new Promise<WSMessageServerSubscribedSession>((res) => {
+        managedTestClient.subscribedCallbacks.push((message) => {
+          if (message.sessionId === session1.id) {
+            res(message)
+          }
+        })
+      })
 
-      const messages: any[] = []
-      ws.onmessage = (event) => {
-        messages.push(JSON.parse(event.data))
-      }
+      const subscribePromise2 = new Promise<WSMessageServerSubscribedSession>((res) => {
+        managedTestClient.subscribedCallbacks.push((message) => {
+          if (message.sessionId === session2.id) {
+            res(message)
+          }
+        })
+      })
 
       // Subscribe to session1
-      ws.send(JSON.stringify({ type: 'subscribe', sessionId: session1.id }))
-      await new Promise((resolve) => setTimeout(resolve, 50))
-
+      managedTestClient.send({
+        type: 'subscribe',
+        sessionId: session1.id,
+      })
       // Subscribe to session2
-      ws.send(JSON.stringify({ type: 'subscribe', sessionId: session2.id }))
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      managedTestClient.send({
+        type: 'subscribe',
+        sessionId: session2.id,
+      })
+      await Promise.all([subscribePromise1, subscribePromise2])
+
+      const unsubscribePromise1 = new Promise<WSMessageServerUnsubscribedSession>((res) => {
+        managedTestClient.unsubscribedCallbacks.push((message) => {
+          if (message.sessionId === session1.id) {
+            res(message)
+          }
+        })
+      })
 
       // Unsubscribe from session1
-      ws.send(JSON.stringify({ type: 'unsubscribe', sessionId: session1.id }))
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      managedTestClient.send({
+        type: 'unsubscribe',
+        sessionId: session1.id,
+      })
+      await unsubscribePromise1
 
       // Check no errors occurred
-      const errorMessages = messages.filter((msg) => msg.type === 'error')
-      expect(errorMessages.length).toBe(0)
+      expect(errors.length).toBe(0)
 
       // This demonstrates that the WebSocket server correctly manages
       // multiple subscriptions per client, which is essential for the UI
       // to properly track counter state for different sessions.
       // Integration test failures were DOM-related, not subscription logic issues.
-    })
+    }, 200)
   })
 })

@@ -6,42 +6,23 @@ import { ptyWrite } from './plugin/pty/tools/write.ts'
 import { ptyRead } from './plugin/pty/tools/read.ts'
 import { ptyList } from './plugin/pty/tools/list.ts'
 import { ptyKill } from './plugin/pty/tools/kill.ts'
-import { getServerUrl, startWebServer } from './web/server/server.ts'
+import { PTYServer } from './web/server/server.ts'
+import open from 'open'
 
-interface SessionDeletedEvent {
-  type: 'session.deleted'
-  properties: {
-    info: {
-      id: string
-    }
-  }
-}
-const ptyServerUrlCommand = 'pty-server-url'
+const ptyOpenClientCommand = 'pty-open-background-spy'
 
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initPermissions(client, directory)
   initManager(client)
+  const ptyServer = await PTYServer.createServer()
 
   return {
     'command.execute.before': async (input) => {
-      if (input.command === ptyServerUrlCommand) {
-        const serverUrl = getServerUrl()
-        client.session.prompt({
-          path: { id: input.sessionID },
-          body: {
-            parts: [
-              {
-                type: 'text',
-                text: serverUrl
-                  ? `PTY Web Server URL: ${serverUrl}`
-                  : 'PTY Web Server is not running.',
-              },
-            ],
-            noReply: true,
-          },
-        })
-        throw new Error('Command handled by PTY plugin')
+      if (input.command !== ptyOpenClientCommand) {
+        return
       }
+      open(ptyServer.server.url.origin)
+      throw new Error('Command handled by PTY plugin')
     },
     tool: {
       pty_spawn: ptySpawn,
@@ -54,23 +35,15 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       if (!input.command) {
         input.command = {}
       }
-      const serverUrl = await startWebServer()
-      input.command[ptyServerUrlCommand] = {
+      const serverUrl = ptyServer.server.url.toString()
+      input.command[ptyOpenClientCommand] = {
         template: `${serverUrl}`,
-        description: 'print link to PTY web server',
+        description: 'Open PTY Sessions Web Interface',
       }
     },
     event: async ({ event }) => {
-      if (!event) {
-        return
-      }
-
       if (event.type === 'session.deleted') {
-        const sessionEvent = event as SessionDeletedEvent
-        const sessionId = sessionEvent.properties?.info?.id
-        if (sessionId) {
-          manager.cleanupBySession(sessionId)
-        }
+        manager.cleanupBySession(event.properties.info.id)
       }
     },
   }

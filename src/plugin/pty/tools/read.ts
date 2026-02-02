@@ -3,7 +3,16 @@ import { manager } from '../manager.ts'
 import { DEFAULT_READ_LIMIT, MAX_LINE_LENGTH } from '../../../shared/constants.ts'
 import { buildSessionNotFoundError } from '../utils.ts'
 import { formatLine } from '../formatters.ts'
+import type { PTYSessionInfo } from '../types.ts'
 import DESCRIPTION from './read.txt'
+
+interface ReadArgs {
+  id: string
+  offset?: number
+  limit?: number
+  pattern?: string
+  ignoreCase?: boolean
+}
 
 /**
  * Formats PTY output with XML tags and pagination
@@ -48,18 +57,25 @@ function validateAndCreateRegex(pattern: string, ignoreCase?: boolean): RegExp {
 /**
  * Handles pattern-based reading and formatting
  */
-function handlePatternRead(args: any, session: any, offset: number, limit: number): string {
-  const regex = validateAndCreateRegex(args.pattern, args.ignoreCase)
+function handlePatternRead(
+  id: string,
+  pattern: string,
+  ignoreCase: boolean | undefined,
+  session: PTYSessionInfo,
+  offset: number,
+  limit: number
+): string {
+  const regex = validateAndCreateRegex(pattern, ignoreCase)
 
-  const result = manager.search(args.id, regex, offset, limit)
+  const result = manager.search(id, regex, offset, limit)
   if (!result) {
-    throw buildSessionNotFoundError(args.id)
+    throw buildSessionNotFoundError(id)
   }
 
   if (result.matches.length === 0) {
     return [
-      `<pty_output id="${args.id}" status="${session.status}" pattern="${args.pattern}">`,
-      `No lines matched the pattern '${args.pattern}'.`,
+      `<pty_output id="${id}" status="${session.status}" pattern="${pattern}">`,
+      `No lines matched the pattern '${pattern}'.`,
       `Total lines in buffer: ${result.totalLines}`,
       `</pty_output>`,
     ].join('\n')
@@ -73,9 +89,9 @@ function handlePatternRead(args: any, session: any, offset: number, limit: numbe
   const endMessage = `(${result.totalMatches} match${result.totalMatches === 1 ? '' : 'es'} from ${result.totalLines} total lines)`
 
   return formatPtyOutput(
-    args.id,
+    id,
     session.status,
-    args.pattern,
+    pattern,
     formattedLines,
     result.hasMore,
     paginationMessage,
@@ -86,7 +102,12 @@ function handlePatternRead(args: any, session: any, offset: number, limit: numbe
 /**
  * Handles plain reading and formatting
  */
-function handlePlainRead(args: any, session: any, offset: number, limit: number): string {
+function handlePlainRead(
+  args: ReadArgs,
+  session: PTYSessionInfo,
+  offset: number,
+  limit: number
+): string {
   const result = manager.read(args.id, offset, limit)
   if (!result) {
     throw buildSessionNotFoundError(args.id)
@@ -175,7 +196,7 @@ export const ptyRead = tool({
     const limit = args.limit ?? DEFAULT_READ_LIMIT
 
     if (args.pattern) {
-      return handlePatternRead(args, session, offset, limit)
+      return handlePatternRead(args.id, args.pattern, args.ignoreCase, session, offset, limit)
     } else {
       return handlePlainRead(args, session, offset, limit)
     }

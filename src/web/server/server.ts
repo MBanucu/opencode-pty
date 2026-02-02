@@ -1,7 +1,4 @@
-import type { Server, ServerWebSocket, BunRequest } from 'bun'
-import { manager, onRawOutput, setOnSessionUpdate } from '../../plugin/pty/manager.ts'
-import type { WSMessage, ServerConfig } from '../shared/types.ts'
-import { get404Response } from './handlers/static.ts'
+import type { Server } from 'bun'
 import { handleHealth } from './handlers/health.ts'
 import {
   getSessions,
@@ -12,256 +9,86 @@ import {
   killSession,
   getRawBuffer,
   getPlainBuffer,
+  cleanupSession,
 } from './handlers/sessions.ts'
-import { DEFAULT_SERVER_PORT } from '../shared/constants.ts'
 
 import { buildStaticRoutes } from './handlers/static.ts'
+import { handleUpgrade } from './handlers/upgrade.ts'
+import { handleWebSocketMessage } from './handlers/websocket.ts'
+import { CallbackManager } from './CallbackManager.ts'
 
-const defaultConfig: ServerConfig = {
-  port: DEFAULT_SERVER_PORT,
-  hostname: 'localhost',
-}
+import { routes } from '../shared/routes.ts'
 
-let server: Server<any> | null = null
-let wsConnectionCount = 0
-const wsClients: Map<ServerWebSocket<any>, any> = new Map()
+export class PTYServer implements Disposable {
+  public readonly server: Server<undefined>
+  private readonly staticRoutes: Record<string, Response>
+  private readonly stack = new DisposableStack()
 
-export { wsConnectionCount }
-
-function wrapWithSecurityHeaders(
-  handler: (req: Request) => Promise<Response> | Response
-): (req: Request) => Promise<Response> {
-  return async (req: Request) => {
-    const response = await handler(req)
-    const headers = new Headers(response.headers)
-    headers.set('X-Content-Type-Options', 'nosniff')
-    headers.set('X-Frame-Options', 'DENY')
-    headers.set('X-XSS-Protection', '1; mode=block')
-    headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-    headers.set(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
-    )
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    })
-  }
-}
-
-function sendSessionList(ws: ServerWebSocket<any>): void {
-  const sessions = manager.list()
-  const sessionData = sessions.map((s) => ({
-    id: s.id,
-    title: s.title,
-    description: s.description,
-    command: s.command,
-    status: s.status,
-    exitCode: s.exitCode,
-    pid: s.pid,
-    lineCount: s.lineCount,
-    createdAt: s.createdAt.toISOString(),
-  }))
-  const message: WSMessage = { type: 'session_list', sessions: sessionData }
-  ws.send(JSON.stringify(message))
-}
-
-function handleSubscribe(ws: ServerWebSocket<any>, message: WSMessage): void {
-  if (message.sessionId) {
-    const session = manager.get(message.sessionId)
-    if (!session) {
-      ws.send(JSON.stringify({ type: 'error', error: `Session ${message.sessionId} not found` }))
-    } else {
-      ws.subscribe(`session:${message.sessionId}`)
-    }
-  }
-}
-
-function handleUnsubscribe(ws: ServerWebSocket<any>, message: WSMessage): void {
-  if (message.sessionId) {
-    ws.unsubscribe(`session:${message.sessionId}`)
-  }
-}
-
-function handleSessionListRequest(ws: ServerWebSocket<any>, _message: WSMessage): void {
-  sendSessionList(ws)
-}
-
-function handleUnknownMessage(ws: ServerWebSocket<any>, _message: WSMessage): void {
-  ws.send(JSON.stringify({ type: 'error', error: 'Unknown message type' }))
-}
-
-// Set callback for session updates
-setOnSessionUpdate(() => {
-  const sessions = manager.list()
-  const sessionData = sessions.map((s) => ({
-    id: s.id,
-    title: s.title,
-    description: s.description,
-    command: s.command,
-    status: s.status,
-    exitCode: s.exitCode,
-    pid: s.pid,
-    lineCount: s.lineCount,
-    createdAt: s.createdAt.toISOString(),
-  }))
-  const message = { type: 'session_list', sessions: sessionData }
-  for (const [ws] of wsClients) {
-    ws.send(JSON.stringify(message))
-  }
-})
-
-function handleWebSocketMessage(ws: ServerWebSocket<any>, data: string): void {
-  try {
-    const message: WSMessage = JSON.parse(data)
-
-    switch (message.type) {
-      case 'subscribe':
-        handleSubscribe(ws, message)
-        break
-
-      case 'unsubscribe':
-        handleUnsubscribe(ws, message)
-        break
-
-      case 'session_list':
-        handleSessionListRequest(ws, message)
-        break
-
-      default:
-        handleUnknownMessage(ws, message)
-    }
-  } catch (err) {
-    ws.send(JSON.stringify({ type: 'error', error: 'Invalid message format' }))
-  }
-}
-
-const wsHandler = {
-  open(ws: ServerWebSocket<any>) {
-    wsConnectionCount++
-    wsClients.set(ws, {})
-    sendSessionList(ws)
-  },
-
-  message(ws: ServerWebSocket<any>, message: string) {
-    handleWebSocketMessage(ws, message)
-  },
-
-  close(_ws: ServerWebSocket<any>) {
-    wsConnectionCount--
-    wsClients.delete(_ws)
-  },
-}
-
-async function handleRequest(req: Request): Promise<Response> {
-  return get404Response({ url: req.url, method: req.method, note: 'No route matched' })
-}
-
-export async function startWebServer(config: Partial<ServerConfig> = {}): Promise<string> {
-  const finalConfig = { ...defaultConfig, ...config }
-
-  if (server) {
-    return `http://${server.hostname}:${server.port}`
+  private constructor(staticRoutes: Record<string, Response>) {
+    this.staticRoutes = staticRoutes
+    this.server = this.startWebServer()
+    this.stack.use(this.server)
+    this.stack.use(new CallbackManager(this.server))
   }
 
-  onRawOutput((sessionId, rawData) => {
-    if (server) {
-      server.publish(
-        `session:${sessionId}`,
-        JSON.stringify({ type: 'raw_data', sessionId, rawData })
-      )
-    }
-  })
+  [Symbol.dispose]() {
+    this.stack.dispose()
+  }
 
-  const staticRoutes = await buildStaticRoutes()
+  public static async createServer(): Promise<PTYServer> {
+    const staticRoutes = await buildStaticRoutes()
 
-  const createServer = (port: number) => {
+    return new PTYServer(staticRoutes)
+  }
+
+  private startWebServer(): Server<undefined> {
     return Bun.serve({
-      hostname: finalConfig.hostname,
-      port,
+      port: 0,
 
       routes: {
-        ...staticRoutes,
-        '/': wrapWithSecurityHeaders(
-          () => new Response(null, { status: 302, headers: { Location: '/index.html' } })
-        ),
-        '/ws': (req: Request) => {
-          if (req.headers.get('upgrade') === 'websocket') {
-            const success = server!.upgrade(req)
-            if (success) {
-              return undefined // Upgrade succeeded, Bun sends 101 automatically
-            }
-            return new Response('WebSocket upgrade failed', { status: 400 })
-          } else {
-            return new Response('WebSocket endpoint - use WebSocket upgrade', { status: 426 })
-          }
+        ...this.staticRoutes,
+        [routes.websocket.path]: (req: Request) => handleUpgrade(this.server, req),
+        [routes.health.path]: () => handleHealth(this.server),
+        [routes.sessions.path]: {
+          GET: getSessions,
+          POST: createSession,
+          DELETE: clearSessions,
         },
-        '/health': wrapWithSecurityHeaders(handleHealth),
-        '/api/sessions': wrapWithSecurityHeaders(async (req: Request) => {
-          if (req.method === 'GET') return getSessions()
-          if (req.method === 'POST') return createSession(req)
-          return new Response('Method not allowed', { status: 405 })
-        }),
-        '/api/sessions/clear': wrapWithSecurityHeaders(async (req: Request) => {
-          if (req.method === 'POST') return clearSessions()
-          return new Response('Method not allowed', { status: 405 })
-        }),
-        '/api/sessions/:id': wrapWithSecurityHeaders(async (req: Request) => {
-          if (req.method === 'GET') return getSession(req as BunRequest<'/api/sessions/:id'>)
-          return new Response('Method not allowed', { status: 405 })
-        }),
-        '/api/sessions/:id/input': wrapWithSecurityHeaders(async (req: Request) => {
-          if (req.method === 'POST') return sendInput(req as BunRequest<'/api/sessions/:id/input'>)
-          return new Response('Method not allowed', { status: 405 })
-        }),
-        '/api/sessions/:id/kill': wrapWithSecurityHeaders(async (req: Request) => {
-          if (req.method === 'POST') return killSession(req as BunRequest<'/api/sessions/:id/kill'>)
-          return new Response('Method not allowed', { status: 405 })
-        }),
-        '/api/sessions/:id/buffer/raw': wrapWithSecurityHeaders(async (req: Request) => {
-          if (req.method === 'GET')
-            return getRawBuffer(req as BunRequest<'/api/sessions/:id/buffer/raw'>)
-          return new Response('Method not allowed', { status: 405 })
-        }),
-        '/api/sessions/:id/buffer/plain': wrapWithSecurityHeaders(async (req: Request) => {
-          if (req.method === 'GET')
-            return getPlainBuffer(req as BunRequest<'/api/sessions/:id/buffer/plain'>)
-          return new Response('Method not allowed', { status: 405 })
-        }),
+        [routes.session.path]: {
+          GET: getSession,
+          DELETE: killSession,
+        },
+        [routes.session.cleanup.path]: {
+          DELETE: cleanupSession,
+        },
+        [routes.session.input.path]: {
+          POST: sendInput,
+        },
+        [routes.session.buffer.raw.path]: {
+          GET: getRawBuffer,
+        },
+        [routes.session.buffer.plain.path]: {
+          GET: getPlainBuffer,
+        },
       },
 
       websocket: {
+        data: undefined as undefined,
         perMessageDeflate: true,
-        ...wsHandler,
+        open: (ws) => ws.subscribe('sessions:update'),
+        message: handleWebSocketMessage,
+        close: (ws) => {
+          ws.subscriptions.forEach((topic) => {
+            ws.unsubscribe(topic)
+          })
+        },
       },
 
-      fetch: handleRequest,
+      fetch: () => new Response(null, { status: 302, headers: { Location: '/index.html' } }),
     })
   }
 
-  try {
-    server = createServer(finalConfig.port)
-  } catch (error: any) {
-    if (error.code === 'EADDRINUSE' || error.message?.includes('EADDRINUSE')) {
-      server = createServer(0)
-    } else {
-      throw error
-    }
+  public getWsUrl(): string {
+    return `${this.server.url.origin.replace(/^http/, 'ws')}${routes.websocket.path}`
   }
-
-  return `http://${server.hostname}:${server.port}`
-}
-
-export function stopWebServer(): void {
-  if (server) {
-    server.stop()
-    server = null
-    wsClients.clear()
-  }
-}
-
-export function getServerUrl(): string | null {
-  if (!server) return null
-  return `http://${server.hostname}:${server.port}`
 }

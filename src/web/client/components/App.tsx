@@ -1,39 +1,67 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { Session } from 'opencode-pty-test/shared/types'
+import type { PTYSessionInfo } from 'opencode-pty-test/web/shared/types'
 
 import { useWebSocket } from '../hooks/useWebSocket.ts'
 import { useSessionManager } from '../hooks/useSessionManager.ts'
 
 import { Sidebar } from './Sidebar.tsx'
 import { RawTerminal } from './TerminalRenderer.tsx'
+import { api } from '../../shared/apiClient.ts'
 
 export function App() {
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [activeSession, setActiveSession] = useState<Session | null>(null)
+  const [sessions, setSessions] = useState<PTYSessionInfo[]>([])
+  const [activeSession, setActiveSession] = useState<PTYSessionInfo | null>(null)
   const [rawOutput, setRawOutput] = useState<string>('')
 
   const [connected, setConnected] = useState(false)
   const [wsMessageCount, setWsMessageCount] = useState(0)
+  const [sessionUpdateCount, setSessionUpdateCount] = useState(0)
 
-  const { connected: wsConnected, subscribeWithRetry } = useWebSocket({
+  const {
+    connected: wsConnected,
+    subscribeWithRetry,
+    sendInput,
+  } = useWebSocket({
     activeSession,
     onRawData: useCallback((rawData: string) => {
-      setRawOutput((prev) => prev + rawData)
+      setRawOutput((prev) => {
+        const newOutput = prev + rawData
+        return newOutput
+      })
       setWsMessageCount((prev) => prev + 1)
     }, []),
-    onSessionList: useCallback((newSessions: Session[], autoSelected: Session | null) => {
-      setSessions(newSessions)
-      if (autoSelected) {
+    onSessionList: useCallback(
+      (newSessions: PTYSessionInfo[], autoSelected: PTYSessionInfo | null) => {
+        setSessions(newSessions)
+        if (!autoSelected) {
+          return
+        }
         setActiveSession(autoSelected)
-        fetch(`${location.protocol}//${location.host}/api/sessions/${autoSelected.id}/buffer/raw`)
-          .then((response) => (response.ok ? response.json() : { raw: '' }))
+        api.session.buffer
+          .raw({ id: autoSelected.id })
           .then((data) => {
-            setRawOutput(data.raw || '')
+            setRawOutput(data.raw)
           })
-          .catch(() => {
-            setRawOutput('')
+          .catch((error) => {
+            console.error('Failed to fetch initial raw buffer for auto-selected session', error)
           })
-      }
+      },
+      []
+    ),
+    onSessionUpdate: useCallback((updatedSession: PTYSessionInfo) => {
+      setSessionUpdateCount((prev) => prev + 1)
+      setSessions((prevSessions) => {
+        const existingIndex = prevSessions.findIndex((s) => s.id === updatedSession.id)
+        if (existingIndex >= 0) {
+          // Replace the existing session
+          const newSessions = [...prevSessions]
+          newSessions[existingIndex] = updatedSession
+          return newSessions
+        } else {
+          // Add the new session to the list
+          return [...prevSessions, updatedSession]
+        }
+      })
     }, []),
   })
 
@@ -42,10 +70,25 @@ export function App() {
     setConnected(wsConnected)
   }, [wsConnected])
 
+  // Periodic session list sync every 10 seconds
+  useEffect(() => {
+    const syncInterval = setInterval(async () => {
+      try {
+        setSessions(await api.sessions.list())
+      } catch (error) {
+        console.error('Failed to sync sessions', error)
+      }
+    }, 10000) // 10 seconds
+
+    return () => clearInterval(syncInterval)
+  }, [])
+
   const { handleSessionClick, handleSendInput, handleKillSession } = useSessionManager({
     activeSession,
     setActiveSession,
     subscribeWithRetry,
+    sendInput,
+    wsConnected,
     onRawOutputUpdate: useCallback((rawOutput: string) => {
       setRawOutput(rawOutput)
     }, []),
@@ -78,8 +121,8 @@ export function App() {
               />
             </div>
             <div className="debug-info" data-testid="debug-info">
-              Debug: {rawOutput.length} chars, active: {activeSession?.id || 'none'}, WS messages:{' '}
-              {wsMessageCount}
+              Debug: {rawOutput.length} chars, active: {activeSession?.id || 'none'}, WS raw_data:{' '}
+              {wsMessageCount}, session_updates: {sessionUpdateCount}
             </div>
             <div data-testid="test-output" style={{ position: 'absolute', left: '-9999px' }}>
               {rawOutput.split('\n').map((line, i) => (

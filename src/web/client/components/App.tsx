@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { PTYSessionInfo } from 'opencode-pty/shared/types'
+import type { PTYSessionInfo } from 'opencode-pty/web/shared/types'
 
 import { useWebSocket } from '../hooks/useWebSocket.ts'
 import { useSessionManager } from '../hooks/useSessionManager.ts'
@@ -37,11 +37,14 @@ export function App() {
           return
         }
         setActiveSession(autoSelected)
-        api.session.buffer.raw({ id: autoSelected.id }).then((data) => {
-          setRawOutput(data.raw)
-        }).catch((error) => {
-          console.error('Failed to fetch initial raw buffer for auto-selected session', error)
-        })
+        api.session.buffer
+          .raw({ id: autoSelected.id })
+          .then((data) => {
+            setRawOutput(data.raw)
+          })
+          .catch((error) => {
+            console.error('Failed to fetch initial raw buffer for auto-selected session', error)
+          })
       },
       []
     ),

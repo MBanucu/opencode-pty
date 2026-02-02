@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        quality: [test --timeout=30000, run typecheck, run lint, run format:check, run test:e2e]
+        quality: [test, typecheck, lint, format:check, test:e2e]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -42,9 +42,9 @@ jobs:
         run: bunx playwright install --with-deps
 
       - name: Build
-        run: bun run build:prod
+        run: bun build:prod
 
-      - name: Run test
+      - name: Run quality step
         run: bun ${{matrix.quality}}
 
   dependency-review:
@@ -61,7 +61,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        quality: [bun run quality, bun test, bun run test:e2e]
+        quality: [quality, test, test:e2e]
     name: Nix Flake CI
     runs-on: ubuntu-latest
     steps:
@@ -75,7 +75,7 @@ jobs:
         run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun install
 
       - name: Build (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun run build
+        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun build
 
       - name: Quality checks (Nix devShell)
-        run: nix --experimental-features 'nix-command flakes' develop .# --command -- ${{matrix.quality}}
+        run: nix --experimental-features 'nix-command flakes' develop .# --command -- bun ${{matrix.quality}}

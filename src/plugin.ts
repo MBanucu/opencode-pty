@@ -46,7 +46,7 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       const serverUrl = ptyServer.server.url.toString()
       input.command[ptyOpenClientCommand] = {
         template: `${serverUrl}`,
-        description: 'print link to PTY web server',
+        description: 'Open PTY Sessions Web Interface',
       }
     },
     event: async ({ event }) => {

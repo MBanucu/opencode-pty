@@ -54,13 +54,13 @@ opencode
 
 ## Tools Provided
 
-| Tool             | Description                                                                 |
-| ---------------- | --------------------------------------------------------------------------- |
-| `pty_spawn`      | Create a new PTY session (command, args, workdir, env, title, notifyOnExit) |
-| `pty_write`      | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C)         |
-| `pty_read`       | Read output buffer with pagination and optional regex filtering             |
-| `pty_list`       | List all PTY sessions with status, PID, line count                          |
-| `pty_kill`       | Terminate a PTY, optionally cleanup the buffer                              |
+| Tool        | Description                                                                 |
+| ----------- | --------------------------------------------------------------------------- |
+| `pty_spawn` | Create a new PTY session (command, args, workdir, env, title, notifyOnExit) |
+| `pty_write` | Send input to a PTY (text, escape sequences like `\x03` for Ctrl+C)         |
+| `pty_read`  | Read output buffer with pagination and optional regex filtering             |
+| `pty_list`  | List all PTY sessions with status, PID, line count                          |
+| `pty_kill`  | Terminate a PTY, optionally cleanup the buffer                              |
 
 ## Slash Commands
 
@@ -159,6 +159,7 @@ Replace `[PORT]` with the actual port number shown in the slash command output.
 Future implementation will include:
 
 #### App
+
 - A startup script that runs the server (in the same process).
 - The startup script will run `bun vite` with an environment variable set to the server URL
 - The client will use this environment variable for WebSocket and HTTP requests

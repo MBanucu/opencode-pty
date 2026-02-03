@@ -1,7 +1,7 @@
-import { describe, it, expect, afterEach } from 'bun:test'
-import { mkdtempSync, rmSync, copyFileSync, existsSync, mkdirSync } from 'fs'
-import { join } from 'path'
+import { afterEach, describe, expect, it } from 'bun:test'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
+import { join } from 'path'
 
 // This test ensures the npm package can be packed, installed, and serves assets correctly
 

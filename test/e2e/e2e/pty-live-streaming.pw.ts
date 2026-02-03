@@ -1,6 +1,6 @@
-import { test as extendedTest } from '../fixtures'
 import { expect } from '@playwright/test'
 import type { PTYSessionInfo } from '../../../src/plugin/pty/types'
+import { test as extendedTest } from '../fixtures'
 
 extendedTest.describe('PTY Live Streaming', () => {
   extendedTest('should preserve and display complete historical output buffer', async ({ api }) => {

@@ -1,10 +1,10 @@
+import { expect, test as extendedTest } from './fixtures'
 import {
   bunStripANSI,
-  getTerminalPlainText,
   getSerializedContentByXtermSerializeAddon,
+  getTerminalPlainText,
   waitForTerminalRegex,
 } from './xterm-test-helpers'
-import { test as extendedTest, expect } from './fixtures'
 
 extendedTest(
   'should assert exactly 2 "$" prompts appear and verify 4 extraction methods match (ignoring \\r) with echo "Hello World"',

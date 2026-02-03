@@ -8,26 +8,28 @@ export class PerformanceMonitor {
   private static readonly MAX_MEASURES = PERFORMANCE_MEASURE_LIMIT
 
   static startMark(name: string): void {
-    this.marks.set(name, performance.now())
+    PerformanceMonitor.marks.set(name, performance.now())
   }
 
   static endMark(name: string): number | null {
-    const startTime = this.marks.get(name)
+    const startTime = PerformanceMonitor.marks.get(name)
     if (!startTime) return null
 
     const duration = performance.now() - startTime
-    this.measures.push({
+    PerformanceMonitor.measures.push({
       name,
       duration,
       timestamp: Date.now(),
     })
 
     // Keep only last N measures
-    if (this.measures.length > this.MAX_MEASURES) {
-      this.measures = this.measures.slice(-this.MAX_MEASURES)
+    if (PerformanceMonitor.measures.length > PerformanceMonitor.MAX_MEASURES) {
+      PerformanceMonitor.measures = PerformanceMonitor.measures.slice(
+        -PerformanceMonitor.MAX_MEASURES
+      )
     }
 
-    this.marks.delete(name)
+    PerformanceMonitor.marks.delete(name)
     return duration
   }
 
@@ -38,7 +40,7 @@ export class PerformanceMonitor {
     const metrics: {
       measures: Array<{ name: string; duration: number; timestamp: number }>
       memory?: { used: number; total: number; limit: number }
-    } = { measures: this.measures }
+    } = { measures: PerformanceMonitor.measures }
 
     // Add memory info if available (Chrome-specific extension)
     if ('memory' in performance) {
@@ -60,8 +62,8 @@ export class PerformanceMonitor {
   }
 
   static clearMetrics(): void {
-    this.marks.clear()
-    this.measures.length = 0
+    PerformanceMonitor.marks.clear()
+    PerformanceMonitor.measures.length = 0
   }
 }
 

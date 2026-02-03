@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, mock, spyOn, afterAll } from 'bun:test'
-import { ptySpawn } from '../src/plugin/pty/tools/spawn.ts'
-import { ptyRead } from '../src/plugin/pty/tools/read.ts'
-import { ptyList } from '../src/plugin/pty/tools/list.ts'
+import { afterAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
+import moment from 'moment'
 import { RingBuffer } from '../src/plugin/pty/buffer.ts'
 import { manager } from '../src/plugin/pty/manager.ts'
-import moment from 'moment'
+import { ptyList } from '../src/plugin/pty/tools/list.ts'
+import { ptyRead } from '../src/plugin/pty/tools/read.ts'
+import { ptySpawn } from '../src/plugin/pty/tools/spawn.ts'
 
 describe('PTY Tools', () => {
   afterAll(() => {

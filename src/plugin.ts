@@ -1,13 +1,13 @@
-import type { PluginContext, PluginResult } from './plugin/types.ts'
+import open from 'open'
 import { initManager, manager } from './plugin/pty/manager.ts'
 import { initPermissions } from './plugin/pty/permissions.ts'
+import { ptyKill } from './plugin/pty/tools/kill.ts'
+import { ptyList } from './plugin/pty/tools/list.ts'
+import { ptyRead } from './plugin/pty/tools/read.ts'
 import { ptySpawn } from './plugin/pty/tools/spawn.ts'
 import { ptyWrite } from './plugin/pty/tools/write.ts'
-import { ptyRead } from './plugin/pty/tools/read.ts'
-import { ptyList } from './plugin/pty/tools/list.ts'
-import { ptyKill } from './plugin/pty/tools/kill.ts'
+import type { PluginContext, PluginResult } from './plugin/types.ts'
 import { PTYServer } from './web/server/server.ts'
-import open from 'open'
 
 const ptyOpenClientCommand = 'pty-open-background-spy'
 

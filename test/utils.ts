@@ -2,24 +2,24 @@ import { OpencodeClient } from '@opencode-ai/sdk'
 import {
   initManager,
   manager,
-  sessionUpdateCallbacks,
   rawOutputCallbacks,
+  sessionUpdateCallbacks,
 } from '../src/plugin/pty/manager'
 import { PTYServer } from '../src/web/server/server'
 import type {
-  WSMessageServer,
-  WSMessageServerSubscribedSession,
-  WSMessageServerUnsubscribedSession,
-  WSMessageServerSessionUpdate,
-  WSMessageServerRawData,
-  WSMessageServerReadRawResponse,
-  WSMessageServerSessionList,
-  WSMessageServerError,
   WSMessageClientInput,
   WSMessageClientSessionList,
   WSMessageClientSpawnSession,
   WSMessageClientSubscribeSession,
   WSMessageClientUnsubscribeSession,
+  WSMessageServer,
+  WSMessageServerError,
+  WSMessageServerRawData,
+  WSMessageServerReadRawResponse,
+  WSMessageServerSessionList,
+  WSMessageServerSessionUpdate,
+  WSMessageServerSubscribedSession,
+  WSMessageServerUnsubscribedSession,
 } from '../src/web/shared/types'
 
 export class ManagedTestClient implements Disposable {

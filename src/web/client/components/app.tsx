@@ -1,12 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
 import type { PTYSessionInfo } from 'opencode-pty/web/shared/types'
-
-import { useWebSocket } from '../hooks/use-web-socket.ts'
+import { useCallback, useEffect, useState } from 'react'
+import { api } from '../../shared/api-client.ts'
 import { useSessionManager } from '../hooks/use-session-manager.ts'
-
+import { useWebSocket } from '../hooks/use-web-socket.ts'
 import { Sidebar } from './sidebar.tsx'
 import { RawTerminal } from './terminal-renderer.tsx'
-import { api } from '../../shared/api-client.ts'
 
 export function App() {
   const [sessions, setSessions] = useState<PTYSessionInfo[]>([])
@@ -95,23 +93,23 @@ export function App() {
   })
 
   return (
-    <div className="container" data-active-session={activeSession?.id}>
+    <div className='container' data-active-session={activeSession?.id}>
       <Sidebar
         sessions={sessions}
         activeSession={activeSession}
         onSessionClick={handleSessionClick}
         connected={connected}
       />
-      <div className="main">
+      <div className='main'>
         {activeSession ? (
           <>
-            <div className="output-header">
-              <div className="output-title">{activeSession.description ?? activeSession.title}</div>
-              <button className="kill-btn" onClick={handleKillSession}>
+            <div className='output-header'>
+              <div className='output-title'>{activeSession.description ?? activeSession.title}</div>
+              <button className='kill-btn' onClick={handleKillSession}>
                 Kill Session
               </button>
             </div>
-            <div className="output-container">
+            <div className='output-container'>
               <RawTerminal
                 key={activeSession?.id}
                 rawOutput={rawOutput}
@@ -120,20 +118,20 @@ export function App() {
                 disabled={!activeSession || activeSession.status !== 'running'}
               />
             </div>
-            <div className="debug-info" data-testid="debug-info">
+            <div className='debug-info' data-testid='debug-info'>
               Debug: {rawOutput.length} chars, active: {activeSession?.id || 'none'}, WS raw_data:{' '}
               {wsMessageCount}, session_updates: {sessionUpdateCount}
             </div>
-            <div data-testid="test-output" style={{ position: 'absolute', left: '-9999px' }}>
+            <div data-testid='test-output' style={{ position: 'absolute', left: '-9999px' }}>
               {rawOutput.split('\n').map((line, i) => (
-                <div key={i} className="output-line">
+                <div key={i} className='output-line'>
                   {line}
                 </div>
               ))}
             </div>
           </>
         ) : (
-          <div className="empty-state">Select a session from the sidebar to view its output</div>
+          <div className='empty-state'>Select a session from the sidebar to view its output</div>
         )}
       </div>
     </div>

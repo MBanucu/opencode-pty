@@ -1,9 +1,9 @@
+import { expect, test as extendedTest } from './fixtures'
 import {
   bunStripANSI,
   getSerializedContentByXtermSerializeAddon,
   waitForTerminalRegex,
 } from './xterm-test-helpers'
-import { test as extendedTest, expect } from './fixtures'
 
 extendedTest.describe(
   'Xterm Content Extraction - Visual Verification (DOM vs Serialize vs Plain API)',

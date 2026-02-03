@@ -1,8 +1,8 @@
-import { spawn, type IPty } from 'bun-pty'
+import { type IPty, spawn } from 'bun-pty'
+import moment from 'moment'
+import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS } from '../constants.ts'
 import { RingBuffer } from './buffer.ts'
 import type { PTYSession, PTYSessionInfo, SpawnOptions } from './types.ts'
-import { DEFAULT_TERMINAL_COLS, DEFAULT_TERMINAL_ROWS } from '../constants.ts'
-import moment from 'moment'
 
 const SESSION_ID_BYTE_LENGTH = 4
 

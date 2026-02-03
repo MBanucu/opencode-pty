@@ -23,6 +23,7 @@
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.bun
+            pkgs.biome
             pkgs.bashInteractive
             pkgs.playwright-driver.browsers
           ];

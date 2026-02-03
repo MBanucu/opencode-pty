@@ -1,11 +1,10 @@
-import { test as extendedTest, expect } from './fixtures'
 import type { Page } from '@playwright/test'
-
+import type { createApiClient } from 'opencode-pty/web/shared/api-client'
+import { expect, test as extendedTest } from './fixtures'
 import {
   getSerializedContentByXtermSerializeAddon,
   waitForTerminalRegex,
 } from './xterm-test-helpers'
-import { createApiClient } from 'opencode-pty/web/shared/api-client'
 
 async function createSession(
   api: ReturnType<typeof createApiClient>,
@@ -68,7 +67,7 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
       await page.keyboard.press('Enter')
       await waitForTerminalRegex(page, /OK/)
       // Print buffer after typing
-      let after = await getSerializedContentByXtermSerializeAddon(page, {
+      const after = await getSerializedContentByXtermSerializeAddon(page, {
         excludeModes: true,
         excludeAltBuffer: true,
       })

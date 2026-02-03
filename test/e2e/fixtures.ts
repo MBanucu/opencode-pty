@@ -1,5 +1,5 @@
+import { type ChildProcess, spawn } from 'node:child_process'
 import { test as base, type WorkerInfo } from '@playwright/test'
-import { spawn, type ChildProcess } from 'node:child_process'
 
 import { createApiClient } from '../../src/web/shared/api-client.ts'
 import { ManagedTestClient } from '../utils'

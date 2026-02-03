@@ -1,23 +1,21 @@
 import type { Server } from 'bun'
+import { routes } from '../shared/routes.ts'
+import { CallbackManager } from './callback-manager.ts'
 import { handleHealth } from './handlers/health.ts'
 import {
-  getSessions,
-  createSession,
-  clearSessions,
-  getSession,
-  sendInput,
-  killSession,
-  getRawBuffer,
-  getPlainBuffer,
   cleanupSession,
+  clearSessions,
+  createSession,
+  getPlainBuffer,
+  getRawBuffer,
+  getSession,
+  getSessions,
+  killSession,
+  sendInput,
 } from './handlers/sessions.ts'
-
 import { buildStaticRoutes } from './handlers/static.ts'
 import { handleUpgrade } from './handlers/upgrade.ts'
 import { handleWebSocketMessage } from './handlers/websocket.ts'
-import { CallbackManager } from './callback-manager.ts'
-
-import { routes } from '../shared/routes.ts'
 
 export class PTYServer implements Disposable {
   public readonly server: Server<undefined>

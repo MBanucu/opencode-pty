@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { manager, registerRawOutputCallback } from '../src/plugin/pty/manager.ts'
 import { ManagedTestServer } from './utils.ts'
 

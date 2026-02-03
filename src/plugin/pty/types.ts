@@ -1,6 +1,6 @@
 import type { IPty } from 'bun-pty'
-import type { RingBuffer } from './buffer.ts'
 import type moment from 'moment'
+import type { RingBuffer } from './buffer.ts'
 
 export type PTYStatus = 'running' | 'exited' | 'killing' | 'killed'
 

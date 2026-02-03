@@ -1,6 +1,5 @@
-import { resolve } from 'node:path'
 import { readdirSync, statSync } from 'node:fs'
-import { join, extname } from 'node:path'
+import { extname, join, resolve } from 'node:path'
 import { ASSET_CONTENT_TYPES } from '../../shared/constants.ts'
 
 // ----- MODULE-SCOPE CONSTANTS -----

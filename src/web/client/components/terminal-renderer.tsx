@@ -1,7 +1,7 @@
-import React from 'react'
-import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SerializeAddon } from '@xterm/addon-serialize'
+import { Terminal } from '@xterm/xterm'
+import React from 'react'
 import '@xterm/xterm/css/xterm.css'
 
 // Global module augmentation to extend Window interface
@@ -108,7 +108,7 @@ export class RawTerminal extends React.Component<RawTerminalProps> {
 
   override render() {
     return (
-      <div ref={this.terminalRef} className="xterm" style={{ width: '100%', height: '100%' }} />
+      <div ref={this.terminalRef} className='xterm' style={{ width: '100%', height: '100%' }} />
     )
   }
 }

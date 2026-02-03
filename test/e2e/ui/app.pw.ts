@@ -1,5 +1,5 @@
-import { test as extendedTest, expect } from '../fixtures'
 import type { PTYSessionInfo } from '../../../src/plugin/pty/types'
+import { expect, test as extendedTest } from '../fixtures'
 
 extendedTest.describe('App Component', () => {
   extendedTest('renders the PTY Sessions title', async ({ page }) => {

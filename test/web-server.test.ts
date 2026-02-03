@@ -1,11 +1,11 @@
-import { describe, it, expect, afterAll, beforeAll } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import {
   manager,
   registerRawOutputCallback,
   registerSessionUpdateCallback,
 } from '../src/plugin/pty/manager.ts'
-import { PTYServer } from '../src/web/server/server.ts'
 import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
+import { PTYServer } from '../src/web/server/server.ts'
 import { ManagedTestServer } from './utils.ts'
 
 describe('Web Server', () => {

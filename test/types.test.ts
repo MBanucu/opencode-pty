@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
+import moment from 'moment'
+import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
 import {
   CustomError,
   type WSMessageClientSubscribeSession,
   type WSMessageServerError,
   type WSMessageServerSessionList,
 } from '../src/web/shared/types.ts'
-import type { PTYSessionInfo } from '../src/plugin/pty/types.ts'
-import moment from 'moment'
 
 describe('Web Types', () => {
   describe('WSMessage', () => {

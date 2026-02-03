@@ -5,7 +5,7 @@ import {
   removeSessionUpdateCallback,
 } from '../../plugin/pty/manager'
 import type { PTYSessionInfo } from '../../plugin/pty/types'
-import type { WSMessageServerSessionUpdate, WSMessageServerRawData } from '../shared/types'
+import type { WSMessageServerRawData, WSMessageServerSessionUpdate } from '../shared/types'
 
 export class CallbackManager implements Disposable {
   constructor(private server: Bun.Server<undefined>) {

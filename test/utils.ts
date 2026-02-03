@@ -51,35 +51,39 @@ export class ManagedTestClient implements Disposable {
       this.messages.push(message)
       switch (message.type) {
         case 'subscribed':
-          this.subscribedCallbacks.forEach((callback) =>
+          this.subscribedCallbacks.forEach((callback) => {
             callback(message as WSMessageServerSubscribedSession)
-          )
+          })
           break
         case 'unsubscribed':
-          this.unsubscribedCallbacks.forEach((callback) =>
+          this.unsubscribedCallbacks.forEach((callback) => {
             callback(message as WSMessageServerUnsubscribedSession)
-          )
+          })
           break
         case 'session_update':
-          this.sessionUpdateCallbacks.forEach((callback) =>
+          this.sessionUpdateCallbacks.forEach((callback) => {
             callback(message as WSMessageServerSessionUpdate)
-          )
+          })
           break
         case 'raw_data':
-          this.rawDataCallbacks.forEach((callback) => callback(message as WSMessageServerRawData))
+          this.rawDataCallbacks.forEach((callback) => {
+            callback(message as WSMessageServerRawData)
+          })
           break
         case 'readRawResponse':
-          this.readRawResponseCallbacks.forEach((callback) =>
+          this.readRawResponseCallbacks.forEach((callback) => {
             callback(message as WSMessageServerReadRawResponse)
-          )
+          })
           break
         case 'session_list':
-          this.sessionListCallbacks.forEach((callback) =>
+          this.sessionListCallbacks.forEach((callback) => {
             callback(message as WSMessageServerSessionList)
-          )
+          })
           break
         case 'error':
-          this.errorCallbacks.forEach((callback) => callback(message as WSMessageServerError))
+          this.errorCallbacks.forEach((callback) => {
+            callback(message as WSMessageServerError)
+          })
           break
       }
     }

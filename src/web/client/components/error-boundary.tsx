@@ -57,12 +57,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 marginTop: '10px',
               }}
             >
-              {this.state.error && this.state.error.toString()}
+              {this.state.error?.toString()}
               {this.state.errorInfo?.componentStack}
             </pre>
           </details>
           <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
             <button
+              type='button'
               onClick={this.handleReset}
               style={{
                 padding: '8px 16px',
@@ -76,6 +77,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               Try Again
             </button>
             <button
+              type='button'
               onClick={() => window.location.reload()}
               style={{
                 padding: '8px 16px',

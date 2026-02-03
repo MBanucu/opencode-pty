@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'fs'
-import { tmpdir } from 'os'
-import { join } from 'path'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 // This test ensures the npm package can be packed, installed, and serves assets correctly
 
@@ -23,7 +23,7 @@ function findPackFileFromOutput(stdout: string): string {
   const lines = stdout.trim().split(/\r?\n/)
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i]
-    if (line && line.trim().endsWith('.tgz')) return line.trim()
+    if (line?.trim().endsWith('.tgz')) return line.trim()
   }
   throw new Error('No .tgz file found in npm pack output')
 }

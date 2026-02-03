@@ -1,5 +1,5 @@
+import { resolve } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
-import { resolve } from 'path'
 
 /**
  * @see https://playwright.dev/docs/test-configuration

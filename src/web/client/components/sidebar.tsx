@@ -23,10 +23,19 @@ export function Sidebar({ sessions, activeSession, onSessionClick, connected }: 
           </div>
         ) : (
           sessions.map((session) => (
+            // biome-ignore lint/a11y/noStaticElementInteractions: Designed as clickable session item
+            // biome-ignore lint/a11y/useSemanticElements: Designed as clickable session item with custom styling
             <div
               key={session.id}
               className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
               onClick={() => onSessionClick(session)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onSessionClick(session)
+                }
+              }}
+              role='button'
+              tabIndex={0}
             >
               <div className='session-title'>{session.description ?? session.title}</div>
               <div className='session-info'>

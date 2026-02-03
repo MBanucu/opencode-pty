@@ -20,7 +20,7 @@ async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
 
 type TestFixtures = {
   api: ReturnType<typeof createApiClient>
-  autoCleanup: void
+  autoCleanup: undefined
   wsClient: ManagedTestClient
 }
 type WorkerFixtures = {
@@ -94,7 +94,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         if (!urlMatch) {
           throw new Error(`Invalid port file format: ${serverURL}`)
         }
-        const port = parseInt(urlMatch[1]!)
+        const port = parseInt(urlMatch[1]!, 10)
         const baseURL = `http://localhost:${port}`
 
         await waitForServer(baseURL, 15000)

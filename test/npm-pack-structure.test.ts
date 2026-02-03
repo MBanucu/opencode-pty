@@ -26,7 +26,7 @@ function findPackFileFromOutput(stdout: string): string | null {
   const lines = stdout.trim().split(/\r?\n/)
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i]
-    if (line && line.trim().endsWith('.tgz')) return line.trim()
+    if (line?.trim().endsWith('.tgz')) return line.trim()
   }
   return null
 }

@@ -1,5 +1,5 @@
 import { RETRY_DELAY, SKIP_AUTOSELECT_KEY } from 'opencode-pty/web/shared/constants'
-import { RouteBuilder } from 'opencode-pty/web/shared/route-builder'
+import { websocket } from 'opencode-pty/web/shared/route-builder'
 import type {
   PTYSessionInfo,
   WSMessageServer,
@@ -34,9 +34,7 @@ export function useWebSocket({
 
   // Connect to WebSocket on mount
   useEffect(() => {
-    const ws = new WebSocket(
-      `${RouteBuilder.websocket()}`.replace(/^\/ws/, `ws://${location.host}/ws`)
-    )
+    const ws = new WebSocket(`${websocket()}`.replace(/^\/ws/, `ws://${location.host}/ws`))
     ws.onopen = () => {
       setConnected(true)
       // Request initial session list

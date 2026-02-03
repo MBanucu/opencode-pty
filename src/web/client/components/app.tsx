@@ -105,7 +105,7 @@ export function App() {
           <>
             <div className='output-header'>
               <div className='output-title'>{activeSession.description ?? activeSession.title}</div>
-              <button className='kill-btn' onClick={handleKillSession}>
+              <button type='button' className='kill-btn' onClick={handleKillSession}>
                 Kill Session
               </button>
             </div>
@@ -124,6 +124,7 @@ export function App() {
             </div>
             <div data-testid='test-output' style={{ position: 'absolute', left: '-9999px' }}>
               {rawOutput.split('\n').map((line, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: test output lines may not be unique
                 <div key={i} className='output-line'>
                   {line}
                 </div>

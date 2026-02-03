@@ -49,9 +49,9 @@
     "prepack": "bun build:prod",
     "clean": "rm -rf dist playwright-report test-results",
     "lint": "biome lint",
-    "lint:fix": "biome lint --write",
-    "format": "biome format --write",
-    "format:check": "biome format --check",
+    "lint:write": "biome lint --write",
+    "format": "biome format",
+    "format:write": "biome format --write",
     "check": "biome check",
     "check:ci": "biome ci",
     "quality": "bun check && bun typecheck"

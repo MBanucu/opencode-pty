@@ -29,7 +29,7 @@ extendedTest.describe('PTY Live Streaming', () => {
     while (Date.now() - bufferStartTime < bufferTimeoutMs) {
       try {
         const bufferData = await api.session.buffer.raw({ id: session.id })
-        if (bufferData.raw && bufferData.raw.includes('=== END HISTORICAL ===')) break
+        if (bufferData.raw?.includes('=== END HISTORICAL ===')) break
       } catch (error) {
         console.warn('Error checking buffer during wait:', error)
       }
@@ -144,7 +144,7 @@ extendedTest.describe('PTY Live Streaming', () => {
 
       // Extract WS raw_data message count
       const wsMatch = debugText.match(/WS raw_data: (\d+)/)
-      const initialWsMessages = wsMatch && wsMatch[1] ? parseInt(wsMatch[1]) : 0
+      const initialWsMessages = wsMatch?.[1] ? parseInt(wsMatch[1], 10) : 0
 
       // Wait for at least 1 WebSocket streaming update
       let attempts = 0
@@ -155,7 +155,7 @@ extendedTest.describe('PTY Live Streaming', () => {
         await page.waitForTimeout(100)
         const currentDebugText = (await debugElement.textContent()) || ''
         const currentWsMatch = currentDebugText.match(/WS raw_data: (\d+)/)
-        currentWsMessages = currentWsMatch && currentWsMatch[1] ? parseInt(currentWsMatch[1]) : 0
+        currentWsMessages = currentWsMatch?.[1] ? parseInt(currentWsMatch[1], 10) : 0
         if (attempts % 10 === 0) {
           // Log every second
         }
@@ -174,7 +174,7 @@ extendedTest.describe('PTY Live Streaming', () => {
       let liveUpdateFound = false
       for (let i = Math.max(0, finalOutputLines - 10); i < finalOutputLines; i++) {
         const lineText = await outputLines.nth(i).textContent()
-        if (lineText && lineText.includes('Live update...')) {
+        if (lineText?.includes('Live update...')) {
           liveUpdateFound = true
 
           break

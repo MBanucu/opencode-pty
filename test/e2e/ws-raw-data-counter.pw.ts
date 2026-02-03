@@ -29,7 +29,7 @@ extendedTest.describe('WebSocket Raw Data Counter', () => {
       await debugElement.waitFor({ state: 'attached', timeout: 2000 })
       const initialDebugText = (await debugElement.textContent()) || ''
       const initialWsMatch = initialDebugText.match(/WS raw_data:\s*(\d+)/)
-      const initialCount = initialWsMatch && initialWsMatch[1] ? parseInt(initialWsMatch[1]) : 0
+      const initialCount = initialWsMatch?.[1] ? parseInt(initialWsMatch[1], 10) : 0
 
       // Click on terminal and type some text
       await page.locator('.terminal.xterm').click()
@@ -40,8 +40,8 @@ extendedTest.describe('WebSocket Raw Data Counter', () => {
         ({ selector, initialCount }) => {
           const el = document.querySelector(selector)
           if (!el) return false
-          const match = el.textContent && el.textContent.match(/WS raw_data:\s*(\d+)/)
-          const count = match && match[1] ? parseInt(match[1]) : 0
+          const match = el.textContent?.match(/WS raw_data:\s*(\d+)/)
+          const count = match?.[1] ? parseInt(match[1], 10) : 0
           return count > initialCount
         },
         { selector: '[data-testid="debug-info"]', initialCount },
@@ -51,7 +51,7 @@ extendedTest.describe('WebSocket Raw Data Counter', () => {
       // Verify counter incremented
       const finalDebugText = (await debugElement.textContent()) || ''
       const finalWsMatch = finalDebugText.match(/WS raw_data:\s*(\d+)/)
-      const finalCount = finalWsMatch && finalWsMatch[1] ? parseInt(finalWsMatch[1]) : 0
+      const finalCount = finalWsMatch?.[1] ? parseInt(finalWsMatch[1], 10) : 0
 
       expect(finalCount).toBeGreaterThan(initialCount)
       // Robust: Only require an increase, do not assume 1:1 mapping with input chars

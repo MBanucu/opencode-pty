@@ -27,6 +27,13 @@ export function Sidebar({ sessions, activeSession, onSessionClick, connected }: 
               key={session.id}
               className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
               onClick={() => onSessionClick(session)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onSessionClick(session)
+                }
+              }}
+              role='button' // biome-ignore lint/a11y: using div for custom styling, role and keyboard handlers added for accessibility
+              tabIndex={0}
             >
               <div className='session-title'>{session.description ?? session.title}</div>
               <div className='session-info'>

@@ -2,11 +2,11 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './components/app.tsx'
 import { ErrorBoundary } from './components/error-boundary.tsx'
-import { PerformanceMonitor, trackWebVitals } from './performance.ts'
+import { startMark, trackWebVitals } from './performance.ts'
 
 // Initialize performance monitoring
 trackWebVitals()
-PerformanceMonitor.startMark('app-init')
+startMark('app-init')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

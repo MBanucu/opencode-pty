@@ -66,9 +66,9 @@ opencode
 
 This plugin provides slash commands that can be used in OpenCode chat:
 
-| Command           | Description                                        |
-| ----------------- | -------------------------------------------------- |
-| `/pty-server-url` | Get the URL of the running PTY web server instance |
+| Command                    | Description                                        |
+| -------------------------- | -------------------------------------------------- |
+| `/pty-open-background-spy` | Get the URL of the running PTY web server instance |
 
 ## Web UI
 
@@ -152,7 +152,7 @@ ws.onmessage = (event) => {
 }
 ```
 
-Replace `[PORT]` with the actual port number shown in the slash command output.
+Replace `[PORT]` with the actual port number shown in the browser when running the slash command output.
 
 ### Development
 
@@ -304,12 +304,12 @@ Use `pty_kill` with `cleanup=true` to remove completely.
 ## Local Development
 
 ```bash
-git clone https://github.com/MBanucu/opencode-pty-test.git
-cd opencode-pty-test
-bun install
-bun run typecheck  # Type check
-bun run build      # Build the React app for production
-bun run dev        # Start React dev server with hot reloading
+git clone https://github.com/MBanucu/opencode-pty.git
+cd opencode-pty
+git checkout npm-test-release
+bun ci          # install packages from bun.lock
+bun quality     # Quality check
+bun build:dev   # Build the React app for development
 ```
 
 To load a local checkout in OpenCode:
@@ -321,170 +321,202 @@ To load a local checkout in OpenCode:
 }
 ```
 
-## Building OpenCode Plugins
+## Diagrams
 
-Here's a practical guide to building an **OpenCode** plugin using **Bun** so it loads correctly from the `.opencode/plugins/` directory (project-local plugins).
+### Sequence
 
-OpenCode has excellent built-in support for Bun — it automatically runs `bun install` on startup when it finds a `package.json` in the `.opencode/` folder, and it loads TypeScript/JavaScript files directly from `.opencode/plugins/` without any separate build step in most cases.
+#### Use Case 1 – Opening the PTY Monitor Web UI
 
-### Two main approaches in 2025/2026
+```mermaid
+sequenceDiagram
+    participant User as Human User
+    participant Chat as OpenCode Chat
+    participant Core as OpenCode Core
+    participant Plugin as PTY Plugin
+    participant Manager as PTY Manager (in Plugin)
+    participant WS as WebSocket Server (in Plugin)
+    participant Browser as Web Browser
 
-**Approach A – Recommended for most plugins (no build step)**  
-Put plain `.ts` or `.js` files directly into `.opencode/plugins/`. OpenCode loads & executes them natively via Bun.
+    Note over Plugin,WS: Plugin starts/owns the WS server and Manager
 
-**Approach B – When you want a proper build / bundling / multiple files**  
-Use Bun to compile/transpile → output JavaScript into `.opencode/plugins/`.
-
-### Approach A – Simple & most common (no build)
-
-1. In your project root create the folders if they don't exist:
-
-   ```
-   mkdir -p .opencode/plugins
-   ```
-
-2. Create `package.json` **in `.opencode/`** (not inside plugins/) — even if almost empty:
-
-   ```json
-   {
-     "name": "my-opencode-plugins",
-     "private": true,
-     "dependencies": {
-       "@opencode-ai/plugin": "^1.x" // optional but strongly recommended
-     }
-   }
-   ```
-
-   → OpenCode will run `bun install` automatically the next time you start `opencode`.
-
-3. Create your plugin file — e.g. `.opencode/plugins/my-cool-feature.ts`
-
-   ```ts
-   import type { Plugin } from '@opencode-ai/plugin'
-
-   export const plugin: Plugin = {
-     name: 'my-cool-feature',
-
-     hooks: {
-       // Most popular hook — runs after each agent turn
-       'agent:post-turn': async ({ client, message }) => {
-         if (message.role === 'assistant') {
-           // Example: auto-format code blocks the agent just wrote
-           await client.sendMessage({
-             role: 'system',
-             content: 'Consider running biome format on changed files…',
-           })
-         }
-       },
-
-       // Another common one
-       'session:start': async ({ client }) => {
-         await client.sendMessage({
-           role: 'system',
-           content: '🔥 my-cool-feature plugin is active!',
-         })
-       },
-     },
-   }
-   ```
-
-4. (optional) Add to project `opencode.json` or `opencode.jsonc` to explicitly enable/disable:
-
-   ```json
-   {
-     "plugins": {
-       "my-cool-feature": {
-         "enabled": true
-       }
-     }
-   }
-   ```
-
-5. Just run `opencode` → the plugin should be loaded automatically.
-
-### Approach B – Using Bun to build (for larger plugins / tsconfig / bundling)
-
-Use this when your plugin has many files, complex types, or you want to use `bun build`.
-
-1. Create a source folder (outside `.opencode/` or inside it)
-
-   Example structure:
-
-   ```
-   my-plugin/
-   ├── src/
-   │   └── index.ts
-   ├── .opencode/
-   │   ├── plugins/           ← built files will go here
-   │   └── package.json
-   ├── bunfig.toml            (optional)
-   └── tsconfig.json
-   ```
-
-2. `src/index.ts` — same content as above
-
-3. `tsconfig.json` (example)
-
-   ```json
-   {
-     "compilerOptions": {
-       "target": "ESNext",
-       "module": "ESNext",
-       "moduleResolution": "Bundler",
-       "outDir": ".opencode/plugins",
-       "strict": true,
-       "skipLibCheck": true
-     },
-     "include": ["src"]
-   }
-   ```
-
-4. Add build script to `.opencode/package.json`
-
-   ```json
-   {
-     "name": "my-plugins",
-     "private": true,
-     "scripts": {
-       "build": "bun build ./../src/index.ts --outdir ./plugins --target bun"
-     },
-     "dependencies": {
-       "@opencode-ai/plugin": "^1.x"
-     }
-   }
-   ```
-
-5. Build & test
-
-   ```bash
-   cd .opencode
-   bun run build
-   # or just
-   bun build ../src/index.ts --outdir ./plugins --target bun
-   ```
-
-   → you now have `plugins/index.js` (or whatever name you chose)
-
-6. Start `opencode` — it loads `.js` files from `.opencode/plugins/` the same way as `.ts`
-
-### Quick checklist – what usually goes wrong
-
-- No `package.json` in `.opencode/` → external dependencies won't install
-- Plugin file doesn't export `plugin` with correct shape → ignored silently
-- Syntax error in plugin → usually logged when starting `opencode`
-- Using `import ... from "npm:..."` without `package.json` → fails
-- Forgetting to restart `opencode` after changes
-
-### One-liner starter (most common case)
-
-```bash
-mkdir -p .opencode/{plugins,}
-echo '{"dependencies":{"@opencode-ai/plugin":"^1"}}' > .opencode/package.json
+    User->>Chat: Types /pty-open-background-spy
+    Chat->>Core: Slash command received
+    Core->>Plugin: Dispatches to registered command handler
+    Plugin->>Browser: open(server.url.origin)
+    activate Browser
+    Browser->>WS: Connects → ws://.../ws
+    WS->>Manager: Queries for current sessions (manager.list())
+    Manager-->>WS: Returns session data
+    WS-->>Browser: Sends session_list + subscribes to updates
+    Browser-->>User: PTY monitor UI appears (sessions + terminals)
 ```
 
-Then drop `.ts` files into `.opencode/plugins/` and restart.
+#### Use Case 2 – Starting a Long-Running Background Process
 
-Good luck with your plugin — and check https://opencode.ai/docs/plugins for the latest hook & tool API reference.
+```mermaid
+sequenceDiagram
+    participant User
+    participant Chat as OpenCode Chat
+    participant Agent as AI Agent
+    participant Plugin as PTY Plugin
+    participant Manager as PTY Manager
+    participant PTY as bun-pty Process
+    participant WS as WebSocket Server
+    participant UI as PTY Web UI (optional)
+
+    User->>Chat: "start vite dev server in background"
+    Chat->>Agent: User message
+    Agent->>Plugin: Calls pty_spawn(command="vite", args=["dev"], ...)
+    Plugin->>Manager: spawn(options)
+    Manager->>PTY: Launches real process
+    activate PTY
+    PTY-->>Manager: stdout/stderr chunks
+    Manager->>Manager: Appends to RingBuffer
+    Manager->>WS: Publishes raw_data + session_update
+    alt UI already open
+        WS-->>UI: Real-time terminal output
+        UI-->>User: Live xterm.js view
+    end
+    Plugin-->>Agent: Returns session info
+    Agent-->>Chat: "Dev server started (ID: pty_abc123)"
+    Chat-->>User: Confirmation message
+```
+
+#### Use Case 3 – Sending Interactive Input to a Running Session
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as PTY Web UI
+    participant WS as WebSocket Server
+    participant Manager as PTY Manager
+    participant PTY as bun-pty Process
+
+    %% Variant A: Human typing in browser (most common)
+    User->>UI: Types "rs<Enter>" or pastes text
+    UI->>WS: Sends {type:"input", sessionId, data:"rs\n"}
+    WS->>Manager: write(sessionId, data)
+    Manager->>PTY: process.write(data)
+    PTY-->>Manager: New output (restart message, etc.)
+    Manager->>WS: Publishes raw_data
+    WS-->>UI: Updates xterm.js live
+
+    %% Variant B: AI sending input
+    Note over User,UI: Alternative path – AI controlled
+    Agent->>Plugin: pty_write(id, "\x03")  // e.g. Ctrl+C
+    Plugin->>Manager: write(id, data)
+    Manager->>PTY: process.write("\x03")
+```
+
+#### Use Case 4 – Reading Output / Logs On Demand
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Chat
+    participant Agent as AI Agent
+    participant Plugin as PTY Plugin
+    participant Manager as PTY Manager
+    participant Buffer as RingBuffer
+
+    User->>Chat: "show me the last 200 lines of the dev server"
+    Chat->>Agent: User question
+    Agent->>Plugin: pty_read(id, offset?, limit=200, pattern?)
+    Plugin->>Manager: read / search request
+    Manager->>Buffer: read(offset, limit) or search(pattern)
+    Buffer-->>Manager: Matching / paginated lines
+    Manager-->>Plugin: Raw or formatted lines
+    Plugin-->>Agent: Text response
+    Agent-->>Chat: "Here are the logs:\n\n1 | [vite] ... \n..."
+    Chat-->>User: Logs displayed in chat
+```
+
+#### Use Case 5A – Killing / Cleaning Up a Session via Web UI
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as PTY Web UI
+    participant HTTP as HTTP Server
+    participant Manager as PTY Manager
+    participant PTY as bun-pty Process
+    participant WS as WebSocket Server
+
+    Note over PTY: Assuming PTY is active (running process)<br>notifyOnExit = false (no chat notification,<br>but WS/UI always gets status updates)
+
+    activate PTY
+
+    User->>UI: Clicks "Kill" / "×" on session
+    UI->>HTTP: DELETE /api/sessions/:id  (or /cleanup)
+    HTTP->>Manager: kill(id, cleanup?)
+    Manager->>PTY: Sends SIGTERM (if running)
+    PTY-->>Manager: onExit event (code, signal)
+    deactivate PTY
+    Manager->>WS: Publishes session_update (status: killed/exited)
+    WS-->>UI: UI updates → shows "exited" or removes entry
+```
+
+#### Use Case 5B – Killing / Cleaning Up a Session via Agent
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Chat as OpenCode Chat
+    participant Agent as AI Agent
+    participant Plugin as PTY Plugin
+    participant Manager as PTY Manager
+    participant PTY as bun-pty Process
+    participant WS as WebSocket Server
+    participant UI as PTY Web UI (optional)
+
+    Note over PTY: Assuming PTY is active (running process)<br>notifyOnExit = false (no chat notification,<br>but WS/UI always gets status updates)
+
+    activate PTY
+
+    User->>Chat: "kill the dev server"
+    Chat->>Agent: User request
+    Agent->>Plugin: pty_kill(id, cleanup=true)
+    Plugin->>Manager: kill(id, true)
+    Manager->>PTY: SIGTERM + remove from list (if cleanup)
+    PTY-->>Manager: onExit event (code, signal)
+    deactivate PTY
+    Manager->>WS: Broadcast session_update (status: killed/exited)
+    alt UI open
+        WS-->>UI: UI updates → shows "exited" or removes entry
+    end
+    Plugin-->>Agent: Success response
+    Agent-->>Chat: "Session killed"
+    Chat-->>User: Confirmation in chat
+```
+
+#### Use Case 6 – Automatic Exit Notification
+
+```mermaid
+sequenceDiagram
+    participant PTY as bun-pty Process
+    participant Manager as PTY Manager
+    participant Plugin as PTY Plugin
+    participant Chat as OpenCode Chat
+    participant Agent as AI Agent
+    participant User
+
+    %%{init: {'sequence': {'messageAlign': 'left'}}}%%
+
+    activate PTY
+    Note over PTY: Long-running process (dev server, tests, etc.)
+    PTY-->>Manager: Process exits → exitCode
+    deactivate PTY
+    alt notifyOnExit was true when spawned
+        Manager->>Plugin: Triggers exit notification
+        Plugin->>Chat: Sends formatted message via SDK<br><pty_exited><br>ID: pty_abc123<br>Exit: 0<br>Lines: 342<br>Last: Server running at http://localhost:5173<br></pty_exited>
+        Chat-->>User: Notification appears in chat
+        Chat->>Agent: Triggers agent with exit message
+    end
+    Manager->>WS: Publishes final session_update (status: exited)
+    alt UI open
+        WS-->>UI: UI shows red "exited" badge / stops live output
+    end
+```
 
 ## License
 

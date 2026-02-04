@@ -15,7 +15,7 @@ import {
 import { buildStaticRoutes } from './handlers/static.ts'
 import { handleUpgrade } from './handlers/upgrade.ts'
 import { handleWebSocketMessage } from './handlers/websocket.ts'
-import { CallbackManager } from './CallbackManager.ts'
+import { CallbackManager } from './callback-manager.ts'
 
 import { routes } from '../shared/routes.ts'
 

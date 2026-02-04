@@ -8,7 +8,7 @@ import type {
 } from 'opencode-pty-test/web/shared/types'
 import { RETRY_DELAY, SKIP_AUTOSELECT_KEY } from 'opencode-pty-test/web/shared/constants'
 
-import { RouteBuilder } from 'opencode-pty-test/web/shared/RouteBuilder'
+import { RouteBuilder } from 'opencode-pty-test/web/shared/route-builder'
 
 interface UseWebSocketOptions {
   activeSession: PTYSessionInfo | null

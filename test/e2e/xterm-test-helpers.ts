@@ -1,6 +1,5 @@
 import type { Page } from '@playwright/test'
 import type { SerializeAddon } from '@xterm/addon-serialize'
-import stripAnsi from 'strip-ansi'
 
 // Global module augmentation for E2E testing
 declare global {
@@ -9,22 +8,6 @@ declare global {
     xtermSerializeAddon?: SerializeAddon
   }
 }
-
-// Use Bun.stripANSI if available, otherwise fallback to npm strip-ansi
-let bunStripANSI: (str: string) => string
-try {
-  if (typeof Bun !== 'undefined' && Bun.stripANSI) {
-    bunStripANSI = Bun.stripANSI
-  } else {
-    // Note: dynamic import only relevant in Bun, for typing only in Node
-    const bunModule = await import('bun')
-    bunStripANSI = bunModule.stripANSI
-  }
-} catch {
-  bunStripANSI = stripAnsi
-}
-
-export { bunStripANSI }
 
 /**
  * Deprecated: Use getSerializedContentByXtermSerializeAddon for all terminal content extraction in E2E tests.

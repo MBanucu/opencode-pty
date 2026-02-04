@@ -1,7 +1,7 @@
 import { initManager, manager } from 'opencode-pty-test/plugin/pty/manager'
 import { PTYServer } from 'opencode-pty-test/web/server/server'
 import { OpencodeClient } from '@opencode-ai/sdk'
-import { createApiClient } from 'opencode-pty-test/web/shared/apiClient'
+import { createApiClient } from 'opencode-pty-test/web/shared/api-client'
 
 // Set NODE_ENV if not set
 if (!process.env.NODE_ENV) {

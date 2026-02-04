@@ -2,7 +2,6 @@ import { test as extendedTest, expect } from './fixtures'
 import {
   waitForTerminalRegex,
   getSerializedContentByXtermSerializeAddon,
-  bunStripANSI,
 } from './xterm-test-helpers'
 
 extendedTest.describe('Xterm Newline Handling', () => {
@@ -39,8 +38,8 @@ extendedTest.describe('Xterm Newline Handling', () => {
     })
 
     // Use robust character counting
-    const cleanBefore = bunStripANSI(beforeContent)
-    const cleanAfter = bunStripANSI(afterContent)
+    const cleanBefore = Bun.stripANSI(beforeContent)
+    const cleanAfter = Bun.stripANSI(afterContent)
     const beforeCount = (cleanBefore.match(/a/g) || []).length
     const afterCount = (cleanAfter.match(/a/g) || []).length
     expect(afterCount - beforeCount).toBe(1)
@@ -77,7 +76,7 @@ extendedTest.describe('Xterm Newline Handling', () => {
     await waitForTerminalRegex(page, /Hello World/)
 
     // Get final terminal buffer via SerializeAddon (canonical, robust method)
-    const finalBuffer = bunStripANSI(
+    const finalBuffer = Bun.stripANSI(
       await getSerializedContentByXtermSerializeAddon(page, {
         excludeModes: true,
         excludeAltBuffer: true,

@@ -1,5 +1,4 @@
 import {
-  bunStripANSI,
   getTerminalPlainText,
   getSerializedContentByXtermSerializeAddon,
   waitForTerminalRegex,
@@ -35,7 +34,7 @@ extendedTest(
 
     // PRIMARY: SerializeAddon (robust extraction)
     const serializeContent = await getSerializedContentByXtermSerializeAddon(page)
-    const serializeStrippedContent = bunStripANSI(serializeContent).split('\n')
+    const serializeStrippedContent = Bun.stripANSI(serializeContent).split('\n')
 
     // API
     const plainData = await api.session.buffer.plain({ id: session.id })

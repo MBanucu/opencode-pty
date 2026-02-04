@@ -1,5 +1,4 @@
 import {
-  bunStripANSI,
   getSerializedContentByXtermSerializeAddon,
   waitForTerminalRegex,
 } from './xterm-test-helpers'
@@ -29,7 +28,7 @@ extendedTest.describe(
         await waitForTerminalRegex(page, /More text/)
 
         // Extraction methods
-        const serializeStrippedContent = bunStripANSI(
+        const serializeStrippedContent = Bun.stripANSI(
           await getSerializedContentByXtermSerializeAddon(page)
         ).split('\n')
         const plainData = await api.session.buffer.plain({ id: session.id })

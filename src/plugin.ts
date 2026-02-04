@@ -38,7 +38,6 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       if (!input.command) {
         input.command = {}
       }
-      // const serverUrl = ptyServer.server.url.toString()
       input.command[ptyOpenClientCommand] = {
         template: `This command will start the PTY Sessions Web Interface in your default browser.`,
         description: 'Open PTY Sessions Web Interface',

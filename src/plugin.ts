@@ -14,12 +14,15 @@ const ptyOpenClientCommand = 'pty-open-background-spy'
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initPermissions(client, directory)
   initManager(client)
-  const ptyServer = await PTYServer.createServer()
+  let ptyServer: PTYServer | undefined
 
   return {
     'command.execute.before': async (input) => {
       if (input.command !== ptyOpenClientCommand) {
         return
+      }
+      if (ptyServer === undefined) {
+        ptyServer = await PTYServer.createServer()
       }
       open(ptyServer.server.url.origin)
       throw new Error('Command handled by PTY plugin')
@@ -35,9 +38,9 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       if (!input.command) {
         input.command = {}
       }
-      const serverUrl = ptyServer.server.url.toString()
+      // const serverUrl = ptyServer.server.url.toString()
       input.command[ptyOpenClientCommand] = {
-        template: `${serverUrl}`,
+        template: `This command will start the PTY Sessions Web Interface in your default browser.`,
         description: 'Open PTY Sessions Web Interface',
       }
     },

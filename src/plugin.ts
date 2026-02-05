@@ -37,9 +37,9 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
               {
                 type: 'text',
                 text: message,
-              }
-            ]
-          }
+              },
+            ],
+          },
         })
       }
       throw new Error('Command handled by PTY plugin')

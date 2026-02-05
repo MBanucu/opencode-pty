@@ -10,6 +10,7 @@ import { PTYServer } from './web/server/server.ts'
 import open from 'open'
 
 const ptyOpenClientCommand = 'pty-open-background-spy'
+const ptyShowServerUrlCommand = 'pty-show-server-url'
 
 export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<PluginResult> => {
   initPermissions(client, directory)
@@ -18,13 +19,29 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
 
   return {
     'command.execute.before': async (input) => {
-      if (input.command !== ptyOpenClientCommand) {
+      if (input.command !== ptyOpenClientCommand && input.command !== ptyShowServerUrlCommand) {
         return
       }
       if (ptyServer === undefined) {
         ptyServer = await PTYServer.createServer()
       }
-      open(ptyServer.server.url.origin)
+      if (input.command === ptyOpenClientCommand) {
+        open(ptyServer.server.url.origin)
+      } else if (input.command === ptyShowServerUrlCommand) {
+        const message = `PTY Sessions Web Interface URL: ${ptyServer.server.url.origin}`
+        await client.session.prompt({
+          path: { id: input.sessionID },
+          body: {
+            noReply: true,
+            parts: [
+              {
+                type: 'text',
+                text: message,
+              }
+            ]
+          }
+        })
+      }
       throw new Error('Command handled by PTY plugin')
     },
     tool: {
@@ -41,6 +58,10 @@ export const PTYPlugin = async ({ client, directory }: PluginContext): Promise<P
       input.command[ptyOpenClientCommand] = {
         template: `This command will start the PTY Sessions Web Interface in your default browser.`,
         description: 'Open PTY Sessions Web Interface',
+      }
+      input.command[ptyShowServerUrlCommand] = {
+        template: `This command will show the PTY Sessions Web Interface URL.`,
+        description: 'Show PTY Sessions Web Interface URL',
       }
     },
     event: async ({ event }) => {

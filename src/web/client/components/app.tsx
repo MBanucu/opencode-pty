@@ -124,13 +124,6 @@ export function App() {
               Debug: {rawOutput.length} chars, active: {activeSession?.id || 'none'}, WS raw_data:{' '}
               {wsMessageCount}, session_updates: {sessionUpdateCount}
             </div>
-            <div data-testid="test-output" style={{ position: 'absolute', left: '-9999px' }}>
-              {rawOutput.split('\n').map((line, i) => (
-                <div key={i} className="output-line">
-                  {line}
-                </div>
-              ))}
-            </div>
           </>
         ) : (
           <div className="empty-state">Select a session from the sidebar to view its output</div>

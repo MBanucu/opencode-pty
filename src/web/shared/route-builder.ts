@@ -19,26 +19,26 @@ function buildUrl(template: string, params: Record<string, string | number>): st
 // Import route templates from shared constants
 import { routes } from './routes'
 
-export class RouteBuilder {
+export const RouteBuilder = {
   // WebSocket routes
-  static websocket(): string {
+  websocket(): string {
     return routes.websocket.path
-  }
+  },
 
   // Health check routes
-  static health(): string {
+  health(): string {
     return routes.health.path
-  }
+  },
 
   // Session collection routes
-  static sessions = {
+  sessions: {
     list: (): string => routes.sessions.path,
     create: (): string => routes.sessions.path,
     clear: (): string => routes.sessions.path,
-  }
+  },
 
   // Individual session routes with type-safe parameter building
-  static session = {
+  session: {
     get: (params: { id: string | number }): string => buildUrl(routes.session.path, params),
 
     kill: (params: { id: string | number }): string => buildUrl(routes.session.path, params),
@@ -53,5 +53,5 @@ export class RouteBuilder {
 
     plainBuffer: (params: { id: string | number }): string =>
       buildUrl(routes.session.buffer.plain.path, params),
-  }
+  },
 }

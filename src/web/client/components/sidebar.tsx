@@ -23,18 +23,10 @@ export function Sidebar({ sessions, activeSession, onSessionClick, connected }: 
           </div>
         ) : (
           sessions.map((session) => (
-            <div
+            <button
               key={session.id}
-              role="button"
-              tabIndex={0}
               className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
               onClick={() => onSessionClick(session)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  onSessionClick(session);
-                  e.preventDefault();
-                }
-              }}
             >
               <div className="session-title">{session.description ?? session.title}</div>
               <div className="session-info">
@@ -45,7 +37,7 @@ export function Sidebar({ sessions, activeSession, onSessionClick, connected }: 
                 <span>PID: {session.pid}</span>
                 <span>{session.lineCount} lines</span>
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>

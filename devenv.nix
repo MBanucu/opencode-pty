@@ -12,14 +12,13 @@
     pkgs.git
     pkgs.bashInteractive
     pkgs.biome
-    pkgs.bun
   ];
 
   # https://devenv.sh/languages/
   languages.javascript = {
     # disable prepending node_modules/.bin to PATH
     # it is causing trouble with biome
-    enable = false;
+    enable = true;
     bun = {
       enable = true;
       install = {
@@ -44,6 +43,11 @@
     format.exec = "biome format .";
     "format:fix".exec = "biome format --write .";
   };
+
+  # Remove node_modules/.bin from PATH
+  enterShell = ''
+    PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^node_modules/.bin$' | tr '\n' ':' | sed 's/:$//')
+  '';
 
   # See full reference at https://devenv.sh/reference/options/
 }

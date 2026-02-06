@@ -46,6 +46,7 @@ in
       echo hello from $GREET
     '';
     typecheck.exec = "bun typecheck";
+    unittest.exec = "bun test";
     "test:e2e".exec = "bun test:e2e";
     "test:all".exec = "bun test:all";
     "build:dev".exec = "bun build:dev";

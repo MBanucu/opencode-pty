@@ -28,7 +28,7 @@ describe('Web Server', () => {
     it('should stop server correctly', async () => {
       const server = await PTYServer.createServer()
       expect(server.server.url).toBeTruthy()
-      server[Symbol['dispose']]()
+      server[Symbol.dispose]()
     })
   })
 

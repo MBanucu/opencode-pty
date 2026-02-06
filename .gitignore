@@ -30,7 +30,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .eslintcache
 .cache
 *.tsbuildinfo
-.direnv
 
 # IntelliJ based IDEs
 .idea
@@ -40,3 +39,14 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Log files
 *.log
+
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml

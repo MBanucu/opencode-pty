@@ -56,9 +56,9 @@ export class ManagedTestClient implements Disposable {
           })
           break
         case 'unsubscribed':
-          this.unsubscribedCallbacks.forEach((callback) =>
+          this.unsubscribedCallbacks.forEach((callback) => {
             callback(message as WSMessageServerUnsubscribedSession)
-          )
+          })
           break
         case 'session_update':
           this.sessionUpdateCallbacks.forEach((callback) =>

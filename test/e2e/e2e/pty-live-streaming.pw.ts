@@ -28,7 +28,7 @@ extendedTest.describe('PTY Live Streaming', () => {
     while (Date.now() - bufferStartTime < bufferTimeoutMs) {
       try {
         const bufferData = await api.session.buffer.raw({ id: session.id })
-        if (bufferData.raw && bufferData.raw.includes('=== END HISTORICAL ===')) break
+        if (bufferData.raw?.includes('=== END HISTORICAL ===')) break
       } catch (error) {
         console.warn('Error checking buffer during wait:', error)
       }

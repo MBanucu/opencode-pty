@@ -57,7 +57,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
                 marginTop: '10px',
               }}
             >
-              {this.state.error && this.state.error.toString()}
+              {this.state.error?.toString()}
               {this.state.errorInfo?.componentStack}
             </pre>
           </details>

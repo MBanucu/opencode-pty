@@ -60,12 +60,12 @@ export class SessionLifecycleManager {
     onData: (session: PTYSession, data: string) => void,
     onExit: (session: PTYSession, exitCode: number | null) => void
   ): void {
-    session.process!.onData((data: string) => {
+    session.process?.onData((data: string) => {
       session.buffer.append(data)
       onData(session, data)
     })
 
-    session.process!.onExit(({ exitCode, signal }) => {
+    session.process?.onExit(({ exitCode, signal }) => {
       // Flush any remaining incomplete line in the buffer
       session.buffer.flush()
 
@@ -101,7 +101,7 @@ export class SessionLifecycleManager {
     if (session.status === 'running') {
       session.status = 'killing'
       try {
-        session.process!.kill()
+        session.process?.kill()
       } catch {
         // Ignore kill errors
       }

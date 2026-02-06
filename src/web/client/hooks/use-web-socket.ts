@@ -67,17 +67,17 @@ export function useWebSocket({
 
               if (readyState === WebSocket.OPEN && wsRef.current) {
                 wsRef.current.send(
-                  JSON.stringify({ type: 'subscribe', sessionId: autoSelected!.id })
+                  JSON.stringify({ type: 'subscribe', sessionId: autoSelected.id })
                 )
               } else {
-                setTimeout(() => {
+                setTimeout((autoSelected) => {
                   const retryReadyState = wsRef.current?.readyState
                   if (retryReadyState === WebSocket.OPEN && wsRef.current) {
                     wsRef.current.send(
-                      JSON.stringify({ type: 'subscribe', sessionId: autoSelected!.id })
+                      JSON.stringify({ type: 'subscribe', sessionId: autoSelected.id })
                     )
                   }
-                }, RETRY_DELAY)
+                }, RETRY_DELAY, autoSelected)
               }
             }
           }

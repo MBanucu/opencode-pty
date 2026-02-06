@@ -99,7 +99,7 @@ class PTYManager {
       },
       async (session, exitCode) => {
         notifySessionUpdate(this.lifecycleManager.toInfo(session))
-        if (session && session.notifyOnExit) {
+        if (session?.notifyOnExit) {
           await this.notificationManager.sendExitNotification(session, exitCode || 0)
         }
       }

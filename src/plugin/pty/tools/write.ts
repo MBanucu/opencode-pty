@@ -85,7 +85,7 @@ export const ptyWrite = tool({
       throw new Error(`Failed to write to PTY '${args.id}'.`)
     }
 
-    const preview = args.data.length > 50 ? args.data.slice(0, 50) + '...' : args.data
+    const preview = args.data.length > 50 ? `${args.data.slice(0, 50)}...` : args.data
     const displayPreview = preview
       .replace(new RegExp(ETX, 'g'), '^C')
       .replace(new RegExp(EOT, 'g'), '^D')

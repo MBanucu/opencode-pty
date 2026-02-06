@@ -37,7 +37,7 @@ export class NotificationManager {
         if (line !== undefined && line.trim() !== '') {
           lastLine =
             line.length > NOTIFICATION_LINE_TRUNCATE
-              ? line.slice(0, NOTIFICATION_LINE_TRUNCATE) + '...'
+              ? `${line.slice(0, NOTIFICATION_LINE_TRUNCATE)}...`
               : line
           break
         }
@@ -47,7 +47,7 @@ export class NotificationManager {
     const displayTitle = session.description ?? session.title
     const truncatedTitle =
       displayTitle.length > NOTIFICATION_TITLE_TRUNCATE
-        ? displayTitle.slice(0, NOTIFICATION_TITLE_TRUNCATE) + '...'
+        ? `${displayTitle.slice(0, NOTIFICATION_TITLE_TRUNCATE)}...`
         : displayTitle
 
     const lines = [

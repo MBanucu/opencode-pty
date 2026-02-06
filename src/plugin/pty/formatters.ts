@@ -17,6 +17,6 @@ export function formatSessionInfo(session: PTYSessionInfo): string[] {
 
 export function formatLine(line: string, lineNum: number, maxLength: number = 2000): string {
   const lineNumStr = lineNum.toString().padStart(5, '0')
-  const truncatedLine = line.length > maxLength ? line.slice(0, maxLength) + '...' : line
+  const truncatedLine = line.length > maxLength ? `${line.slice(0, maxLength)}...` : line
   return `${lineNumStr}| ${truncatedLine}`
 }

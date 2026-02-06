@@ -107,7 +107,7 @@ export function App() {
           <>
             <div className="output-header">
               <div className="output-title">{activeSession.description ?? activeSession.title}</div>
-              <button className="kill-btn" onClick={handleKillSession}>
+              <button type="button" className="kill-btn" onClick={handleKillSession}>
                 Kill Session
               </button>
             </div>

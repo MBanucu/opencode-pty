@@ -75,7 +75,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             >
               Try Again
             </button>
-            <button
+            <button type="button"
               onClick={() => window.location.reload()}
               style={{
                 padding: '8px 16px',

@@ -303,6 +303,8 @@ bun lint        # Runs Biome linting checks
 bun format      # Runs Biome formatting checks
 bun typecheck   # Runs TypeScript type checking
 bun build:dev   # Build the React app for development
+bun unittest    # Runs the unit tests
+bun test:e2e    # Runs the e2e tests
 ```
 
 To load a local checkout in OpenCode:

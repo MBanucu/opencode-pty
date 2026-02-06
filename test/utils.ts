@@ -51,9 +51,9 @@ export class ManagedTestClient implements Disposable {
       this.messages.push(message)
       switch (message.type) {
         case 'subscribed':
-          this.subscribedCallbacks.forEach((callback) =>
+          this.subscribedCallbacks.forEach((callback) => {
             callback(message as WSMessageServerSubscribedSession)
-          )
+          })
           break
         case 'unsubscribed':
           this.unsubscribedCallbacks.forEach((callback) =>

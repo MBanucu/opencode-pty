@@ -61,7 +61,6 @@ jobs:
     name: Devenv CI
     runs-on: ubuntu-latest
     permissions:
-      id-token: write # Required for FlakeHub cache authentication
       contents: read
     steps:
       - name: Checkout repository

@@ -204,7 +204,7 @@ describe('Web Server Integration', () => {
         parentSessionId: sessionId,
       })
 
-      const ws = new WebSocket(ptyServer.getWsUrl()!)
+      const ws = new WebSocket(ptyServer.getWsUrl())
       await new Promise((resolve) => {
         ws.onopen = resolve
       })

@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { OpencodeClient } from '@opencode-ai/sdk'
 import {
   initManager,
   manager,
   rawOutputCallbacks,
   registerRawOutputCallback,
 } from '../src/plugin/pty/manager.ts'
-import { OpencodeClient } from '@opencode-ai/sdk'
 
 describe('PTY Echo Behavior', () => {
   beforeEach(() => {

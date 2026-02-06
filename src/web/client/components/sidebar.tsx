@@ -25,6 +25,7 @@ export function Sidebar({ sessions, activeSession, onSessionClick, connected }: 
           sessions.map((session) => (
             <button
               key={session.id}
+              type="button"
               className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
               onClick={() => onSessionClick(session)}
             >

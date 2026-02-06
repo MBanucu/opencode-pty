@@ -12,6 +12,7 @@
     pkgs.git
     pkgs.bashInteractive
     pkgs.biome
+    pkgs.bun
   ];
 
   # https://devenv.sh/languages/

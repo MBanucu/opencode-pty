@@ -25,8 +25,16 @@ export function Sidebar({ sessions, activeSession, onSessionClick, connected }: 
           sessions.map((session) => (
             <div
               key={session.id}
+              role="button"
+              tabIndex={0}
               className={`session-item ${activeSession?.id === session.id ? 'active' : ''}`}
               onClick={() => onSessionClick(session)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  onSessionClick(session);
+                  e.preventDefault();
+                }
+              }}
             >
               <div className="session-title">{session.description ?? session.title}</div>
               <div className="session-info">

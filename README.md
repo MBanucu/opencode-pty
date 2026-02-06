@@ -298,7 +298,7 @@ Use `pty_kill` with `cleanup=true` to remove completely.
 git clone https://github.com/shekohex/opencode-pty.git
 cd opencode-pty
 bun ci          # install packages from bun.lock
-bun quality     # Quality check
+bun quality     # Runs Biome lint/format checks + TypeScript typecheck
 bun build:dev   # Build the React app for development
 ```
 

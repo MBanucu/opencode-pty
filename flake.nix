@@ -25,6 +25,7 @@
             pkgs.bun
             pkgs.bashInteractive
             pkgs.playwright-driver.browsers
+            pkgs.biome
           ];
           shellHook = ''
             export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"

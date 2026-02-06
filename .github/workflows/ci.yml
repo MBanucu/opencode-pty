@@ -61,7 +61,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        quality: [quality, test, test:e2e]
+        quality: [test, typecheck, lint, format:check, test:e2e]
     name: Nix Flake CI
     runs-on: ubuntu-latest
     permissions:

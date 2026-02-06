@@ -1,7 +1,7 @@
 import { manager } from '../../../plugin/pty/manager.ts'
 import type { BunRequest } from 'bun'
 import { JsonResponse, ErrorResponse } from './responses.ts'
-import { routes } from '../../shared/routes.ts'
+import type { routes } from '../../shared/routes.ts'
 
 export function getSessions() {
   const sessions = manager.list()

@@ -1,7 +1,11 @@
 # yaml-language-server: $schema=https://devenv.sh/devenv.schema.json
 inputs:
   nixpkgs:
-    url: github:cachix/devenv-nixpkgs/rolling
+    url: github:NixOS/nixpkgs/nixos-unstable
+# inputs:
+#   nixpkgs:
+#     url: github:cachix/devenv-nixpkgs/rolling
+#     flake: false
 
 # If you're using non-OSS software, you can set allowUnfree to true.
 # allowUnfree: true

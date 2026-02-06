@@ -62,7 +62,7 @@ jobs:
       fail-fast: false
       matrix:
         quality: [test, typecheck, lint, format:check, test:e2e]
-    name: Nix Flake CI
+    name: Devenv CI
     runs-on: ubuntu-latest
     permissions:
       id-token: write # Required for FlakeHub cache authentication
@@ -83,11 +83,8 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
-      - name: Install dependencies (Nix devShell)
-        run: nix develop .# --command bun ci
+      - name: Build (Devenv shell)
+        run: devenv shell -- bun build:prod
 
-      - name: Build (Nix devShell)
-        run: nix develop .# --command bun build:prod
-
-      - name: Quality checks (Nix devShell)
-        run: nix develop .# --command bun ${{matrix.quality}}
+      - name: Quality checks (Devenv shell)
+        run: devenv shell -- bun ${{matrix.quality}}

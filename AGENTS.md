@@ -27,6 +27,8 @@ This is the `opencode-pty` project, an OpenCode plugin providing interactive pse
 - **Format**: `bun format` or `biome format .`
 - **Format fix**: `bun format:fix` or `biome format --write .`
 
+**Note:** If bun commands fail (e.g., due to dynamic linking issues on NixOS), use the direct biome commands.
+
 ### Running Single Tests
 To run a specific test file: `bun test path/to/test.ts`
 

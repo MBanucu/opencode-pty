@@ -64,7 +64,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         console.error(`[W${workerIndex} ERR] ${data}`)
       })
 
-      proc.on('exit', (_code, _signal) => { })
+      proc.on('exit', (_code, _signal) => {})
 
       try {
         // Wait for server to write port file

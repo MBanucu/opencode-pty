@@ -15,7 +15,7 @@ export function all(input: string, patterns: Record<string, string>): string | u
   const sorted = Object.entries(patterns).sort(
     (a, b) => a[0].length - b[0].length || a[0].localeCompare(b[0])
   )
-  let result: string | undefined 
+  let result: string | undefined
   for (const [pattern, value] of sorted) {
     if (match(input, pattern)) {
       result = value
@@ -31,7 +31,7 @@ export function allStructured(
   const sorted = Object.entries(patterns).sort(
     (a, b) => a[0].length - b[0].length || a[0].localeCompare(b[0])
   )
-  let result: string | undefined 
+  let result: string | undefined
   for (const [pattern, value] of sorted) {
     const parts = pattern.split(/\s+/)
     const firstPart = parts[0]

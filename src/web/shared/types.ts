@@ -3,7 +3,6 @@ import type { PTYSessionInfo, PTYStatus, SpawnOptions } from '../../plugin/pty/t
 export type { PTYSessionInfo, PTYStatus, HealthResponse }
 
 export class CustomError extends Error {
-
   override name = 'CustomError'
   prettyPrintColor: string = Bun.inspect(this, { colors: true, depth: 10 })
   prettyPrintNoColor: string = Bun.stripANSI(this.prettyPrintColor)

@@ -77,15 +77,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - name: Build (Devenv shell)
-        run: devenv shell -- build:prod
+        run: devenv shell -- bun build:prod
 
       - name: Quality checks (bun test)
-        run: devenv shell -- unittest
+        run: devenv shell -- bun unittest
       - name: Quality checks (typecheck)
-        run: devenv shell -- typecheck
+        run: devenv shell -- bun typecheck
       - name: Quality checks (lint)
-        run: devenv shell -- lint
+        run: devenv shell -- bun lint
       - name: Quality checks (format)
-        run: devenv shell -- format
+        run: devenv shell -- bun format
       - name: Quality checks (test:e2e)
-        run: devenv shell -- test:e2e
+        run: devenv shell -- bun test:e2e

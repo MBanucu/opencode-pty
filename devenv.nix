@@ -25,6 +25,7 @@ in
     PLAYWRIGHT_BROWSERS_PATH = "${playwright-driver.browsers}";
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${playwright-driver.browsers}/chromium-${chromium-rev}/chrome-linux64/chrome";
     PLAYWRIGHT_FIREFOX_EXECUTABLE_PATH = "${playwright-driver.browsers}/firefox-${firefox-rev}/firefox/firefox";
+    BIOME_BINARY="${biome}/bin/biome";
   };
 
   # https://devenv.sh/languages/
@@ -39,29 +40,6 @@ in
       };
     };
   };
-
-  # https://devenv.sh/scripts/
-  scripts = {
-    hello.exec = ''
-      echo hello from $GREET
-    '';
-    typecheck.exec = "bun typecheck";
-    unittest.exec = "bun test";
-    "test:e2e".exec = "bun test:e2e";
-    "test:all".exec = "bun test:all";
-    "build:dev".exec = "bun build:dev";
-    "build:prod".exec = "bun build:prod";
-    clean.exec = "bun clean";
-    lint.exec = "biome lint .";
-    "lint:fix".exec = "biome lint --write .";
-    format.exec = "biome format .";
-    "format:fix".exec = "biome format --write .";
-  };
-
-  # Remove node_modules/.bin from PATH
-  enterShell = ''
-    PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^node_modules/.bin$' | tr '\n' ':' | sed 's/:$//')
-  '';
 
   # See full reference at https://devenv.sh/reference/options/
 }

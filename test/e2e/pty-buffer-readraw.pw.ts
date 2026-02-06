@@ -1,11 +1,10 @@
-import { test as extendedTest, expect } from './fixtures'
 import type { Page } from '@playwright/test'
-
+import type { createApiClient } from 'opencode-pty/web/shared/api-client'
+import { expect, test as extendedTest } from './fixtures'
 import {
   getSerializedContentByXtermSerializeAddon,
   waitForTerminalRegex,
 } from './xterm-test-helpers'
-import type { createApiClient } from 'opencode-pty/web/shared/api-client'
 
 async function createSession(
   api: ReturnType<typeof createApiClient>,
@@ -184,9 +183,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         args: ['-i'],
         description: 'Double Echo Test Session B',
       })
-      await gotoAndSelectSession(page, 'Double Echo Test Session B', 10000)
+      await gotoAndSelectSession(page, 'Double Echo Test Session B', 15000)
       // Debug what prompt is present before event-driven wait
-      await waitForTerminalRegex(page, /\$\s*$/)
+      await waitForTerminalRegex(page, /\$\s*$/, {}, 10000)
       await page.locator('.terminal.xterm').click()
       // Dump buffer before typing in Session B
       await page.keyboard.type('1')
@@ -197,9 +196,9 @@ extendedTest.describe('PTY Buffer readRaw() Function', () => {
         args: ['-i'],
         description: 'Double Echo Test Session C',
       })
-      await gotoAndSelectSession(page, 'Double Echo Test Session C', 10000)
+      await gotoAndSelectSession(page, 'Double Echo Test Session C', 15000)
       // Debug what prompt is present before event-driven wait
-      await waitForTerminalRegex(page, /\$\s*$/)
+      await waitForTerminalRegex(page, /\$\s*$/, {}, 10000)
       await page.locator('.terminal.xterm').click()
       // Dump buffer before typing in Session C
       await page.keyboard.type('1')

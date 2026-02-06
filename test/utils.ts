@@ -61,9 +61,9 @@ export class ManagedTestClient implements Disposable {
           })
           break
         case 'session_update':
-          this.sessionUpdateCallbacks.forEach((callback) =>
+          this.sessionUpdateCallbacks.forEach((callback) => {
             callback(message as WSMessageServerSessionUpdate)
-          )
+          })
           break
         case 'raw_data':
           this.rawDataCallbacks.forEach((callback) => callback(message as WSMessageServerRawData))

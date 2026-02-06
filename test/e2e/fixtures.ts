@@ -91,10 +91,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
         // Parse URL to extract port number
         const urlMatch = serverURL.match(/http:\/\/localhost:(\d+)/)
-        if (!urlMatch) {
+        if (!urlMatch || !urlMatch[1]) {
           throw new Error(`Invalid port file format: ${serverURL}`)
         }
-        const port = parseInt(urlMatch[1]!)
+        const port = parseInt(urlMatch[1])
         const baseURL = `http://localhost:${port}`
 
         await waitForServer(baseURL, 15000)

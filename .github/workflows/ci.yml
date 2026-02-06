@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        quality: [test, typecheck, lint, format:check, test:e2e]
+        quality: [test, typecheck, lint, format, test:e2e]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -61,7 +61,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        quality: [test, typecheck, lint, format:check, test:e2e]
+        quality: [test, typecheck, lint, format, test:e2e]
     name: Devenv CI
     runs-on: ubuntu-latest
     permissions:

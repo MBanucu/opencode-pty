@@ -68,7 +68,8 @@ This plugin provides slash commands that can be used in OpenCode chat:
 
 | Command                    | Description                                        |
 | -------------------------- | -------------------------------------------------- |
-| `/pty-open-background-spy` | Get the URL of the running PTY web server instance |
+| `/pty-open-background-spy` | Open the PTY web server interface in the browser   |
+| `/pty-show-server-url`     | Show the URL of the running PTY web server instance |
 
 ## Web UI
 
@@ -298,7 +299,9 @@ Use `pty_kill` with `cleanup=true` to remove completely.
 git clone https://github.com/shekohex/opencode-pty.git
 cd opencode-pty
 bun ci          # install packages from bun.lock
-bun quality     # Runs Biome lint/format checks + TypeScript typecheck
+bun lint        # Runs Biome linting checks
+bun format      # Runs Biome formatting checks
+bun typecheck   # Runs TypeScript type checking
 bun build:dev   # Build the React app for development
 ```
 

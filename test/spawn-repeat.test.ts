@@ -19,7 +19,7 @@ describe('PTY Echo Behavior', () => {
   })
 
   class TestSpawner {
-    readonly subprocess: Subprocess<"ignore", "pipe", "pipe">
+    readonly subprocess: Subprocess<'ignore', 'pipe', 'pipe'>
     stderrOutput = ''
     stdoutOutput = ''
     readonly testNumber: number
@@ -40,34 +40,34 @@ describe('PTY Echo Behavior', () => {
 
       const { stdout, stderr } = this.subprocess
 
-        ; (async () => {
-          const decoder = new TextDecoder();
-          const reader = stderr.getReader();
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              this.stderrOutput += decoder.decode(value, { stream: true });
-              if (done) break;
-            }
-            this.stderrOutput += decoder.decode(); // Flush any remaining buffered data
-          } finally {
-            reader.releaseLock();
+      ;(async () => {
+        const decoder = new TextDecoder()
+        const reader = stderr.getReader()
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            this.stderrOutput += decoder.decode(value, { stream: true })
+            if (done) break
           }
-        })()
-        ; (async () => {
-          const decoder = new TextDecoder();
-          const reader = stdout.getReader();
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              this.stdoutOutput += decoder.decode(value, { stream: true });
-              if (done) break;
-            }
-            this.stdoutOutput += decoder.decode(); // Flush any remaining buffered data
-          } finally {
-            reader.releaseLock();
+          this.stderrOutput += decoder.decode() // Flush any remaining buffered data
+        } finally {
+          reader.releaseLock()
+        }
+      })()
+      ;(async () => {
+        const decoder = new TextDecoder()
+        const reader = stdout.getReader()
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            this.stdoutOutput += decoder.decode(value, { stream: true })
+            if (done) break
           }
-        })()
+          this.stdoutOutput += decoder.decode() // Flush any remaining buffered data
+        } finally {
+          reader.releaseLock()
+        }
+      })()
     }
   }
 
@@ -86,20 +86,22 @@ describe('PTY Echo Behavior', () => {
     const timeout = new Promise<void>((resolve) => {
       setTimeout(() => resolve(), 20000)
     })
-    const all = Promise.all(spawned.map(s => s.subprocess.exited))
+    const all = Promise.all(spawned.map((s) => s.subprocess.exited))
     await Promise.race([all, timeout])
-    const stillRunning = spawned.filter(s => s.subprocess.exitCode === null)
-    const exitCodeNonZero = spawned.filter(s => s.subprocess.exitCode !== null && s.subprocess.exitCode !== 0)
+    const stillRunning = spawned.filter((s) => s.subprocess.exitCode === null)
+    const exitCodeNonZero = spawned.filter(
+      (s) => s.subprocess.exitCode !== null && s.subprocess.exitCode !== 0
+    )
     if (stillRunning.length > 0) {
       errorMessage += `[TEST] Timeout reached after 20s with ${stillRunning.length} subprocesses still running.\n`
-      stillRunning.forEach(s => {
+      stillRunning.forEach((s) => {
         errorMessage += `[TEST] Subprocess ${s.testNumber} stderr: ${s.stderrOutput}\n`
         errorMessage += `[TEST] Subprocess ${s.testNumber} stdout: ${s.stdoutOutput}\n`
       })
     }
     if (exitCodeNonZero.length > 0) {
       errorMessage += `[TEST] ${exitCodeNonZero.length} subprocesses exited with non-zero exit code.\n`
-      exitCodeNonZero.forEach(s => {
+      exitCodeNonZero.forEach((s) => {
         errorMessage += `[TEST] Subprocess ${s.testNumber} stderr: ${s.stderrOutput}\n`
         errorMessage += `[TEST] Subprocess ${s.testNumber} stdout: ${s.stdoutOutput}\n`
       })
@@ -126,7 +128,7 @@ describe('PTY Echo Behavior', () => {
           reject(new Error(`Timeout waiting for Hello World, received: ${rawDataTotal}`))
         }, 10000)
       })
-      
+
       // Spawn interactive bash session
       const session = manager.spawn({
         title: title,

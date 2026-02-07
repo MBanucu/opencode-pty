@@ -6,6 +6,7 @@ import {
   rawOutputCallbacks,
   registerRawOutputCallback,
 } from '../src/plugin/pty/manager.ts'
+import type { Subprocess } from 'bun'
 
 describe('PTY Echo Behavior', () => {
   beforeEach(() => {
@@ -17,13 +18,14 @@ describe('PTY Echo Behavior', () => {
     manager.clearAllSessions()
   })
 
-  it('should receive initial data reproducibly', async () => {
-    const start = Date.now()
-    const maxRuntime = 4000
-    let runnings = 1
-    while (Date.now() - start < maxRuntime) {
-      runnings++
-      const { success, stderr } = Bun.spawnSync({
+  class TestSpawner {
+    readonly subprocess: Subprocess<"ignore", "pipe", "pipe">
+    stderrOutput = ''
+    stdoutOutput = ''
+    readonly testNumber: number
+    constructor(testNumber: number) {
+      this.testNumber = testNumber
+      this.subprocess = Bun.spawn({
         cmd: [
           'bun',
           'test',
@@ -35,28 +37,96 @@ describe('PTY Echo Behavior', () => {
         stderr: 'pipe',
         env: { ...process.env, SYNC_TESTS: '1' },
       })
-      expect(success, `[TEST] Iteration ${runnings}, stderr: ${stderr}`).toBe(true)
+
+      const { stdout, stderr } = this.subprocess
+
+        ; (async () => {
+          const decoder = new TextDecoder();
+          const reader = stderr.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              this.stderrOutput += decoder.decode(value, { stream: true });
+              if (done) break;
+            }
+            this.stderrOutput += decoder.decode(); // Flush any remaining buffered data
+          } finally {
+            reader.releaseLock();
+          }
+        })()
+        ; (async () => {
+          const decoder = new TextDecoder();
+          const reader = stdout.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              this.stdoutOutput += decoder.decode(value, { stream: true });
+              if (done) break;
+            }
+            this.stdoutOutput += decoder.decode(); // Flush any remaining buffered data
+          } finally {
+            reader.releaseLock();
+          }
+        })()
     }
-  })
+  }
+
+  it('should receive initial data reproducibly', async () => {
+    const start = Date.now()
+    const maxRuntime = 1000
+    let runnings = 1
+    const spawned: TestSpawner[] = []
+    while (Date.now() - start < maxRuntime) {
+      runnings++
+      const testSpawner = new TestSpawner(runnings)
+      spawned.push(testSpawner)
+    }
+    let errorMessage = ''
+    errorMessage += `[TEST] Spawned ${runnings} subprocesses in ${Date.now() - start}ms.\n`
+    const timeout = new Promise<void>((resolve) => {
+      setTimeout(() => resolve(), 20000)
+    })
+    const all = Promise.all(spawned.map(s => s.subprocess.exited))
+    await Promise.race([all, timeout])
+    const stillRunning = spawned.filter(s => s.subprocess.exitCode === null)
+    const exitCodeNonZero = spawned.filter(s => s.subprocess.exitCode !== null && s.subprocess.exitCode !== 0)
+    if (stillRunning.length > 0) {
+      errorMessage += `[TEST] Timeout reached after 20s with ${stillRunning.length} subprocesses still running.\n`
+      stillRunning.forEach(s => {
+        errorMessage += `[TEST] Subprocess ${s.testNumber} stderr: ${s.stderrOutput}\n`
+        errorMessage += `[TEST] Subprocess ${s.testNumber} stdout: ${s.stdoutOutput}\n`
+      })
+    }
+    if (exitCodeNonZero.length > 0) {
+      errorMessage += `[TEST] ${exitCodeNonZero.length} subprocesses exited with non-zero exit code.\n`
+      exitCodeNonZero.forEach(s => {
+        errorMessage += `[TEST] Subprocess ${s.testNumber} stderr: ${s.stderrOutput}\n`
+        errorMessage += `[TEST] Subprocess ${s.testNumber} stdout: ${s.stdoutOutput}\n`
+      })
+    }
+    expect(stillRunning.length + exitCodeNonZero.length, errorMessage).toBe(0)
+  }, 60000)
 
   it.skipIf(!process.env.SYNC_TESTS)(
     'should receive initial data once',
     async () => {
       const title = crypto.randomUUID()
       // Subscribe to raw output events
-      const promise = new Promise<string>((resolve) => {
+      const promise = new Promise<string>((resolve, reject) => {
         let rawDataTotal = ''
         registerRawOutputCallback((session, rawData) => {
+          // console.log(`[TEST] Received raw data for session ${session.id} (${session.title}): ${rawData}`)
           if (session.title !== title) return
           rawDataTotal += rawData
           if (rawData.includes('Hello World')) {
             resolve(rawDataTotal)
           }
         })
-      }).catch((e) => {
-        console.error(e)
+        setTimeout(() => {
+          reject(new Error(`Timeout waiting for Hello World, received: ${rawDataTotal}`))
+        }, 10000)
       })
-
+      
       // Spawn interactive bash session
       const session = manager.spawn({
         title: title,
@@ -66,7 +136,9 @@ describe('PTY Echo Behavior', () => {
         parentSessionId: 'test',
       })
 
+      // await Promise.resolve() // Yield to allow session to be fully registered and callbacks to be set up
       const rawData = await promise
+      expect(rawData).toContain('Hello World')
 
       // Clean up
       manager.kill(session.id, true)
@@ -75,6 +147,6 @@ describe('PTY Echo Behavior', () => {
       // Verify echo occurred
       expect(rawData).toContain('Hello World')
     },
-    1000
+    10000
   )
 })

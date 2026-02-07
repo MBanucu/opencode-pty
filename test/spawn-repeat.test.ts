@@ -89,9 +89,6 @@ describe('PTY Echo Behavior', () => {
     const all = Promise.all(spawned.map((s) => s.subprocess.exited))
     await Promise.race([all, timeout])
     const stillRunning = spawned.filter((s) => s.subprocess.exitCode === null)
-    const exitCodeNonZero = spawned.filter(
-      (s) => s.subprocess.exitCode !== null && s.subprocess.exitCode !== 0
-    )
     if (stillRunning.length > 0) {
       errorMessage += `[TEST] Timeout reached after 20s with ${stillRunning.length} subprocesses still running.\n`
       stillRunning.forEach((s) => {
@@ -99,6 +96,9 @@ describe('PTY Echo Behavior', () => {
         errorMessage += `[TEST] Subprocess ${s.testNumber} stdout: ${s.stdoutOutput}\n`
       })
     }
+    const exitCodeNonZero = spawned.filter(
+      (s) => s.subprocess.exitCode !== null && s.subprocess.exitCode !== 0
+    )
     if (exitCodeNonZero.length > 0) {
       errorMessage += `[TEST] ${exitCodeNonZero.length} subprocesses exited with non-zero exit code.\n`
       exitCodeNonZero.forEach((s) => {

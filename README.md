@@ -222,9 +222,10 @@ This eliminates the need for polling—perfect for long-running processes like b
 
 ### Environment Variables
 
-| Variable               | Default | Description                                        |
-| ---------------------- | ------- | -------------------------------------------------- |
-| `PTY_MAX_BUFFER_LINES` | `50000` | Maximum lines to keep in output buffer per session |
+| Variable               | Default    | Description                                        |
+| ---------------------- | ---------- | -------------------------------------------------- |
+| `PTY_MAX_BUFFER_LINES` | `50000`    | Maximum lines to keep in output buffer per session |
+| `PTY_WEB_HOSTNAME`     | `::1`      | Hostname for the web server to bind to             |
 
 ### Permissions
 

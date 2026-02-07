@@ -1,5 +1,5 @@
+import { type ChildProcess, spawn } from 'node:child_process'
 import { test as base, type WorkerInfo } from '@playwright/test'
-import { spawn, type ChildProcess } from 'node:child_process'
 
 import { createApiClient } from '../../src/web/shared/api-client.ts'
 import { ManagedTestClient } from '../utils'
@@ -90,12 +90,12 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         const serverURL = serverURLText.trim()
 
         // Parse URL to extract port number
-        const urlMatch = serverURL.match(/http:\/\/localhost:(\d+)/)
+        const urlMatch = serverURL.match(/http:\/\/\[::1\]:(\d+)/)
         if (!urlMatch || !urlMatch[1]) {
           throw new Error(`Invalid port file format: ${serverURL}`)
         }
         const port = parseInt(urlMatch[1], 10)
-        const baseURL = `http://localhost:${port}`
+        const baseURL = `http://[::1]:${port}`
 
         await waitForServer(baseURL, 15000)
 
